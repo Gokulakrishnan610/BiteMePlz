@@ -1,0 +1,133 @@
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import { useAuth } from './context/AuthContext';
+import { WalletProvider } from './context/WalletContext';
+
+// Layouts
+import MainLayout from './layouts/MainLayout';
+import AdminLayout from './layouts/AdminLayout';
+import ShopAdminLayout from './layouts/ShopAdminLayout';
+
+// Public Pages
+import HomePage from './pages/HomePage';
+import ShopPage from './pages/ShopPage';
+import ProductPage from './pages/ProductPage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import NotFoundPage from './pages/NotFoundPage';
+
+// Student Pages
+import CartPage from './pages/student/CartPage';
+import OrdersPage from './pages/student/OrdersPage';
+import OrderDetailsPage from './pages/student/OrderDetailsPage';
+import ProfilePage from './pages/student/ProfilePage';
+
+// Admin Pages
+import AdminDashboardPage from './pages/admin/DashboardPage';
+import AdminShopsPage from './pages/admin/ShopsPage';
+import AdminUsersPage from './pages/admin/UsersPage';
+import AdminCreateShopPage from './pages/admin/CreateShopPage';
+
+// Shop Admin Pages
+import ShopAdminDashboardPage from './pages/shopAdmin/DashboardPage';
+import ShopAdminProductsPage from './pages/shopAdmin/ProductsPage';
+import ShopAdminCreateProductPage from './pages/shopAdmin/CreateProductPage';
+import ShopAdminEditProductPage from './pages/shopAdmin/EditProductPage';
+import ShopAdminOrdersPage from './pages/shopAdmin/OrdersPage';
+import ShopAdminScanQRPage from './pages/shopAdmin/ScanQRPage';
+
+// Protected Route Component
+import ProtectedRoute from './components/ProtectedRoute';
+
+function App() {
+  const { loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--primary)]"></div>
+      </div>
+    );
+  }
+
+  return (
+    <WalletProvider>
+      <Toaster position="top-right" />
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<HomePage />} />
+          <Route path="shop/:id" element={<ShopPage />} />
+          <Route path="product/:id" element={<ProductPage />} />
+          <Route path="login" element={<LoginPage />} />
+          <Route path="register" element={<RegisterPage />} />
+          
+          {/* Student Routes */}
+          <Route path="cart" element={<CartPage />} />
+          <Route 
+            path="profile" 
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="orders" 
+            element={
+              <ProtectedRoute>
+                <OrdersPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="order/:id" 
+            element={
+              <ProtectedRoute>
+                <OrderDetailsPage />
+              </ProtectedRoute>
+            } 
+          />
+        </Route>
+        
+        {/* Admin Routes */}
+        <Route 
+          path="/admin" 
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="shops" element={<AdminShopsPage />} />
+          <Route path="shops/create" element={<AdminCreateShopPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+        </Route>
+        
+        {/* Shop Admin Routes */}
+        <Route 
+          path="/shop-admin" 
+          element={
+            <ProtectedRoute requiredRole="shopAdmin">
+              <ShopAdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<ShopAdminDashboardPage />} />
+          <Route path="products" element={<ShopAdminProductsPage />} />
+          <Route path="products/create" element={<ShopAdminCreateProductPage />} />
+          <Route path="products/edit/:id" element={<ShopAdminEditProductPage />} />
+          <Route path="orders" element={<ShopAdminOrdersPage />} />
+          <Route path="scan" element={<ShopAdminScanQRPage />} />
+        </Route>
+        
+        {/* 404 Page */}
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </WalletProvider>
+  );
+}
+
+export default App;

@@ -1,0 +1,218 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { Store } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+const CreateShopPage: React.FC = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    shopName: '',
+    shopDescription: '',
+    shopLocation: '',
+    shopImage: ''
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // Validate required fields
+      if (!formData.name || !formData.email || !formData.password || 
+          !formData.shopName || !formData.shopDescription || !formData.shopLocation) {
+        throw new Error('Please fill in all required fields');
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        throw new Error('Please enter a valid email address');
+      }
+
+      // Validate password length
+      if (formData.password.length < 6) {
+        throw new Error('Password must be at least 6 characters long');
+      }
+
+      const response = await axios.post('/api/users/shop-admin', formData);
+      
+      toast.success('Shop created successfully');
+      navigate('/admin/shops');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to create shop';
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6">Create New Shop</h1>
+
+      <div className="card">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold flex items-center">
+              <Store size={24} className="mr-2 text-[var(--primary)]" />
+              Shop Details
+            </h2>
+            
+            <div>
+              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+                Shop Name *
+              </label>
+              <input
+                type="text"
+                name="shopName"
+                value={formData.shopName}
+                onChange={handleChange}
+                className="input"
+                required
+                placeholder="Enter shop name"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+                Description *
+              </label>
+              <textarea
+                name="shopDescription"
+                value={formData.shopDescription}
+                onChange={handleChange}
+                className="input"
+                rows={3}
+                required
+                placeholder="Enter shop description"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+                Location *
+              </label>
+              <input
+                type="text"
+                name="shopLocation"
+                value={formData.shopLocation}
+                onChange={handleChange}
+                className="input"
+                required
+                placeholder="Enter shop location"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+                Shop Image URL
+              </label>
+              <input
+                type="url"
+                name="shopImage"
+                value={formData.shopImage}
+                onChange={handleChange}
+                className="input"
+                placeholder="https://example.com/image.jpg"
+              />
+              <p className="text-sm text-[var(--gray-500)] mt-1">
+                Leave empty to use default image
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold flex items-center">
+              <Store size={24} className="mr-2 text-[var(--primary)]" />
+              Shop Admin Details
+            </h2>
+            
+            <div>
+              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+                Admin Name *
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                className="input"
+                required
+                placeholder="Enter admin name"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+                Admin Email *
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                className="input"
+                required
+                placeholder="Enter admin email"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+                Admin Password *
+              </label>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                className="input"
+                required
+                minLength={6}
+                placeholder="Enter admin password"
+              />
+              <p className="text-sm text-[var(--gray-500)] mt-1">
+                Minimum 6 characters
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-4">
+            <button
+              type="button"
+              onClick={() => navigate('/admin/shops')}
+              className="btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary"
+            >
+              {loading ? (
+                <span className="flex items-center">
+                  <span className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></span>
+                  Creating...
+                </span>
+              ) : (
+                'Create Shop'
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default CreateShopPage;

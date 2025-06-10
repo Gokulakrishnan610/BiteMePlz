@@ -1,0 +1,137 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #0047AB;
+  --primary-light: #4169E1;
+  --primary-dark: #00308F;
+  --accent: #FF6B35;
+  --accent-light: #FF8C61;
+  --accent-dark: #E65525;
+  --success: #4CAF50;
+  --warning: #FF9800;
+  --error: #F44336;
+  --background: #F8FAFC;
+  --gray-50: #F9FAFB;
+  --gray-100: #F3F4F6;
+  --gray-200: #E5E7EB;
+  --gray-300: #D1D5DB;
+  --gray-400: #9CA3AF;
+  --gray-500: #6B7280;
+  --gray-600: #4B5563;
+  --gray-700: #374151;
+  --gray-800: #1F2937;
+  --gray-900: #111827;
+}
+
+@layer base {
+  body {
+    @apply bg-[var(--background)] text-[var(--gray-800)] font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold;
+  }
+
+  h1 {
+    @apply text-3xl md:text-4xl;
+  }
+
+  h2 {
+    @apply text-2xl md:text-3xl;
+  }
+
+  h3 {
+    @apply text-xl md:text-2xl;
+  }
+
+  button {
+    @apply rounded px-4 py-2 font-medium transition-all duration-200;
+  }
+
+  table {
+    @apply w-full border-collapse;
+  }
+
+  thead {
+    @apply bg-[var(--gray-100)];
+  }
+
+  th {
+    @apply text-left p-3 font-semibold text-[var(--gray-700)];
+  }
+
+  td {
+    @apply p-3 border-t border-[var(--gray-200)];
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-[var(--primary)] text-white hover:bg-[var(--primary-dark)];
+  }
+
+  .btn-secondary {
+    @apply bg-white text-[var(--gray-800)] border border-[var(--gray-300)] hover:bg-[var(--gray-100)];
+  }
+
+  .btn-accent {
+    @apply bg-[var(--accent)] text-white hover:bg-[var(--accent-dark)];
+  }
+
+  .btn-success {
+    @apply bg-[var(--success)] text-white hover:brightness-90;
+  }
+
+  .btn-danger {
+    @apply bg-[var(--error)] text-white hover:brightness-90;
+  }
+
+  .card {
+    @apply bg-white rounded-lg shadow-md p-6;
+  }
+
+  .input {
+    @apply w-full px-4 py-2 rounded border border-[var(--gray-300)] focus:outline-none focus:ring-2 focus:ring-[var(--primary-light)] focus:border-transparent;
+  }
+
+  .badge {
+    @apply px-2 py-1 text-xs font-semibold rounded-full;
+  }
+
+  .badge-primary {
+    @apply bg-[var(--primary-light)] text-white;
+  }
+
+  .badge-success {
+    @apply bg-[var(--success)] text-white;
+  }
+
+  .badge-warning {
+    @apply bg-[var(--warning)] text-white;
+  }
+
+  .badge-error {
+    @apply bg-[var(--error)] text-white;
+  }
+}
+
+/* Animations */
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
