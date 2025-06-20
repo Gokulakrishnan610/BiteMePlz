@@ -7,7 +7,10 @@ import {
   Users, 
   LogOut, 
   Menu, 
-  X 
+  X,
+  Receipt,
+  TrendingUp,
+  DollarSign
 } from 'lucide-react';
 
 const AdminLayout: React.FC = () => {
@@ -31,6 +34,10 @@ const AdminLayout: React.FC = () => {
 
   const isActive = (path: string) => {
     return location.pathname === path;
+  };
+
+  const isPathActive = (path: string) => {
+    return location.pathname.includes(path);
   };
 
   return (
@@ -73,16 +80,18 @@ const AdminLayout: React.FC = () => {
             <BarChart3 size={20} className="mr-3" />
             <span>Dashboard</span>
           </Link>
+          
           <Link
             to="/admin/shops"
             className={`flex items-center px-6 py-3 hover:bg-[var(--primary)] ${
-              location.pathname.includes('/admin/shops') ? 'bg-[var(--primary)]' : ''
+              isPathActive('/admin/shops') ? 'bg-[var(--primary)]' : ''
             }`}
             onClick={closeSidebar}
           >
             <Store size={20} className="mr-3" />
             <span>Shops</span>
           </Link>
+          
           <Link
             to="/admin/users"
             className={`flex items-center px-6 py-3 hover:bg-[var(--primary)] ${
@@ -93,7 +102,50 @@ const AdminLayout: React.FC = () => {
             <Users size={20} className="mr-3" />
             <span>Users</span>
           </Link>
+
+          {/* Transaction Features */}
+          <div className="mt-4">
+            <div className="px-6 py-2">
+              <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                Transactions
+              </h3>
+            </div>
+            
+            <Link
+              to="/admin/transactions"
+              className={`flex items-center px-6 py-3 hover:bg-[var(--primary)] ${
+                isActive('/admin/transactions') ? 'bg-[var(--primary)]' : ''
+              }`}
+              onClick={closeSidebar}
+            >
+              <Receipt size={20} className="mr-3" />
+              <span>All Transactions</span>
+            </Link>
+            
+            <Link
+              to="/admin/analytics"
+              className={`flex items-center px-6 py-3 hover:bg-[var(--primary)] ${
+                isActive('/admin/analytics') ? 'bg-[var(--primary)]' : ''
+              }`}
+              onClick={closeSidebar}
+            >
+              <TrendingUp size={20} className="mr-3" />
+              <span>Analytics</span>
+            </Link>
+            
+            <Link
+              to="/admin/financial-reports"
+              className={`flex items-center px-6 py-3 hover:bg-[var(--primary)] ${
+                isActive('/admin/financial-reports') ? 'bg-[var(--primary)]' : ''
+              }`}
+              onClick={closeSidebar}
+            >
+              <DollarSign size={20} className="mr-3" />
+              <span>Financial Reports</span>
+            </Link>
+          </div>
         </nav>
+        
         <div className="absolute bottom-0 w-full">
           <button
             onClick={handleLogout}

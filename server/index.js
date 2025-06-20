@@ -23,8 +23,11 @@ import userRoutes from './routes/userRoutes.js';
 import shopRoutes from './routes/shopRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
+import transactionRoutes from './routes/transactionRoutes.js';
 import { errorHandler, notFound } from './middleware/errorMiddleware.js';
 import Order from './models/orderModel.js';
+import Shop from './models/shopModel.js';
+import User from './models/userModel.js';
 import { handleExpiredQR, handleFinalValidityExpired } from './controllers/orderController.js';
 
 const app = express();
@@ -38,6 +41,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/shops', shopRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/transactions', transactionRoutes);
 
 // Uploads folder
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -61,13 +65,67 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
+// Function to check and reset wallets when final validity expires
+const checkFinalValidityAndResetWallets = async () => {
+  try {
+    console.log('Checking final validity times for all shops...');
+    
+    // Get all active shops
+    const shops = await Shop.find({ isActive: true });
+    const now = new Date();
+    
+    let walletsResetForShops = [];
+    let shouldResetWallets = false;
+    
+    for (const shop of shops) {
+      const finalValidityTime = new Date(shop.finalValidityTime);
+      
+      // Check if final validity time has passed
+      if (now >= finalValidityTime) {
+        console.log(`Final validity expired for shop ${shop.name} at ${finalValidityTime}`);
+        
+        // Get all unverified orders for this shop
+        const orders = await Order.find({
+          shop: shop._id,
+          isPaid: true,
+          isVerified: false,
+          status: { $ne: 'expired' }
+        });
+
+        // Process each order
+        for (const order of orders) {
+          try {
+            await handleFinalValidityExpired(order);
+            console.log(`Processed expired order ${order._id} for shop ${shop.name}`);
+          } catch (error) {
+            console.error(`Failed to process order ${order._id}:`, error);
+          }
+        }
+        
+        walletsResetForShops.push(shop.name);
+        shouldResetWallets = true;
+      }
+    }
+    
+    // If any shop's final validity has expired, reset all wallets to zero
+    if (shouldResetWallets) {
+      const result = await User.updateMany({}, { $set: { balance: 0 } });
+      console.log(`Final validity expired for shops: ${walletsResetForShops.join(', ')}`);
+      console.log(`Reset ${result.modifiedCount} user wallets to zero`);
+    }
+    
+  } catch (error) {
+    console.error('Error in final validity check:', error);
+  }
+};
+
 // Connect to MongoDB and start server
 const startServer = async () => {
   try {
     await connectDB();
     console.log('MongoDB connected successfully');
 
-    // Set up periodic check for expired orders (every 5 minutes)
+    // Set up periodic check for expired orders (every 2 minutes)
     setInterval(async () => {
       try {
         console.log('Starting periodic expired orders check...');
@@ -94,7 +152,13 @@ const startServer = async () => {
       } catch (error) {
         console.error('Error in periodic expired orders check:', error);
       }
-    }, 5 * 60 * 1000); // Check every 5 minutes
+    }, 2 * 60 * 1000); // Check every 2 minutes
+
+    // Set up periodic check for final validity and wallet reset (every 1 minute)
+    setInterval(checkFinalValidityAndResetWallets, 1 * 60 * 1000); // Check every 1 minute
+    
+    // Run initial check
+    checkFinalValidityAndResetWallets();
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

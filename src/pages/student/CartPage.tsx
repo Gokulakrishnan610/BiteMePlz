@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Trash2, ShoppingBag, Timer, AlertCircle, X, Wallet, CreditCard } from 'lucide-react';
+import { Trash2, ShoppingBag, Timer, AlertCircle, X, Wallet, CreditCard, Clock } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
@@ -41,20 +41,25 @@ const CartPage: React.FC = () => {
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [remainingBalance, setRemainingBalance] = useState(0);
+  const [shopInfo, setShopInfo] = useState<any>(null);
 
   useEffect(() => {
-    // Fetch user's remaining balance
-    const fetchBalance = async () => {
+    // Fetch user's remaining balance and shop info
+    const fetchData = async () => {
       try {
-        const { data } = await axios.get('/api/users/profile');
-        setRemainingBalance(data.balance || 0);
+        const [balanceRes, shopRes] = await Promise.all([
+          axios.get('/api/users/profile'),
+          shopId ? axios.get(`/api/shops/${shopId}`) : Promise.resolve({ data: null })
+        ]);
+        setRemainingBalance(balanceRes.data.balance || 0);
+        setShopInfo(shopRes.data);
       } catch (error) {
-        console.error('Failed to fetch balance:', error);
+        console.error('Failed to fetch data:', error);
       }
     };
 
     if (user) {
-      fetchBalance();
+      fetchData();
     }
 
     return () => {
@@ -62,7 +67,32 @@ const CartPage: React.FC = () => {
         clearInterval(timer);
       }
     };
-  }, [user, timer]);
+  }, [user, timer, shopId]);
+
+  // Check if shop is still accepting orders
+  const isShopAcceptingOrders = () => {
+    if (!shopInfo) return false;
+    
+    const now = new Date();
+    const finalValidity = new Date(shopInfo.finalValidityTime);
+    
+    return now < finalValidity && shopInfo.isOpen && shopInfo.isActive;
+  };
+
+  const getTimeUntilClosure = () => {
+    if (!shopInfo) return null;
+    
+    const now = new Date();
+    const finalValidity = new Date(shopInfo.finalValidityTime);
+    const timeDiff = finalValidity.getTime() - now.getTime();
+    
+    if (timeDiff <= 0) return null;
+    
+    const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return { hours, minutes };
+  };
 
   const handleQuantityChange = (productId: string, newQuantity: number) => {
     updateQuantity(productId, newQuantity);
@@ -91,6 +121,11 @@ const CartPage: React.FC = () => {
       return;
     }
 
+    if (!isShopAcceptingOrders()) {
+      toast.error('Shop is no longer accepting orders');
+      return;
+    }
+
     try {
       setPaymentInitiated(true);
       
@@ -111,6 +146,11 @@ const CartPage: React.FC = () => {
   };
 
   const initiateRazorpayPayment = async () => {
+    if (!isShopAcceptingOrders()) {
+      toast.error('Shop is no longer accepting orders');
+      return;
+    }
+
     try {
       setPaymentInitiated(true);
       
@@ -218,6 +258,10 @@ const CartPage: React.FC = () => {
   };
 
   const handleCheckout = () => {
+    if (!isShopAcceptingOrders()) {
+      toast.error('Shop is no longer accepting orders for today');
+      return;
+    }
     setShowDisclaimer(true);
   };
 
@@ -240,9 +284,37 @@ const CartPage: React.FC = () => {
     );
   }
 
+  const timeUntilClosure = getTimeUntilClosure();
+  const shopClosed = !isShopAcceptingOrders();
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Shopping Cart</h1>
+
+      {/* Shop Status Warning */}
+      {shopInfo && (
+        <div className="mb-6">
+          {shopClosed ? (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center">
+              <AlertCircle className="text-red-600 mr-3" size={24} />
+              <div>
+                <p className="text-red-800 font-medium">Shop is closed for orders</p>
+                <p className="text-red-600 text-sm">Orders are no longer being accepted for today.</p>
+              </div>
+            </div>
+          ) : timeUntilClosure && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center">
+              <Clock className="text-yellow-600 mr-3" size={24} />
+              <div>
+                <p className="text-yellow-800 font-medium">
+                  Shop closes in {timeUntilClosure.hours}h {timeUntilClosure.minutes}m
+                </p>
+                <p className="text-yellow-600 text-sm">Complete your order before the shop closes.</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
@@ -261,7 +333,7 @@ const CartPage: React.FC = () => {
                     <button
                       onClick={() => handleQuantityChange(item.product, item.quantity - 1)}
                       className="btn-secondary px-3 py-1"
-                      disabled={item.quantity <= 1 || paymentInitiated}
+                      disabled={item.quantity <= 1 || paymentInitiated || shopClosed}
                     >
                       -
                     </button>
@@ -269,7 +341,7 @@ const CartPage: React.FC = () => {
                     <button
                       onClick={() => handleQuantityChange(item.product, item.quantity + 1)}
                       className="btn-secondary px-3 py-1"
-                      disabled={item.quantity >= item.stock || paymentInitiated}
+                      disabled={item.quantity >= item.stock || paymentInitiated || shopClosed}
                     >
                       +
                     </button>
@@ -280,7 +352,7 @@ const CartPage: React.FC = () => {
                   <button
                     onClick={() => removeFromCart(item.product)}
                     className="text-[var(--error)] hover:text-[var(--error-dark)]"
-                    disabled={paymentInitiated}
+                    disabled={paymentInitiated || shopClosed}
                   >
                     <Trash2 size={20} />
                   </button>
@@ -323,10 +395,10 @@ const CartPage: React.FC = () => {
             </div>
             <button
               onClick={handleCheckout}
-              disabled={paymentInitiated}
-              className="w-full btn-primary"
+              disabled={paymentInitiated || shopClosed}
+              className={`w-full btn-primary ${shopClosed ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {paymentInitiated ? 'Processing...' : 'Proceed to Checkout'}
+              {paymentInitiated ? 'Processing...' : shopClosed ? 'Shop Closed' : 'Proceed to Checkout'}
             </button>
           </div>
         </div>
@@ -350,9 +422,9 @@ const CartPage: React.FC = () => {
               <div className="space-y-4">
                 <button
                   onClick={handleBalancePayment}
-                  disabled={remainingBalance < getTotalPrice()}
+                  disabled={remainingBalance < getTotalPrice() || shopClosed}
                   className={`w-full p-4 rounded-lg border ${
-                    remainingBalance >= getTotalPrice()
+                    remainingBalance >= getTotalPrice() && !shopClosed
                       ? 'border-[var(--primary)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white'
                       : 'border-[var(--gray-300)] text-[var(--gray-400)] cursor-not-allowed'
                   } transition-colors flex items-center justify-between`}
@@ -371,7 +443,12 @@ const CartPage: React.FC = () => {
 
                 <button
                   onClick={initiateRazorpayPayment}
-                  className="w-full p-4 rounded-lg border border-[var(--primary)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white transition-colors flex items-center"
+                  disabled={shopClosed}
+                  className={`w-full p-4 rounded-lg border ${
+                    !shopClosed
+                      ? 'border-[var(--primary)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white'
+                      : 'border-[var(--gray-300)] text-[var(--gray-400)] cursor-not-allowed'
+                  } transition-colors flex items-center`}
                 >
                   <CreditCard size={24} className="mr-3" />
                   <div className="text-left">
@@ -408,11 +485,16 @@ const CartPage: React.FC = () => {
                   Please note the following important points before proceeding with your payment:
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-[var(--gray-600)]">
-                  <li>After payment, you will receive a QR code valid for 20 minutes</li>
+                  <li>After payment, you will receive a QR code valid for {shopInfo?.qrValidityMinutes || 20} minutes</li>
                   <li>The QR code must be shown to shop staff for verification</li>
                   <li>Orders are valid until the shop's closing time on the same day</li>
-                  <li>Unverified orders cannot be refunded or cancelled</li>
+                  <li>All wallet balances will be reset to zero at the end of the day</li>
                   <li>Payment must be completed within 3 minutes</li>
+                  {timeUntilClosure && (
+                    <li className="text-yellow-600 font-medium">
+                      Shop closes in {timeUntilClosure.hours}h {timeUntilClosure.minutes}m
+                    </li>
+                  )}
                 </ul>
               </div>
 

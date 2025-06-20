@@ -26,8 +26,12 @@ import ProfilePage from './pages/student/ProfilePage';
 // Admin Pages
 import AdminDashboardPage from './pages/admin/DashboardPage';
 import AdminShopsPage from './pages/admin/ShopsPage';
+import AdminShopDetailsPage from './pages/admin/ShopDetailsPage';
 import AdminUsersPage from './pages/admin/UsersPage';
 import AdminCreateShopPage from './pages/admin/CreateShopPage';
+import TransactionsPage from './pages/admin/TransactionsPage';
+import AnalyticsPage from './pages/admin/AnalyticsPage';
+import FinancialReportsPage from './pages/admin/FinancialReportsPage';
 
 // Shop Admin Pages
 import ShopAdminDashboardPage from './pages/shopAdmin/DashboardPage';
@@ -102,8 +106,12 @@ function App() {
         >
           <Route index element={<AdminDashboardPage />} />
           <Route path="shops" element={<AdminShopsPage />} />
+          <Route path="shops/:id" element={<AdminShopDetailsPage />} />
           <Route path="shops/create" element={<AdminCreateShopPage />} />
           <Route path="users" element={<AdminUsersPage />} />
+          <Route path="transactions" element={<TransactionsPage />} />
+          <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="financial-reports" element={<FinancialReportsPage />} />
         </Route>
         
         {/* Shop Admin Routes */}

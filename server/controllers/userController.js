@@ -245,12 +245,35 @@ const deleteUser = asyncHandler(async (req, res) => {
 // @route   POST /api/users/shop-admin
 // @access  Private/Admin
 const createShopAdmin = asyncHandler(async (req, res) => {
-  const { name, email, password, shopName, shopDescription, shopLocation, shopImage } = req.body;
+  const { 
+    name, 
+    email, 
+    password, 
+    shopName, 
+    shopDescription, 
+    shopLocation, 
+    shopImage,
+    finalValidityTime,
+    qrValidityMinutes
+  } = req.body;
 
   // Validate required fields
   if (!name || !email || !password || !shopName || !shopDescription || !shopLocation) {
     res.status(400);
     throw new Error('Please fill in all required fields');
+  }
+
+  // Validate finalValidityTime
+  if (!finalValidityTime) {
+    res.status(400);
+    throw new Error('Final validity time is required');
+  }
+
+  // Validate QR validity minutes
+  const qrMinutes = parseInt(qrValidityMinutes) || 20;
+  if (qrMinutes < 1 || qrMinutes > 60) {
+    res.status(400);
+    throw new Error('QR validity must be between 1 and 60 minutes');
   }
 
   // Check if user already exists
@@ -286,7 +309,9 @@ const createShopAdmin = asyncHandler(async (req, res) => {
       image: shopImage || '/uploads/default-shop.jpg',
       isActive: true,
       isOpen: true,
-      shopAdmin: createdUser._id // Set the shopAdmin reference
+      shopAdmin: createdUser._id,
+      finalValidityTime: new Date(finalValidityTime),
+      qrValidityMinutes: qrMinutes
     });
 
     // Update user with shop reference

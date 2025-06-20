@@ -74,7 +74,10 @@ shopSchema.virtual('products', {
 
 // Method to check if shop is accepting orders
 shopSchema.methods.isAcceptingOrders = function() {
-  if (!this.isOpen || !this.isActive) return false;
+  if (!this.isOpen || !this.isActive) {
+    console.log('Shop closed: Not open or not active');
+    return false;
+  }
 
   // Get current time
   const now = new Date();
@@ -82,7 +85,6 @@ shopSchema.methods.isAcceptingOrders = function() {
 
   // Get current hour
   const currentHour = now.getHours();
-  const currentMinutes = now.getMinutes();
 
   // Check if before opening hours (7 AM)
   if (currentHour < 7) {
@@ -90,9 +92,12 @@ shopSchema.methods.isAcceptingOrders = function() {
     return false;
   }
 
-  // Check if after final validity time
+  // Check if after final validity time - this is the key fix
   if (now >= validityTime) {
-    console.log('Shop closed: After final validity time');
+    console.log('Shop closed: After final validity time', {
+      currentTime: now.toISOString(),
+      validityTime: validityTime.toISOString()
+    });
     return false;
   }
 
@@ -107,11 +112,10 @@ shopSchema.methods.isAcceptingOrders = function() {
 // Pre-save middleware to update nextOpeningTime when finalValidityTime changes
 shopSchema.pre('save', function(next) {
   if (this.isModified('finalValidityTime') || !this.nextOpeningTime) {
-    // Set next opening time to 7 AM next day in IST
+    // Set next opening time to 7 AM next day
     const nextDay = new Date(this.finalValidityTime);
     nextDay.setDate(nextDay.getDate() + 1);
-    // Convert to IST (UTC+5:30)
-    nextDay.setHours(7 - 5, 30, 0, 0); // 7 AM IST = 1:30 AM UTC
+    nextDay.setHours(7, 0, 0, 0); // 7 AM next day
     this.nextOpeningTime = nextDay;
   }
   next();

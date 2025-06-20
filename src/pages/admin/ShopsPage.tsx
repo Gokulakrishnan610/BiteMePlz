@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { Store, Plus, Edit, Trash2 } from 'lucide-react';
+import { Store, Plus, Edit, Trash2, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Shop {
@@ -93,14 +93,23 @@ const ShopsPage: React.FC = () => {
                   <td>
                     <div className="flex space-x-2">
                       <Link
+                        to={`/admin/shops/${shop._id}`}
+                        className="p-2 text-[var(--primary)] hover:bg-[var(--gray-100)] rounded"
+                        title="View Details"
+                      >
+                        <Eye size={18} />
+                      </Link>
+                      <Link
                         to={`/admin/shops/${shop._id}/edit`}
                         className="p-2 text-[var(--primary)] hover:bg-[var(--gray-100)] rounded"
+                        title="Edit Shop"
                       >
                         <Edit size={18} />
                       </Link>
                       <button
                         onClick={() => handleDelete(shop._id)}
                         className="p-2 text-[var(--error)] hover:bg-[var(--gray-100)] rounded"
+                        title="Delete Shop"
                       >
                         <Trash2 size={18} />
                       </button>

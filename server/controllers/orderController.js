@@ -5,6 +5,7 @@ import Order from '../models/orderModel.js';
 import Product from '../models/productModel.js';
 import Shop from '../models/shopModel.js';
 import User from '../models/userModel.js';
+import { logTransaction } from '../utils/transactionLogger.js';
 
 const instance = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID||"rzp_test_RVKFS8WX756Anx",
@@ -13,16 +14,7 @@ const instance = new Razorpay({
 
 const getEndOfDay = (finalValidityTime) => {
   if (!finalValidityTime) return null;
-  
-  const now = new Date();
-  const date = new Date();
-  date.setHours(18, 30, 0, 0);
-  
-  if (now.getHours() >= 18 && now.getMinutes() >= 30) {
-    date.setDate(date.getDate() + 1);
-  }
-
-  return date;
+  return new Date(finalValidityTime);
 };
 
 const getQRValidityTime = (minutes) => {
@@ -74,9 +66,29 @@ const handleExpiredQR = async (order) => {
         // Log refund event
         console.log(`Refunding ₹${order.balanceAmount} to user ${user._id} for order ${order._id}`);
         
+        const previousBalance = user.balance;
+        
         // Add balance back to user's wallet
         user.balance += order.balanceAmount;
         await user.save();
+        
+        // Log transaction
+        await logTransaction({
+          shop: order.shop,
+          order: order._id,
+          user: order.user,
+          type: 'refund',
+          amount: order.balanceAmount,
+          paymentMethod: order.paymentResult?.razorpay_payment_id ? 'razorpay' : 'balance',
+          description: 'QR code expired - amount refunded to wallet',
+          metadata: {
+            orderId: order.orderId,
+            qrExpiry: order.qrValidUntil,
+            previousBalance,
+            newBalance: user.balance,
+            balanceAmount: order.balanceAmount
+          }
+        });
         
         // Update order
         order.status = 'expired';
@@ -115,26 +127,27 @@ const handleFinalValidityExpired = async (order) => {
     const balanceAmount = order.balanceAmount;
     console.log(`Order ${order._id} has balance amount: ${balanceAmount}`);
 
-    // Refund balance amount to user's wallet first
-    const user = await User.findById(order.user);
-    if (!user) {
-      console.error(`User not found for order ${order._id}`);
-      throw new Error('User not found');
-    }
-
-    if (balanceAmount > 0) {
-      console.log(`Refunding ₹${balanceAmount} to user ${user._id} for order ${order._id}`);
-      const oldBalance = user.balance;
-      user.balance += balanceAmount;
-      await user.save();
-      console.log(`User ${user._id} balance updated from ${oldBalance} to ${user.balance}`);
-    }
-
-    // Then update order status and balance
+    // Update order status and balance first
     order.status = 'expired';
     order.balanceAmount = 0;
     await order.save();
     console.log(`Order ${order._id} marked as expired`);
+
+    // Log transaction for final validity expiry
+    await logTransaction({
+      shop: order.shop,
+      order: order._id,
+      user: order.user,
+      type: 'expiry',
+      amount: balanceAmount,
+      paymentMethod: order.paymentResult?.razorpay_payment_id ? 'razorpay' : 'balance',
+      description: 'Final validity expired - balance forfeited',
+      metadata: {
+        orderId: order.orderId,
+        finalValidity: order.finalValidity,
+        balanceAmount
+      }
+    });
 
     // Return products to stock if not verified
     if (!order.isVerified) {
@@ -148,7 +161,7 @@ const handleFinalValidityExpired = async (order) => {
       }
     }
 
-    console.log(`Order ${order._id} final validity expired. Balance refunded. Products returned to stock.`);
+    console.log(`Order ${order._id} final validity expired. Products returned to stock.`);
   } catch (error) {
     console.error('Error handling final validity expiry:', error);
     throw error; // Re-throw the error to be handled by the caller
@@ -201,27 +214,14 @@ const createOrder = asyncHandler(async (req, res) => {
     throw new Error('Shop not found');
   }
 
-  // Log current time, final validity, and their ms values for debugging
-  const now = new Date();
-  const shopFinalValidity = new Date(shop.finalValidityTime);
-  console.log('Order attempt:', {
-    now: now.toISOString(),
-    nowMs: now.getTime(),
-    finalValidityTime: shopFinalValidity.toISOString(),
-    finalValidityMs: shopFinalValidity.getTime(),
-    isAcceptingOrders: shop.isAcceptingOrders()
-  });
-
+  // Check if shop is accepting orders - this will now properly check final validity
   if (!shop.isAcceptingOrders()) {
-    if (now.getTime() >= shopFinalValidity.getTime()) {
-      console.error('BUG: Order creation attempted after final validity!', {
-        now: now.toISOString(),
-        finalValidity: shopFinalValidity.toISOString(),
-        nowMs: now.getTime(),
-        finalValidityMs: shopFinalValidity.getTime()
-      });
+    const now = new Date();
+    const finalValidity = new Date(shop.finalValidityTime);
+    
+    if (now >= finalValidity) {
       res.status(400);
-      throw new Error('Shop is closed for the day (failsafe block).');
+      throw new Error('Shop has closed for the day. Orders are no longer accepted.');
     } else {
       res.status(400);
       throw new Error('Shop is currently closed');
@@ -285,6 +285,8 @@ const createOrder = asyncHandler(async (req, res) => {
 
   if (paymentMethod === 'balance') {
     const user = await User.findById(req.user._id);
+    const previousBalance = user.balance;
+    
     user.balance -= totalPrice;
     await user.save();
 
@@ -298,6 +300,24 @@ const createOrder = asyncHandler(async (req, res) => {
     order.balanceAmount = totalPrice;
     order.status = 'completed';
     await order.save();
+
+    // Log transaction
+    await logTransaction({
+      shop: shopId,
+      order: order._id,
+      user: req.user._id,
+      type: 'payment',
+      amount: totalPrice,
+      paymentMethod: 'balance',
+      description: 'Payment successful using wallet balance',
+      metadata: {
+        orderId: order.orderId,
+        previousBalance,
+        newBalance: user.balance,
+        qrExpiry: order.qrValidUntil,
+        finalValidity: order.finalValidity
+      }
+    });
 
     // Set timer for QR expiry
     setTimeout(async () => {
@@ -341,6 +361,22 @@ const createOrder = asyncHandler(async (req, res) => {
       if (unpaidOrder) {
         unpaidOrder.status = 'expired';
         await unpaidOrder.save();
+        
+        // Log cancellation
+        await logTransaction({
+          shop: shopId,
+          order: order._id,
+          user: req.user._id,
+          type: 'cancellation',
+          amount: totalPrice,
+          status: 'failed',
+          paymentMethod: 'razorpay',
+          description: 'Order cancelled due to payment timeout',
+          metadata: {
+            orderId: order.orderId,
+            reason: 'payment_timeout'
+          }
+        });
       }
     }, 3 * 60 * 1000);
   }
@@ -450,6 +486,13 @@ const continuePayment = asyncHandler(async (req, res) => {
     throw new Error('Not authorized');
   }
 
+  // Check if shop is still accepting orders
+  const shop = await Shop.findById(order.shop);
+  if (!shop || !shop.isAcceptingOrders()) {
+    res.status(400);
+    throw new Error('Shop is no longer accepting orders');
+  }
+
   for (const item of order.orderItems) {
     const product = await Product.findById(item.product);
     if (!product || !product.isAvailable) {
@@ -507,6 +550,12 @@ const updateOrderToPaid = asyncHandler(async (req, res) => {
     throw new Error('Shop not found');
   }
 
+  // Check if shop is still accepting orders
+  if (!shop.isAcceptingOrders()) {
+    res.status(400);
+    throw new Error('Shop is no longer accepting orders');
+  }
+
   const finalValidity = shop?.finalValidityTime ? getEndOfDay(shop.finalValidityTime) : getEndOfDay('23:59');
 
   for (const item of order.orderItems) {
@@ -545,6 +594,23 @@ const updateOrderToPaid = asyncHandler(async (req, res) => {
 
   const updatedOrder = await order.save();
 
+  // Log transaction
+  await logTransaction({
+    shop: order.shop,
+    order: order._id,
+    user: order.user,
+    type: 'payment',
+    amount: order.totalPrice,
+    paymentMethod: 'razorpay',
+    description: 'Payment successful via Razorpay',
+    metadata: {
+      orderId: order.orderId,
+      paymentId: razorpay_payment_id,
+      qrExpiry: order.qrValidUntil,
+      finalValidity: order.finalValidity
+    }
+  });
+
   // Set timer for QR expiry
   setTimeout(async () => {
     const unverifiedOrder = await Order.findOne({
@@ -558,15 +624,17 @@ const updateOrderToPaid = asyncHandler(async (req, res) => {
 
   // Set timer for final validity
   const finalValidityTimeout = new Date(finalValidity).getTime() - Date.now();
-  setTimeout(async () => {
-    const unverifiedOrder = await Order.findOne({
-      _id: order._id,
-      isVerified: false
-    });
-    if (unverifiedOrder) {
-      await handleFinalValidityExpired(unverifiedOrder);
-    }
-  }, finalValidityTimeout);
+  if (finalValidityTimeout > 0) {
+    setTimeout(async () => {
+      const unverifiedOrder = await Order.findOne({
+        _id: order._id,
+        isVerified: false
+      });
+      if (unverifiedOrder) {
+        await handleFinalValidityExpired(unverifiedOrder);
+      }
+    }, finalValidityTimeout);
+  }
 
   res.json(updatedOrder);
 });
@@ -596,6 +664,21 @@ const cancelOrder = asyncHandler(async (req, res) => {
 
   order.status = 'expired';
   await order.save();
+
+  // Log cancellation
+  await logTransaction({
+    shop: order.shop,
+    order: order._id,
+    user: order.user,
+    type: 'cancellation',
+    amount: order.totalPrice,
+    status: 'success',
+    description: 'Order cancelled by user',
+    metadata: {
+      orderId: order.orderId,
+      reason: 'user_cancelled'
+    }
+  });
 
   res.json({ message: 'Order cancelled successfully' });
 });
@@ -645,17 +728,29 @@ const verifyOrderQR = asyncHandler(async (req, res) => {
     throw new Error('Order already verified');
   }
 
-  const user = await User.findById(order.user);
-  if (user && order.balanceAmount > 0) {
-    user.balance += order.balanceAmount;
-    await user.save();
-  }
-  
+  // Don't add balance back to user when verifying - balance should be zero after final validity
   order.isVerified = true;
   order.verifiedAt = Date.now();
   order.balanceAmount = 0;
   
   const updatedOrder = await order.save();
+
+  // Log verification
+  await logTransaction({
+    shop: order.shop,
+    order: order._id,
+    user: order.user._id,
+    type: 'verification',
+    amount: order.totalPrice,
+    paymentMethod: order.paymentResult?.razorpay_payment_id ? 'razorpay' : 'balance',
+    description: 'Order verified by shop staff',
+    metadata: {
+      orderId: order.orderId,
+      verifiedBy: req.user._id,
+      verifiedAt: order.verifiedAt
+    }
+  });
+
   res.json(updatedOrder);
 });
 
@@ -693,7 +788,14 @@ const expireAllOrders = asyncHandler(async (req, res) => {
       expiredCount++;
     }
   }
-  res.json({ message: `All expired orders processed. Total expired: ${expiredCount}` });
+  
+  // Reset all user wallets to zero
+  const result = await User.updateMany({}, { $set: { balance: 0 } });
+  
+  res.json({ 
+    message: `All expired orders processed. Total expired: ${expiredCount}. ${result.modifiedCount} user wallets reset to zero.`,
+    walletsReset: result.modifiedCount
+  });
 });
 
 export {

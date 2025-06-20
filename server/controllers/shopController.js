@@ -338,7 +338,7 @@ const toggleShopStatus = asyncHandler(async (req, res) => {
   shop.isOpen = !shop.isOpen;
   await shop.save();
 
-  // If closing the shop, process unverified orders
+  // If closing the shop, process unverified orders and set all wallets to zero
   if (!shop.isOpen) {
     // Get all unverified orders for this shop
     const orders = await Order.find({
@@ -368,11 +368,13 @@ const toggleShopStatus = asyncHandler(async (req, res) => {
     }
 
     // Set all users' wallet balances to zero
-    await User.updateMany({}, { $set: { balance: 0 } });
+    const walletResetResult = await User.updateMany({}, { $set: { balance: 0 } });
+    console.log(`Reset ${walletResetResult.modifiedCount} user wallets to zero`);
 
     res.json({
-      message: `Shop closed successfully. ${expiredCount} orders expired.${failedOrders.length > 0 ? ` ${failedOrders.length} orders failed to process.` : ''} All user wallets set to zero.`,
+      message: `Shop closed successfully. ${expiredCount} orders expired. ${walletResetResult.modifiedCount} user wallets reset to zero.${failedOrders.length > 0 ? ` ${failedOrders.length} orders failed to process.` : ''}`,
       shop,
+      walletsReset: walletResetResult.modifiedCount,
       failedOrders: failedOrders.length > 0 ? failedOrders : undefined
     });
   } else {
@@ -383,4 +385,34 @@ const toggleShopStatus = asyncHandler(async (req, res) => {
   }
 });
 
-export { getShops, getShopById, updateShop, deleteShop, getShopAnalytics, closeShop, toggleShopStatus };
+// @desc    Set all wallets to zero when final validity ends
+// @route   POST /api/shops/reset-wallets
+// @access  Private/Admin
+const resetAllWallets = asyncHandler(async (req, res) => {
+  try {
+    // Set all users' wallet balances to zero
+    const result = await User.updateMany({}, { $set: { balance: 0 } });
+    
+    console.log(`Reset ${result.modifiedCount} user wallets to zero due to final validity expiry`);
+    
+    res.json({
+      message: `Successfully reset ${result.modifiedCount} user wallets to zero`,
+      walletsReset: result.modifiedCount
+    });
+  } catch (error) {
+    console.error('Error resetting wallets:', error);
+    res.status(500);
+    throw new Error('Failed to reset wallets');
+  }
+});
+
+export { 
+  getShops, 
+  getShopById, 
+  updateShop, 
+  deleteShop, 
+  getShopAnalytics, 
+  closeShop, 
+  toggleShopStatus,
+  resetAllWallets
+};

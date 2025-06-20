@@ -48,12 +48,28 @@ router.get('/test-jwt', (req, res) => {
   }
 });
 
-router.post('/register', registerUser);
+router.post('/register', (req, res) => {
+  const formData = req.body;
+  console.log('Received registration data:', formData);
+  
+  // Call the original registerUser function with the new fields
+  registerUser(req, res, {
+    name: formData.name,
+    email: formData.email,
+    password: formData.password,
+    shopName: formData.shopName,
+    shopDescription: formData.shopDescription,
+    shopLocation: formData.shopLocation,
+    finalValidityTime: formData.finalValidityTime,
+    shopImage: formData.shopImage || undefined,
+  });
+});
+
 router.post('/login', authUser);
 router.post('/verify-otp', verifyOTP);
 router.post('/resend-otp', resendOTP);
 router.route('/profile').get(protect, getUserProfile);
-router.route('/shop-admin').post(protect, admin, createShopAdmin);
+router.post('/shop-admin', createShopAdmin);
 router.route('/shop-admins').get(protect, admin, getShopAdmins);
 router.route('/:id').delete(protect, admin, deleteUser);
 router.get('/', protect, admin, getUsers);

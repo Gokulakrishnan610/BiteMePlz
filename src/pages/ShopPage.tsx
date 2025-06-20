@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Package, AlertCircle, Store } from 'lucide-react';
+import { Package, AlertCircle, Store, Clock } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -24,6 +24,7 @@ interface Shop {
   location: string;
   image: string;
   isOpen: boolean;
+  finalValidityTime: string;
 }
 
 const ShopPage: React.FC = () => {
@@ -61,6 +62,30 @@ const ShopPage: React.FC = () => {
     }
   }, [id]);
 
+  const isShopAcceptingOrders = () => {
+    if (!shop) return false;
+    
+    const now = new Date();
+    const finalValidity = new Date(shop.finalValidityTime);
+    
+    return now < finalValidity && shop.isOpen;
+  };
+
+  const getTimeUntilClosure = () => {
+    if (!shop) return null;
+    
+    const now = new Date();
+    const finalValidity = new Date(shop.finalValidityTime);
+    const timeDiff = finalValidity.getTime() - now.getTime();
+    
+    if (timeDiff <= 0) return null;
+    
+    const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return { hours, minutes };
+  };
+
   const handleAddToCart = (product: Product) => {
     if (!user) {
       toast.error('Please login to add items to cart');
@@ -68,8 +93,8 @@ const ShopPage: React.FC = () => {
       return;
     }
 
-    if (!shop?.isOpen) {
-      toast.error('Shop is currently closed');
+    if (!isShopAcceptingOrders()) {
+      toast.error('Shop is no longer accepting orders for today');
       return;
     }
 
@@ -110,6 +135,9 @@ const ShopPage: React.FC = () => {
     );
   }
 
+  const shopAcceptingOrders = isShopAcceptingOrders();
+  const timeUntilClosure = getTimeUntilClosure();
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
@@ -129,22 +157,35 @@ const ShopPage: React.FC = () => {
             </p>
           </div>
           <div className={`px-4 py-2 rounded-lg ${
-            shop.isOpen 
+            shopAcceptingOrders 
               ? 'bg-[var(--success)] text-white'
               : 'bg-[var(--error)] text-white'
           }`}>
-            {shop.isOpen ? 'Open' : 'Closed'}
+            {shopAcceptingOrders ? 'Open' : 'Closed'}
           </div>
         </div>
-      </div>
 
-      {!shop.isOpen && (
-        <div className="mb-8 p-4 bg-[var(--error)] bg-opacity-10 rounded-lg text-center">
-            <p className="text-red-1000 font-medium">
-            This shop is currently closed. Please check back later.
-          </p>
-        </div>
-      )}
+        {/* Shop Status Messages */}
+        {!shopAcceptingOrders ? (
+          <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
+            <AlertCircle className="text-red-600 mr-3" size={24} />
+            <div>
+              <p className="text-red-800 font-medium">Shop is closed for orders</p>
+              <p className="text-red-600">Orders are no longer being accepted for today.</p>
+            </div>
+          </div>
+        ) : timeUntilClosure && (
+          <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center">
+            <Clock className="text-yellow-600 mr-3" size={24} />
+            <div>
+              <p className="text-yellow-800 font-medium">
+                Shop closes in {timeUntilClosure.hours}h {timeUntilClosure.minutes}m
+              </p>
+              <p className="text-yellow-600">Complete your order before the shop closes.</p>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {products.map((product) => (
@@ -169,13 +210,13 @@ const ShopPage: React.FC = () => {
               </div>
               <button
                 onClick={() => handleAddToCart(product)}
-                disabled={product.stock === 0 || !shop.isOpen}
+                disabled={product.stock === 0 || !shopAcceptingOrders}
                 className={`w-full btn-primary mt-4 ${
-                  (product.stock === 0 || !shop.isOpen) ? 'opacity-50 cursor-not-allowed' : ''
+                  (product.stock === 0 || !shopAcceptingOrders) ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
                 <Package size={20} className="inline-block mr-2" />
-                {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+                {product.stock === 0 ? 'Out of Stock' : !shopAcceptingOrders ? 'Shop Closed' : 'Add to Cart'}
               </button>
             </div>
           </div>

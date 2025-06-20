@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Store } from 'lucide-react';
+import { Store, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const CreateShopPage: React.FC = () => {
@@ -14,7 +14,9 @@ const CreateShopPage: React.FC = () => {
     shopName: '',
     shopDescription: '',
     shopLocation: '',
-    shopImage: ''
+    shopImage: '',
+    finalValidityTime: '18:30', // Default to 6:30 PM
+    qrValidityMinutes: '20'
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,11 +41,43 @@ const CreateShopPage: React.FC = () => {
         throw new Error('Password must be at least 6 characters long');
       }
 
-      const response = await axios.post('/api/users/shop-admin', formData);
+      // Validate QR validity minutes
+      const qrMinutes = parseInt(formData.qrValidityMinutes);
+      if (isNaN(qrMinutes) || qrMinutes < 1 || qrMinutes > 60) {
+        throw new Error('QR validity must be between 1 and 60 minutes');
+      }
+
+      // Create final validity time for today
+      const now = new Date();
+      const [hours, minutes] = formData.finalValidityTime.split(':');
+      const finalValidityDate = new Date();
+      finalValidityDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      
+      // If the time is in the past, set it for tomorrow
+      if (finalValidityDate <= now) {
+        finalValidityDate.setDate(finalValidityDate.getDate() + 1);
+      }
+
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        shopName: formData.shopName,
+        shopDescription: formData.shopDescription,
+        shopLocation: formData.shopLocation,
+        shopImage: formData.shopImage || undefined,
+        finalValidityTime: finalValidityDate.toISOString(),
+        qrValidityMinutes: qrMinutes
+      };
+
+      console.log('Sending payload:', payload);
+
+      const response = await axios.post('/api/users/shop-admin', payload);
       
       toast.success('Shop created successfully');
       navigate('/admin/shops');
     } catch (error: any) {
+      console.log('Error details:', error.response?.data || error);
       const errorMessage = error.response?.data?.message || error.message || 'Failed to create shop';
       toast.error(errorMessage);
     } finally {
@@ -127,6 +161,45 @@ const CreateShopPage: React.FC = () => {
               <p className="text-sm text-[var(--gray-500)] mt-1">
                 Leave empty to use default image
               </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+                  <Clock size={16} className="inline mr-1" />
+                  Final Validity Time *
+                </label>
+                <input
+                  type="time"
+                  name="finalValidityTime"
+                  value={formData.finalValidityTime}
+                  onChange={handleChange}
+                  className="input"
+                  required
+                />
+                <p className="text-sm text-[var(--gray-500)] mt-1">
+                  Shop closes for orders at this time
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+                  QR Validity (minutes) *
+                </label>
+                <input
+                  type="number"
+                  name="qrValidityMinutes"
+                  value={formData.qrValidityMinutes}
+                  onChange={handleChange}
+                  className="input"
+                  min="1"
+                  max="60"
+                  required
+                />
+                <p className="text-sm text-[var(--gray-500)] mt-1">
+                  How long QR codes remain valid (1-60 minutes)
+                </p>
+              </div>
             </div>
           </div>
 
