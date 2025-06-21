@@ -15,6 +15,7 @@ import ShopPage from './pages/ShopPage';
 import ProductPage from './pages/ProductPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 // Student Pages
@@ -39,6 +40,7 @@ import ShopAdminProductsPage from './pages/shopAdmin/ProductsPage';
 import ShopAdminCreateProductPage from './pages/shopAdmin/CreateProductPage';
 import ShopAdminEditProductPage from './pages/shopAdmin/EditProductPage';
 import ShopAdminOrdersPage from './pages/shopAdmin/OrdersPage';
+import ShopAdminTransactionsPage from './pages/shopAdmin/TransactionsPage';
 import ShopAdminScanQRPage from './pages/shopAdmin/ScanQRPage';
 
 // Protected Route Component
@@ -66,6 +68,7 @@ function App() {
           <Route path="product/:id" element={<ProductPage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<RegisterPage />} />
+          <Route path="forgot-password" element={<ForgotPasswordPage />} />
           
           {/* Student Routes */}
           <Route path="cart" element={<CartPage />} />
@@ -128,6 +131,7 @@ function App() {
           <Route path="products/create" element={<ShopAdminCreateProductPage />} />
           <Route path="products/edit/:id" element={<ShopAdminEditProductPage />} />
           <Route path="orders" element={<ShopAdminOrdersPage />} />
+          <Route path="transactions" element={<ShopAdminTransactionsPage />} />
           <Route path="scan" element={<ShopAdminScanQRPage />} />
         </Route>
         

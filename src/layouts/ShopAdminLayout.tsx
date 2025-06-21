@@ -8,7 +8,8 @@ import {
   QrCode, 
   LogOut, 
   Menu, 
-  X 
+  X,
+  Receipt
 } from 'lucide-react';
 
 const ShopAdminLayout: React.FC = () => {
@@ -93,6 +94,16 @@ const ShopAdminLayout: React.FC = () => {
           >
             <ShoppingBag size={20} className="mr-3" />
             <span>Orders</span>
+          </Link>
+          <Link
+            to="/shop-admin/transactions"
+            className={`flex items-center px-6 py-3 hover:bg-[var(--primary)] ${
+              isActive('/shop-admin/transactions') ? 'bg-[var(--primary)]' : ''
+            }`}
+            onClick={closeSidebar}
+          >
+            <Receipt size={20} className="mr-3" />
+            <span>Transactions</span>
           </Link>
           <Link
             to="/shop-admin/scan"

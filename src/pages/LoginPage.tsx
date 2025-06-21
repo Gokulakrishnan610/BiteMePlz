@@ -81,12 +81,17 @@ const LoginPage: React.FC = () => {
             )}
           </button>
 
-          <p className="text-center text-[var(--gray-600)]">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-[var(--primary)] hover:underline">
-              Register here
+          <div className="text-center space-y-2">
+            <Link to="/forgot-password" className="text-[var(--primary)] hover:underline block">
+              Forgot your password?
             </Link>
-          </p>
+            <p className="text-[var(--gray-600)]">
+              Don't have an account?{' '}
+              <Link to="/register" className="text-[var(--primary)] hover:underline">
+                Register here
+              </Link>
+            </p>
+          </div>
         </form>
       </div>
     </div>

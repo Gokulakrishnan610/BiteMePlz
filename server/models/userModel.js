@@ -39,6 +39,14 @@ const userSchema = mongoose.Schema(
       code: String,
       expiresAt: Date,
     },
+    passwordResetOtp: {
+      code: String,
+      expiresAt: Date,
+    },
+    passwordResetToken: {
+      token: String,
+      expiresAt: Date,
+    },
     balance: {
       type: Number,
       default: 0,
