@@ -1,45 +1,84 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
-import { Store, Clock } from 'lucide-react';
+import { Store, Clock, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ImageUpload from '../../components/ImageUpload';
 
-const CreateShopPage: React.FC = () => {
+interface Shop {
+  _id: string;
+  name: string;
+  description: string;
+  location: string;
+  image: string;
+  isActive: boolean;
+  isOpen: boolean;
+  finalValidityTime: string;
+  qrValidityMinutes: number;
+}
+
+const EditShopPage: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [shop, setShop] = useState<Shop | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
-    password: '',
-    shopName: '',
-    shopDescription: '',
-    shopLocation: '',
-    shopImage: '',
-    finalValidityTime: '18:30', // Default to 6:30 PM
+    description: '',
+    location: '',
+    image: '',
+    isActive: true,
+    isOpen: true,
+    finalValidityTime: '18:30',
     qrValidityMinutes: '20'
   });
 
+  useEffect(() => {
+    const fetchShop = async () => {
+      try {
+        const { data } = await axios.get(`/api/shops/${id}`);
+        setShop(data);
+        
+        // Format the time for the input
+        const validityTime = data.finalValidityTime 
+          ? new Date(data.finalValidityTime).toLocaleTimeString('en-US', {
+              hour12: false,
+              hour: '2-digit',
+              minute: '2-digit'
+            })
+          : '18:30';
+
+        setFormData({
+          name: data.name || '',
+          description: data.description || '',
+          location: data.location || '',
+          image: data.image || '',
+          isActive: data.isActive ?? true,
+          isOpen: data.isOpen ?? true,
+          finalValidityTime: validityTime,
+          qrValidityMinutes: (data.qrValidityMinutes || 20).toString()
+        });
+        setLoading(false);
+      } catch (error) {
+        toast.error('Failed to load shop details');
+        navigate('/admin/shops');
+      }
+    };
+
+    if (id) {
+      fetchShop();
+    }
+  }, [id, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
 
     try {
       // Validate required fields
-      if (!formData.name || !formData.email || !formData.password || 
-          !formData.shopName || !formData.shopDescription || !formData.shopLocation) {
+      if (!formData.name || !formData.description || !formData.location) {
         throw new Error('Please fill in all required fields');
-      }
-
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.email)) {
-        throw new Error('Please enter a valid email address');
-      }
-
-      // Validate password length
-      if (formData.password.length < 6) {
-        throw new Error('Password must be at least 6 characters long');
       }
 
       // Validate QR validity minutes
@@ -61,42 +100,61 @@ const CreateShopPage: React.FC = () => {
 
       const payload = {
         name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        shopName: formData.shopName,
-        shopDescription: formData.shopDescription,
-        shopLocation: formData.shopLocation,
-        shopImage: formData.shopImage || undefined,
+        description: formData.description,
+        location: formData.location,
+        image: formData.image || undefined,
+        isActive: formData.isActive,
+        isOpen: formData.isOpen,
         finalValidityTime: finalValidityDate.toISOString(),
         qrValidityMinutes: qrMinutes
       };
 
-      console.log('Sending payload:', payload);
-
-      const response = await axios.post('/api/users/shop-admin', payload);
+      await axios.put(`/api/shops/${id}`, payload);
       
-      toast.success('Shop created successfully');
+      toast.success('Shop updated successfully');
       navigate('/admin/shops');
     } catch (error: any) {
-      console.log('Error details:', error.response?.data || error);
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to create shop';
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to update shop';
       toast.error(errorMessage);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value, type } = e.target;
+    const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
   };
 
   const handleImageUpload = (imagePath: string) => {
-    setFormData({ ...formData, shopImage: imagePath });
+    setFormData(prev => ({ ...prev, image: imagePath }));
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--primary)]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Create New Shop</h1>
+      <div className="flex items-center mb-6">
+        <button
+          onClick={() => navigate('/admin/shops')}
+          className="flex items-center text-[var(--primary)] hover:underline mr-4"
+        >
+          <ArrowLeft size={20} className="mr-2" />
+          Back to Shops
+        </button>
+        <h1 className="text-2xl font-bold">Edit Shop</h1>
+      </div>
 
       <div className="card">
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
@@ -112,8 +170,8 @@ const CreateShopPage: React.FC = () => {
               </label>
               <input
                 type="text"
-                name="shopName"
-                value={formData.shopName}
+                name="name"
+                value={formData.name}
                 onChange={handleChange}
                 className="input"
                 required
@@ -126,8 +184,8 @@ const CreateShopPage: React.FC = () => {
                 Description *
               </label>
               <textarea
-                name="shopDescription"
-                value={formData.shopDescription}
+                name="description"
+                value={formData.description}
                 onChange={handleChange}
                 className="input"
                 rows={3}
@@ -142,8 +200,8 @@ const CreateShopPage: React.FC = () => {
               </label>
               <input
                 type="text"
-                name="shopLocation"
-                value={formData.shopLocation}
+                name="location"
+                value={formData.location}
                 onChange={handleChange}
                 className="input"
                 required
@@ -157,10 +215,10 @@ const CreateShopPage: React.FC = () => {
               </label>
               <ImageUpload
                 onImageUpload={handleImageUpload}
-                currentImage={formData.shopImage}
+                currentImage={formData.image}
               />
               <p className="text-sm text-[var(--gray-500)] mt-1">
-                Upload a shop image or leave empty to use default
+                Upload a new shop image or keep the current one
               </p>
             </div>
 
@@ -202,61 +260,35 @@ const CreateShopPage: React.FC = () => {
                 </p>
               </div>
             </div>
-          </div>
 
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold flex items-center">
-              <Store size={24} className="mr-2 text-[var(--primary)]" />
-              Shop Admin Details
-            </h2>
-            
-            <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Admin Name *
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="input"
-                required
-                placeholder="Enter admin name"
-              />
-            </div>
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Shop Status</h3>
+              
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="isActive"
+                  checked={formData.isActive}
+                  onChange={handleChange}
+                  className="h-4 w-4 text-[var(--primary)] border-[var(--gray-300)] rounded"
+                />
+                <label className="ml-2 text-sm text-[var(--gray-700)]">
+                  Shop is active
+                </label>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Admin Email *
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="input"
-                required
-                placeholder="Enter admin email"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Admin Password *
-              </label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className="input"
-                required
-                minLength={6}
-                placeholder="Enter admin password"
-              />
-              <p className="text-sm text-[var(--gray-500)] mt-1">
-                Minimum 6 characters
-              </p>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="isOpen"
+                  checked={formData.isOpen}
+                  onChange={handleChange}
+                  className="h-4 w-4 text-[var(--primary)] border-[var(--gray-300)] rounded"
+                />
+                <label className="ml-2 text-sm text-[var(--gray-700)]">
+                  Shop is currently open
+                </label>
+              </div>
             </div>
           </div>
 
@@ -270,16 +302,16 @@ const CreateShopPage: React.FC = () => {
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={saving}
               className="btn-primary"
             >
-              {loading ? (
+              {saving ? (
                 <span className="flex items-center">
                   <span className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></span>
-                  Creating...
+                  Updating...
                 </span>
               ) : (
-                'Create Shop'
+                'Update Shop'
               )}
             </button>
           </div>
@@ -289,4 +321,4 @@ const CreateShopPage: React.FC = () => {
   );
 };
 
-export default CreateShopPage;
+export default EditShopPage;

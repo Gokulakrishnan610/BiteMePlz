@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { LogIn } from 'lucide-react';
+import { LogIn, Eye, EyeOff, Zap, Mail, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -26,73 +27,124 @@ const LoginPage: React.FC = () => {
     }
   };
 
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4">
-      <div className="card max-w-md w-full">
+    <div className="min-h-screen bg-gradient-to-br from-[var(--primary-bg)] via-[var(--secondary-bg)] to-[var(--primary-bg)] flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        {/* Logo Section */}
         <div className="text-center mb-8">
-          <LogIn className="mx-auto text-[var(--primary)]" size={48} />
-          <h1 className="text-2xl font-bold mt-4">Welcome Back</h1>
-          <p className="text-[var(--gray-600)] mt-2">
-            Sign in to your account to continue
-          </p>
+          <div className="flex justify-center mb-4">
+            <div className="p-4 rounded-full bg-gradient-to-r from-[var(--accent-purple)] to-[var(--accent-violet)] glow">
+              <Zap size={32} className="text-white" />
+            </div>
+          </div>
+          <h1 className="text-3xl font-bold gradient-text mb-2">Campus Kiosk</h1>
+          <p className="text-[var(--muted-text)]">Your digital campus marketplace</p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label htmlFor="email" className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-              Email Address
-            </label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="input"
-              required
-            />
-          </div>
-
-          <div className="mb-6">
-            <label htmlFor="password" className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input"
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full btn-primary mb-4"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center">
-                <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></span>
-                Signing in...
-              </span>
-            ) : (
-              'Sign In'
-            )}
-          </button>
-
-          <div className="text-center space-y-2">
-            <Link to="/forgot-password" className="text-[var(--primary)] hover:underline block">
-              Forgot your password?
-            </Link>
-            <p className="text-[var(--gray-600)]">
-              Don't have an account?{' '}
-              <Link to="/register" className="text-[var(--primary)] hover:underline">
-                Register here
-              </Link>
+        {/* Login Form */}
+        <div className="form-container p-8">
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <LogIn className="text-[var(--accent-purple)]" size={48} />
+            </div>
+            <h2 className="text-2xl font-bold text-[var(--primary-text)] mb-2">Welcome Back</h2>
+            <p className="text-[var(--secondary-text)]">
+              Sign in to your account to continue
             </p>
           </div>
-        </form>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="form-group">
+              <label htmlFor="email" className="form-label">
+                <Mail size={16} className="inline mr-2" />
+                Email Address
+              </label>
+              <input
+                type="email"
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input"
+                placeholder="Enter your email"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="password" className="form-label">
+                <Lock size={16} className="inline mr-2" />
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input pr-12"
+                  placeholder="Enter your password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-[var(--muted-text)] hover:text-[var(--accent-purple)] transition-colors"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full btn-primary py-3 text-lg"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center">
+                  <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></span>
+                  Signing in...
+                </span>
+              ) : (
+                <>
+                  <LogIn size={20} className="inline mr-2" />
+                  Sign In
+                </>
+              )}
+            </button>
+
+            <div className="text-center space-y-4">
+              <Link 
+                to="/forgot-password" 
+                className="text-[var(--accent-purple)] hover:text-[var(--accent-violet)] transition-colors block"
+              >
+                Forgot your password?
+              </Link>
+              <div className="border-t border-[var(--border-color)] pt-4">
+                <p className="text-[var(--secondary-text)]">
+                  Don't have an account?{' '}
+                  <Link 
+                    to="/register" 
+                    className="text-[var(--accent-purple)] hover:text-[var(--accent-violet)] font-medium transition-colors"
+                  >
+                    Register here
+                  </Link>
+                </p>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center mt-8">
+          <p className="text-[var(--muted-text)] text-sm">
+            © 2024 Campus Kiosk. All rights reserved.
+          </p>
+        </div>
       </div>
     </div>
   );

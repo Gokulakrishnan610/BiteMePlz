@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Package, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Loader from '../../components/Loader';
+import ImageUpload from '../../components/ImageUpload';
 
 interface Product {
   name: string;
@@ -69,6 +70,10 @@ const EditProductPage: React.FC = () => {
     setFormData({ ...formData, [e.target.name]: value });
   };
 
+  const handleImageUpload = (imagePath: string) => {
+    setFormData({ ...formData, image: imagePath });
+  };
+
   if (loading) {
     return <Loader />;
   }
@@ -93,7 +98,7 @@ const EditProductPage: React.FC = () => {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Product Name
+                Product Name *
               </label>
               <input
                 type="text"
@@ -107,7 +112,7 @@ const EditProductPage: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Description
+                Description *
               </label>
               <textarea
                 name="description"
@@ -121,7 +126,7 @@ const EditProductPage: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Price (₹)
+                Price (₹) *
               </label>
               <input
                 type="number"
@@ -137,7 +142,7 @@ const EditProductPage: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Stock
+                Stock *
               </label>
               <input
                 type="number"
@@ -152,16 +157,15 @@ const EditProductPage: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Image URL
+                Product Image
               </label>
-              <input
-                type="url"
-                name="image"
-                value={formData.image}
-                onChange={handleChange}
-                className="input"
-                placeholder="https://example.com/image.jpg"
+              <ImageUpload
+                onImageUpload={handleImageUpload}
+                currentImage={formData.image}
               />
+              <p className="text-sm text-[var(--gray-500)] mt-1">
+                Upload a new image or keep the current one
+              </p>
             </div>
 
             <div className="flex items-center">

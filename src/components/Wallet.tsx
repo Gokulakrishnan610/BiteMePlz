@@ -7,17 +7,17 @@ const Wallet: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center space-x-2">
-        <WalletIcon size={20} className="text-[var(--gray-400)]" />
-        <div className="h-4 w-16 bg-[var(--gray-200)] animate-pulse rounded"></div>
+      <div className="flex items-center space-x-2 bg-[var(--card-bg)] px-4 py-2 rounded-lg border border-[var(--border-color)]">
+        <WalletIcon size={20} className="text-[var(--muted-text)]" />
+        <div className="h-4 w-16 bg-[var(--border-color)] animate-pulse rounded"></div>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center space-x-2">
-      <WalletIcon size={20} className="text-[var(--primary)]" />
-      <span className="font-medium">₹{balance}</span>
+    <div className="flex items-center space-x-2 bg-[var(--card-bg)] px-4 py-2 rounded-lg border border-[var(--border-color)] hover:border-[var(--accent-purple)] transition-colors duration-200">
+      <WalletIcon size={20} className="text-[var(--accent-purple)]" />
+      <span className="font-medium text-[var(--primary-text)]">₹{balance}</span>
     </div>
   );
 };

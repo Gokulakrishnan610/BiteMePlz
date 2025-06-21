@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { Store, Plus, Edit, Trash2, Eye } from 'lucide-react';
+import { Store, Plus, Edit, Trash2, Eye, Clock, MapPin } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 interface Shop {
   _id: string;
@@ -10,12 +11,23 @@ interface Shop {
   description: string;
   location: string;
   isActive: boolean;
+  isOpen: boolean;
   createdAt: string;
+  finalValidityTime: string;
 }
 
 const ShopsPage: React.FC = () => {
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    shopId: string;
+    shopName: string;
+  }>({
+    isOpen: false,
+    shopId: '',
+    shopName: ''
+  });
 
   useEffect(() => {
     fetchShops();
@@ -32,95 +44,184 @@ const ShopsPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this shop?')) return;
+  const handleDeleteClick = (shop: Shop) => {
+    setDeleteDialog({
+      isOpen: true,
+      shopId: shop._id,
+      shopName: shop.name
+    });
+  };
 
+  const handleDeleteConfirm = async () => {
     try {
-      await axios.delete(`/api/shops/${id}`);
+      await axios.delete(`/api/shops/${deleteDialog.shopId}`);
       toast.success('Shop deleted successfully');
       fetchShops();
     } catch (error) {
       toast.error('Failed to delete shop');
+    } finally {
+      setDeleteDialog({
+        isOpen: false,
+        shopId: '',
+        shopName: ''
+      });
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialog({
+      isOpen: false,
+      shopId: '',
+      shopName: ''
+    });
+  };
+
+  const formatTime = (dateString: string) => {
+    if (!dateString) return 'Not set';
+    return new Date(dateString).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--primary)]"></div>
+      <div className="flex items-center justify-center h-64">
+        <div className="flex space-x-2 text-4xl font-bold">
+          <span className="animate-bounce text-[var(--accent-purple)]" style={{ animationDelay: '0ms' }}>L</span>
+          <span className="animate-bounce text-[var(--accent-violet)]" style={{ animationDelay: '150ms' }}>O</span>
+          <span className="animate-bounce text-[var(--accent-purple)]" style={{ animationDelay: '300ms' }}>A</span>
+          <span className="animate-bounce text-[var(--accent-violet)]" style={{ animationDelay: '450ms' }}>D</span>
+          <span className="animate-bounce text-[var(--accent-purple)]" style={{ animationDelay: '600ms' }}>I</span>
+          <span className="animate-bounce text-[var(--accent-violet)]" style={{ animationDelay: '750ms' }}>N</span>
+          <span className="animate-bounce text-[var(--accent-purple)]" style={{ animationDelay: '900ms' }}>G</span>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 fade-in">
+      {/* Header */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Shops</h1>
+        <div>
+          <h1 className="text-3xl font-bold gradient-text">Shop Management</h1>
+          <p className="text-[var(--secondary-text)] mt-2">Manage all campus shops and their settings</p>
+        </div>
         <Link to="/admin/shops/create" className="btn-primary flex items-center">
           <Plus size={20} className="mr-2" />
           Create Shop
         </Link>
       </div>
 
-      <div className="card">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Location</th>
-                <th>Status</th>
-                <th>Created At</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shops.map((shop) => (
-                <tr key={shop._id}>
-                  <td className="flex items-center">
-                    <Store size={20} className="mr-2 text-[var(--primary)]" />
-                    {shop.name}
-                  </td>
-                  <td>{shop.location}</td>
-                  <td>
-                    <span className={`badge ${
-                      shop.isActive ? 'badge-success' : 'badge-error'
-                    }`}>
-                      {shop.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td>{new Date(shop.createdAt).toLocaleDateString()}</td>
-                  <td>
-                    <div className="flex space-x-2">
-                      <Link
-                        to={`/admin/shops/${shop._id}`}
-                        className="p-2 text-[var(--primary)] hover:bg-[var(--gray-100)] rounded"
-                        title="View Details"
-                      >
-                        <Eye size={18} />
-                      </Link>
-                      <Link
-                        to={`/admin/shops/${shop._id}/edit`}
-                        className="p-2 text-[var(--primary)] hover:bg-[var(--gray-100)] rounded"
-                        title="Edit Shop"
-                      >
-                        <Edit size={18} />
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(shop._id)}
-                        className="p-2 text-[var(--error)] hover:bg-[var(--gray-100)] rounded"
-                        title="Delete Shop"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+      {/* Shops Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {shops.map((shop) => (
+          <div key={shop._id} className="card hover:scale-105 transition-all duration-300 glow-hover overflow-hidden">
+            {/* Shop Header */}
+            <div className="card-header">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-gradient-to-r from-[var(--accent-purple)] to-[var(--accent-violet)] rounded-lg">
+                    <Store className="text-white" size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-[var(--primary-text)]">{shop.name}</h3>
+                    <div className="flex items-center text-[var(--muted-text)] text-sm mt-1">
+                      <MapPin size={14} className="mr-1" />
+                      <span className="text-[var(--secondary-text)]">{shop.location}</span>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                </div>
+                <div className="flex space-x-1">
+                  <span className={`badge ${
+                    shop.isActive ? 'badge-success' : 'badge-error'
+                  }`}>
+                    {shop.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                  <span className={`badge ${
+                    shop.isOpen ? 'badge-success' : 'badge-warning'
+                  }`}>
+                    {shop.isOpen ? 'Open' : 'Closed'}
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-[var(--secondary-text)] text-sm line-clamp-2 mb-4">
+                {shop.description}
+              </p>
+
+              <div className="flex items-center text-[var(--muted-text)] text-sm">
+                <Clock size={14} className="mr-1" />
+                <span className="text-[var(--secondary-text)]">Closes at {formatTime(shop.finalValidityTime)}</span>
+              </div>
+            </div>
+
+            {/* Shop Actions */}
+            <div className="card-footer">
+              <div className="flex justify-between items-center">
+                <span className="text-[var(--muted-text)] text-sm">
+                  Created {new Date(shop.createdAt).toLocaleDateString()}
+                </span>
+                <div className="flex space-x-2">
+                  <Link
+                    to={`/admin/shops/${shop._id}`}
+                    className="p-2 text-[var(--info)] hover:bg-[var(--hover-bg)] rounded-lg transition-colors"
+                    title="View Details"
+                  >
+                    <Eye size={16} />
+                  </Link>
+                  <Link
+                    to={`/admin/shops/${shop._id}/edit`}
+                    className="p-2 text-[var(--accent-purple)] hover:bg-[var(--hover-bg)] rounded-lg transition-colors"
+                    title="Edit Shop"
+                  >
+                    <Edit size={16} />
+                  </Link>
+                  <button
+                    onClick={() => handleDeleteClick(shop)}
+                    className="p-2 text-[var(--error)] hover:bg-[var(--hover-bg)] rounded-lg transition-colors"
+                    title="Delete Shop"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
+
+      {/* Empty State */}
+      {shops.length === 0 && (
+        <div className="text-center py-16">
+          <div className="card p-12 max-w-md mx-auto">
+            <Store size={64} className="text-[var(--muted-text)] mx-auto mb-6" />
+            <h3 className="text-2xl font-semibold text-[var(--secondary-text)] mb-4">
+              No Shops Found
+            </h3>
+            <p className="text-[var(--muted-text)] mb-6">
+              Get started by creating your first shop.
+            </p>
+            <Link to="/admin/shops/create" className="btn-primary">
+              <Plus size={20} className="inline mr-2" />
+              Create First Shop
+            </Link>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        isOpen={deleteDialog.isOpen}
+        title="Delete Shop"
+        message={`Are you sure you want to delete "${deleteDialog.shopName}"? This action cannot be undone and will also delete all associated products and orders.`}
+        confirmText="Delete Shop"
+        cancelText="Cancel"
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        type="danger"
+      />
     </div>
   );
 };

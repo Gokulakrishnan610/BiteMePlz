@@ -30,6 +30,7 @@ import AdminShopsPage from './pages/admin/ShopsPage';
 import AdminShopDetailsPage from './pages/admin/ShopDetailsPage';
 import AdminUsersPage from './pages/admin/UsersPage';
 import AdminCreateShopPage from './pages/admin/CreateShopPage';
+import AdminEditShopPage from './pages/admin/EditShopPage';
 import TransactionsPage from './pages/admin/TransactionsPage';
 import AnalyticsPage from './pages/admin/AnalyticsPage';
 import FinancialReportsPage from './pages/admin/FinancialReportsPage';
@@ -110,6 +111,7 @@ function App() {
           <Route index element={<AdminDashboardPage />} />
           <Route path="shops" element={<AdminShopsPage />} />
           <Route path="shops/:id" element={<AdminShopDetailsPage />} />
+          <Route path="shops/:id/edit" element={<AdminEditShopPage />} />
           <Route path="shops/create" element={<AdminCreateShopPage />} />
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="transactions" element={<TransactionsPage />} />
