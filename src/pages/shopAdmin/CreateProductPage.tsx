@@ -14,7 +14,7 @@ const CreateProductPage: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    category: 'others',
+    category: 'others', // Default to 'others'
     price: '',
     stock: '',
     image: ''
@@ -34,26 +34,45 @@ const CreateProductPage: React.FC = () => {
     setLoading(true);
 
     try {
-      await axios.post('/api/products', {
-        ...formData,
+      console.log('Creating product with data:', formData);
+      
+      const createData = {
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        category: formData.category.toLowerCase().trim(), // Ensure lowercase
         price: Number(formData.price),
-        stock: Number(formData.stock)
-      });
+        stock: Number(formData.stock),
+        image: formData.image
+      };
+      
+      console.log('Create payload:', createData);
+      
+      const response = await axios.post('/api/products', createData);
+      console.log('Product created successfully:', response.data);
+      
       toast.success('Product created successfully');
       navigate('/shop-admin/products');
-    } catch (error) {
-      toast.error('Failed to create product');
+    } catch (error: any) {
+      console.error('Error creating product:', error);
+      toast.error(error.response?.data?.message || 'Failed to create product');
     } finally {
       setLoading(false);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    console.log('Form field changed:', { name, value });
+    
+    setFormData(prev => {
+      const newData = { ...prev, [name]: value };
+      console.log('Updated form data:', newData);
+      return newData;
+    });
   };
 
   const handleImageUpload = (imagePath: string) => {
-    setFormData({ ...formData, image: imagePath });
+    setFormData(prev => ({ ...prev, image: imagePath }));
   };
 
   return (
@@ -95,6 +114,9 @@ const CreateProductPage: React.FC = () => {
                   </option>
                 ))}
               </select>
+              <p className="text-xs text-[var(--muted-text)] mt-1">
+                Selected: {categories.find(cat => cat.value === formData.category)?.label || formData.category}
+              </p>
             </div>
 
             <div>
