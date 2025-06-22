@@ -4,6 +4,7 @@ import User from '../models/userModel.js';
 import Product from '../models/productModel.js';
 import Order from '../models/orderModel.js';
 import { handleFinalValidityExpired } from './orderController.js';
+import { logShopActivity } from '../utils/shopLogger.js';
 
 // @desc    Get all shops
 // @route   GET /api/shops
@@ -47,6 +48,18 @@ const updateShop = asyncHandler(async (req, res) => {
     throw new Error('Not authorized');
   }
 
+  // Store previous state for logging
+  const previousState = {
+    name: shop.name,
+    description: shop.description,
+    location: shop.location,
+    image: shop.image,
+    isActive: shop.isActive,
+    isOpen: shop.isOpen,
+    finalValidityTime: shop.finalValidityTime,
+    qrValidityMinutes: shop.qrValidityMinutes
+  };
+
   // Validate finalValidityTime if it's being updated
   if (req.body.finalValidityTime) {
     const validityTime = new Date(req.body.finalValidityTime);
@@ -74,7 +87,60 @@ const updateShop = asyncHandler(async (req, res) => {
     shop.finalValidityTime = new Date(req.body.finalValidityTime);
   }
 
+  if (req.body.qrValidityMinutes) {
+    shop.qrValidityMinutes = req.body.qrValidityMinutes;
+  }
+
   const updatedShop = await shop.save();
+
+  // Store new state for logging
+  const newState = {
+    name: updatedShop.name,
+    description: updatedShop.description,
+    location: updatedShop.location,
+    image: updatedShop.image,
+    isActive: updatedShop.isActive,
+    isOpen: updatedShop.isOpen,
+    finalValidityTime: updatedShop.finalValidityTime,
+    qrValidityMinutes: updatedShop.qrValidityMinutes
+  };
+
+  // Determine what was updated
+  const changes = [];
+  if (previousState.finalValidityTime !== newState.finalValidityTime) {
+    changes.push('final validity time');
+  }
+  if (previousState.qrValidityMinutes !== newState.qrValidityMinutes) {
+    changes.push('QR validity duration');
+  }
+  if (previousState.isOpen !== newState.isOpen) {
+    changes.push(newState.isOpen ? 'opened shop' : 'closed shop');
+  }
+  if (previousState.isActive !== newState.isActive) {
+    changes.push(newState.isActive ? 'activated shop' : 'deactivated shop');
+  }
+
+  // Log the activity
+  if (changes.length > 0) {
+    const action = req.body.finalValidityTime ? 'validity_updated' : 
+                  req.body.qrValidityMinutes ? 'qr_validity_updated' : 
+                  'settings_updated';
+    
+    await logShopActivity({
+      shop: shop._id,
+      action,
+      performedBy: req.user._id,
+      previousState,
+      newState,
+      metadata: {
+        changes,
+        updatedFields: Object.keys(req.body)
+      },
+      description: `Shop settings updated: ${changes.join(', ')}`,
+      req
+    });
+  }
+
   res.json(updatedShop);
 });
 
@@ -88,6 +154,25 @@ const deleteShop = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error('Shop not found');
   }
+
+  // Log the deletion
+  await logShopActivity({
+    shop: shop._id,
+    action: 'shop_deleted',
+    performedBy: req.user._id,
+    previousState: {
+      name: shop.name,
+      isActive: shop.isActive
+    },
+    newState: {
+      deleted: true
+    },
+    metadata: {
+      deletedAt: new Date()
+    },
+    description: `Shop "${shop.name}" deleted by admin`,
+    req
+  });
 
   // Delete associated products
   await Product.deleteMany({ shop: shop._id });
@@ -276,9 +361,33 @@ const closeShop = asyncHandler(async (req, res) => {
     throw new Error('Not authorized');
   }
 
+  // Store previous state
+  const previousState = {
+    isOpen: shop.isOpen,
+    finalValidityTime: shop.finalValidityTime
+  };
+
   // Close the shop
   shop.isOpen = false;
   await shop.save();
+
+  // Log the manual closure
+  await logShopActivity({
+    shop: shop._id,
+    action: 'manual_close',
+    performedBy: req.user._id,
+    previousState,
+    newState: {
+      isOpen: false,
+      closedAt: new Date()
+    },
+    metadata: {
+      manualClosure: true,
+      closedBy: req.user.name
+    },
+    description: `Shop manually closed by ${req.user.name}`,
+    req
+  });
 
   // Get all unverified orders for this shop
   const orders = await Order.find({
@@ -334,9 +443,32 @@ const toggleShopStatus = asyncHandler(async (req, res) => {
     throw new Error('Not authorized');
   }
 
+  // Store previous state
+  const previousState = {
+    isOpen: shop.isOpen
+  };
+
   // Toggle the shop status
   shop.isOpen = !shop.isOpen;
   await shop.save();
+
+  // Log the toggle action
+  await logShopActivity({
+    shop: shop._id,
+    action: shop.isOpen ? 'shop_opened' : 'shop_closed',
+    performedBy: req.user._id,
+    previousState,
+    newState: {
+      isOpen: shop.isOpen,
+      toggledAt: new Date()
+    },
+    metadata: {
+      manualToggle: true,
+      toggledBy: req.user.name
+    },
+    description: `Shop ${shop.isOpen ? 'opened' : 'closed'} by ${req.user.name}`,
+    req
+  });
 
   // If closing the shop, process unverified orders and set all wallets to zero
   if (!shop.isOpen) {
@@ -394,6 +526,25 @@ const resetAllWallets = asyncHandler(async (req, res) => {
     const result = await User.updateMany({}, { $set: { balance: 0 } });
     
     console.log(`Reset ${result.modifiedCount} user wallets to zero due to final validity expiry`);
+    
+    // Log the wallet reset activity for all shops
+    const shops = await Shop.find({ isActive: true });
+    for (const shop of shops) {
+      await logShopActivity({
+        shop: shop._id,
+        action: 'auto_close',
+        performedBy: req.user._id,
+        previousState: { walletsActive: true },
+        newState: { walletsActive: false },
+        metadata: { 
+          walletsReset: result.modifiedCount,
+          resetAt: new Date(),
+          adminReset: true
+        },
+        description: `All user wallets reset to zero by admin`,
+        req
+      });
+    }
     
     res.json({
       message: `Successfully reset ${result.modifiedCount} user wallets to zero`,

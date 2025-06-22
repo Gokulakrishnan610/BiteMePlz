@@ -35,6 +35,8 @@ import AdminEditShopPage from './pages/admin/EditShopPage';
 import TransactionsPage from './pages/admin/TransactionsPage';
 import AnalyticsPage from './pages/admin/AnalyticsPage';
 import FinancialReportsPage from './pages/admin/FinancialReportsPage';
+import ShopLogsPage from './pages/shopAdmin/ShopLogsPage';
+import StudentAnalyticsPage from './pages/shopAdmin/StudentAnalyticsPage';
 
 // Shop Admin Pages
 import ShopAdminDashboardPage from './pages/shopAdmin/DashboardPage';
@@ -147,6 +149,9 @@ function App() {
             <Route path="transactions" element={<TransactionsPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="financial-reports" element={<FinancialReportsPage />} />
+                        
+            <Route path="shop-logs" element={<ShopLogsPage />} />
+            <Route path="student-analytics" element={<StudentAnalyticsPage />} />
           </Route>
           
           {/* Shop Admin Routes */}
