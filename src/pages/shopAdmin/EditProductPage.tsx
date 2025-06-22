@@ -9,6 +9,7 @@ import ImageUpload from '../../components/ImageUpload';
 interface Product {
   name: string;
   description: string;
+  category: string;
   price: number;
   stock: number;
   image: string;
@@ -24,11 +25,21 @@ const EditProductPage: React.FC = () => {
   const [formData, setFormData] = useState<Product>({
     name: '',
     description: '',
+    category: 'others',
     price: 0,
     stock: 0,
     image: '',
     isAvailable: true
   });
+
+  const categories = [
+    { value: 'food', label: 'Food' },
+    { value: 'beverages', label: 'Beverages' },
+    { value: 'snacks', label: 'Snacks' },
+    { value: 'stationery', label: 'Stationery' },
+    { value: 'electronics', label: 'Electronics' },
+    { value: 'others', label: 'Others' }
+  ];
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -61,7 +72,7 @@ const EditProductPage: React.FC = () => {
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const value = e.target.type === 'checkbox' 
       ? (e.target as HTMLInputElement).checked 
@@ -97,7 +108,7 @@ const EditProductPage: React.FC = () => {
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
                 Product Name *
               </label>
               <input
@@ -111,7 +122,26 @@ const EditProductPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
+                Category *
+              </label>
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                className="input"
+                required
+              >
+                {categories.map((category) => (
+                  <option key={category.value} value={category.value}>
+                    {category.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
                 Description *
               </label>
               <textarea
@@ -125,7 +155,7 @@ const EditProductPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
                 Price (₹) *
               </label>
               <input
@@ -141,7 +171,7 @@ const EditProductPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
                 Stock *
               </label>
               <input
@@ -156,14 +186,14 @@ const EditProductPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
                 Product Image
               </label>
               <ImageUpload
                 onImageUpload={handleImageUpload}
                 currentImage={formData.image}
               />
-              <p className="text-sm text-[var(--gray-500)] mt-1">
+              <p className="text-sm text-[var(--muted-text)] mt-1">
                 Upload a new image or keep the current one
               </p>
             </div>
@@ -174,9 +204,9 @@ const EditProductPage: React.FC = () => {
                 name="isAvailable"
                 checked={formData.isAvailable}
                 onChange={handleChange}
-                className="h-4 w-4 text-[var(--primary)] border-[var(--gray-300)] rounded"
+                className="h-4 w-4 text-[var(--accent-purple)] border-[var(--border-color)] rounded focus:ring-[var(--accent-purple)]"
               />
-              <label className="ml-2 text-sm text-[var(--gray-700)]">
+              <label className="ml-2 text-sm text-[var(--secondary-text)]">
                 Product is available for sale
               </label>
             </div>

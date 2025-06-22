@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Package, AlertCircle, Store, Clock, ArrowLeft, ShoppingCart, Star, MapPin, Zap } from 'lucide-react';
+import { Package, AlertCircle, Store, Clock, ArrowLeft, ShoppingCart, MapPin, Zap, Search, X } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -11,6 +11,7 @@ interface Product {
   _id: string;
   name: string;
   description: string;
+  category: string;
   price: number;
   stock: number;
   image: string;
@@ -36,6 +37,7 @@ const ShopPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const { addToCart } = useCart();
 
   useEffect(() => {
@@ -50,7 +52,9 @@ const ShopPage: React.FC = () => {
           })
         ]);
         setShop(shopResponse.data);
-        setProducts(productsResponse.data.filter((product: Product) => product.isAvailable));
+        // Get all products, not just available ones, but filter them properly
+        const allProducts = productsResponse.data || [];
+        setProducts(allProducts.filter((product: Product) => product.isAvailable));
         setLoading(false);
       } catch (err) {
         setError('Failed to load shop data');
@@ -118,23 +122,40 @@ const ShopPage: React.FC = () => {
     toast.success('Added to cart');
   };
 
-  // Get unique categories from products
-  const categories = ['all', ...new Set(products.map(product => 
-    product.name.toLowerCase().includes('food') || product.name.toLowerCase().includes('snack') ? 'food' :
-    product.name.toLowerCase().includes('drink') || product.name.toLowerCase().includes('beverage') ? 'beverages' :
-    product.name.toLowerCase().includes('book') || product.name.toLowerCase().includes('pen') ? 'stationery' :
-    'others'
-  ))];
+  // Get unique categories from products, filtering out undefined/null values
+  const validCategories = products
+    .map(product => product.category)
+    .filter(category => category && typeof category === 'string');
+  
+  const categories = ['all', ...new Set(validCategories)];
 
-  const filteredProducts = selectedCategory === 'all' 
-    ? products 
-    : products.filter(product => {
-        const category = product.name.toLowerCase().includes('food') || product.name.toLowerCase().includes('snack') ? 'food' :
-                        product.name.toLowerCase().includes('drink') || product.name.toLowerCase().includes('beverage') ? 'beverages' :
-                        product.name.toLowerCase().includes('book') || product.name.toLowerCase().includes('pen') ? 'stationery' :
-                        'others';
-        return category === selectedCategory;
-      });
+  const categoryLabels: { [key: string]: string } = {
+    all: 'All Products',
+    food: 'Food',
+    beverages: 'Beverages',
+    snacks: 'Snacks',
+    stationery: 'Stationery',
+    electronics: 'Electronics',
+    others: 'Others'
+  };
+
+  // Filter products based on category and search query
+  const filteredProducts = products.filter(product => {
+    // Category filter
+    const categoryMatch = selectedCategory === 'all' || product.category === selectedCategory;
+    
+    // Search filter
+    const searchMatch = searchQuery.length === 0 || 
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (product.category && product.category.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    return categoryMatch && searchMatch;
+  });
+
+  const clearSearch = () => {
+    setSearchQuery('');
+  };
 
   if (loading) {
     return (
@@ -209,10 +230,6 @@ const ShopPage: React.FC = () => {
                       <MapPin size={16} />
                       <span>{shop.location}</span>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <Star className="text-yellow-400 fill-current" size={16} />
-                      <span>4.8 Rating</span>
-                    </div>
                   </div>
                 </div>
                 <div className={`px-4 py-2 rounded-full text-sm font-medium backdrop-blur-md ${
@@ -252,24 +269,60 @@ const ShopPage: React.FC = () => {
           </div>
         )}
 
-        {/* Category Filter */}
-        <div className="mb-8">
-          <div className="flex flex-wrap gap-3">
-            {categories.map((category) => (
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative max-w-md mx-auto">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-[var(--muted-text)]" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search products..."
+              className="input pl-10 pr-10 w-full"
+            />
+            {searchQuery && (
               <button
-                key={category}
-                onClick={() => setSelectedCategory(category)}
-                className={`px-6 py-3 rounded-full font-medium transition-all duration-200 ${
-                  selectedCategory === category
-                    ? 'bg-gradient-to-r from-[var(--accent-purple)] to-[var(--accent-violet)] text-white shadow-lg'
-                    : 'bg-[var(--card-bg)] text-[var(--secondary-text)] border border-[var(--border-color)] hover:border-[var(--accent-purple)] hover:text-[var(--accent-purple)]'
-                }`}
+                onClick={clearSearch}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-[var(--muted-text)] hover:text-[var(--accent-purple)]"
               >
-                {category.charAt(0).toUpperCase() + category.slice(1)}
+                <X className="h-5 w-5" />
               </button>
-            ))}
+            )}
           </div>
         </div>
+
+        {/* Category Filter - Only show when there are products */}
+        {products.length > 0 && (
+          <div className="mb-8">
+            <div className="flex flex-wrap gap-3 justify-center">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`px-6 py-3 rounded-full font-medium transition-all duration-200 ${
+                    selectedCategory === category
+                      ? 'bg-gradient-to-r from-[var(--accent-purple)] to-[var(--accent-violet)] text-white shadow-lg'
+                      : 'bg-[var(--card-bg)] text-[var(--secondary-text)] border border-[var(--border-color)] hover:border-[var(--accent-purple)] hover:text-[var(--accent-purple)]'
+                  }`}
+                >
+                  {categoryLabels[category] || (category && typeof category === 'string' ? category.charAt(0).toUpperCase() + category.slice(1) : 'Unknown')}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Search Results Info */}
+        {searchQuery && (
+          <div className="mb-6 text-center">
+            <p className="text-[var(--secondary-text)]">
+              {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} found for "{searchQuery}"
+              {selectedCategory !== 'all' && ` in ${categoryLabels[selectedCategory] || selectedCategory}`}
+            </p>
+          </div>
+        )}
 
         {/* Products Grid */}
         {filteredProducts.length === 0 ? (
@@ -277,13 +330,35 @@ const ShopPage: React.FC = () => {
             <div className="card p-12 max-w-md mx-auto">
               <Package size={64} className="text-[var(--muted-text)] mx-auto mb-6" />
               <h3 className="text-2xl font-semibold text-[var(--secondary-text)] mb-4">
-                No Products Available
+                {searchQuery ? 'No Products Found' : 'No Products Available'}
               </h3>
               <p className="text-[var(--muted-text)]">
-                {selectedCategory === 'all' 
+                {searchQuery 
+                  ? `No products match your search "${searchQuery}"${selectedCategory !== 'all' ? ` in ${categoryLabels[selectedCategory] || selectedCategory}` : ''}.`
+                  : selectedCategory === 'all' 
                   ? "This shop doesn't have any products yet." 
-                  : `No products found in the ${selectedCategory} category.`}
+                  : `No products found in the ${categoryLabels[selectedCategory] || selectedCategory} category.`}
               </p>
+              {(searchQuery || selectedCategory !== 'all') && (
+                <div className="mt-4 space-x-2">
+                  {searchQuery && (
+                    <button
+                      onClick={clearSearch}
+                      className="btn-secondary text-sm"
+                    >
+                      Clear Search
+                    </button>
+                  )}
+                  {selectedCategory !== 'all' && (
+                    <button
+                      onClick={() => setSelectedCategory('all')}
+                      className="btn-secondary text-sm"
+                    >
+                      View All Products
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -301,8 +376,15 @@ const ShopPage: React.FC = () => {
                     alt={product.name}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-[var(--primary-bg)]/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   
+                  {/* Category Badge */}
+                  {product.category && (
+                    <div className="absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-medium backdrop-blur-md bg-[var(--accent-purple)]/20 text-[var(--accent-purple)] border border-[var(--accent-purple)]/30">
+                      {categoryLabels[product.category] || product.category}
+                    </div>
+                  )}
+
                   {/* Stock Badge */}
                   <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-medium backdrop-blur-md ${
                     product.stock > 0 
@@ -357,6 +439,8 @@ const ShopPage: React.FC = () => {
                     </span>
                   </button>
                 </div>
+
+              
               </div>
             ))}
           </div>

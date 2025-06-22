@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { QrCode, CheckCircle, CreditCard, Receipt, Camera, X } from 'lucide-react';
+import { QrCode, CheckCircle, CreditCard, Receipt, Camera, X, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { QrReader } from 'react-qr-reader';
+import QRScanner from '../../components/QRScanner';
 import toast from 'react-hot-toast';
 
 interface VerifiedOrder {
@@ -27,19 +27,23 @@ const ScanQRPage: React.FC = () => {
   const [paymentId, setPaymentId] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [verifiedOrder, setVerifiedOrder] = useState<VerifiedOrder | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
 
-  const handleScan = (result: { text: string } | null) => {
-    if (result?.text) {
-      try {
-        // Validate that the decoded text is valid JSON
-        JSON.parse(result.text);
-        setQrData(result.text);
-        setIsScanning(false);
-      } catch (error) {
-        toast.error('Invalid QR code format');
-      }
+  const handleScanSuccess = (decodedText: string) => {
+    try {
+      // Validate that the decoded text is valid JSON
+      JSON.parse(decodedText);
+      setQrData(decodedText);
+      setShowScanner(false);
+      toast.success('QR code scanned successfully');
+    } catch (error) {
+      toast.error('Invalid QR code format');
     }
+  };
+
+  const handleScanError = (error: string) => {
+    console.error('QR scan error:', error);
+    // Don't show toast for every scan error as it would be too noisy
   };
 
   const handleVerify = async (e: React.FormEvent) => {
@@ -49,11 +53,19 @@ const ScanQRPage: React.FC = () => {
 
     try {
       if (verificationMethod === 'qr') {
+        if (!qrData) {
+          throw new Error('Please scan or enter QR code data');
+        }
+        
         const parsedData = JSON.parse(qrData);
         const { data } = await axios.put(`/api/orders/${parsedData.orderId}/verify`, { qrData });
         setVerifiedOrder(data);
         toast.success('Order verified successfully');
       } else {
+        if (!paymentId) {
+          throw new Error('Please enter payment ID');
+        }
+        
         const { data: orderData } = await axios.get(`/api/orders/payment/${paymentId}`);
         const { data } = await axios.put(`/api/orders/${orderData.orderId}/verify`, {
           qrData: JSON.stringify({
@@ -66,7 +78,8 @@ const ScanQRPage: React.FC = () => {
         toast.success('Order verified successfully');
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Verification failed');
+      console.error('Verification error:', error);
+      toast.error(error.response?.data?.message || error.message || 'Verification failed');
     } finally {
       setVerifying(false);
       setQrData('');
@@ -86,34 +99,75 @@ const ScanQRPage: React.FC = () => {
         <head>
           <title>Order Receipt</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            .header { text-align: center; margin-bottom: 20px; }
-            .order-info { margin-bottom: 20px; }
-            .items { margin-bottom: 20px; }
-            .item { margin-bottom: 10px; }
-            .total { text-align: right; font-weight: bold; }
+            body { 
+              font-family: Arial, sans-serif; 
+              padding: 20px; 
+              max-width: 400px; 
+              margin: 0 auto;
+            }
+            .header { 
+              text-align: center; 
+              margin-bottom: 20px; 
+              border-bottom: 2px solid #333;
+              padding-bottom: 10px;
+            }
+            .order-info { 
+              margin-bottom: 20px; 
+            }
+            .items { 
+              margin-bottom: 20px; 
+            }
+            .item { 
+              margin-bottom: 10px; 
+              padding: 5px 0;
+              border-bottom: 1px dashed #ccc;
+            }
+            .total { 
+              text-align: right; 
+              font-weight: bold; 
+              font-size: 18px;
+              border-top: 2px solid #333;
+              padding-top: 10px;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 20px;
+              font-size: 12px;
+              color: #666;
+            }
           </style>
         </head>
         <body>
           <div class="header">
-            <h1>Order Receipt</h1>
-            <p>Order #${verifiedOrder._id.slice(-8)}</p>
+            <h1>Campus Kiosk</h1>
+            <h2>Order Receipt</h2>
+            <p><strong>Order #${verifiedOrder._id.slice(-8)}</strong></p>
             <p>${new Date(verifiedOrder.createdAt).toLocaleString()}</p>
           </div>
           <div class="order-info">
-            <p><strong>Customer Name:</strong> ${verifiedOrder.user.name}</p>
+            <p><strong>Customer:</strong> ${verifiedOrder.user.name}</p>
             <p><strong>Roll Number:</strong> ${verifiedOrder.user.rollNo}</p>
           </div>
           <div class="items">
-            <h2>Items</h2>
+            <h3>Items Purchased:</h3>
             ${verifiedOrder.orderItems.map(item => `
               <div class="item">
-                <p>${item.name} x ${item.quantity} @ ₹${item.price} = ₹${item.price * item.quantity}</p>
+                <div style="display: flex; justify-content: space-between;">
+                  <span>${item.name}</span>
+                  <span>₹${item.price}</span>
+                </div>
+                <div style="font-size: 12px; color: #666;">
+                  Quantity: ${item.quantity} × ₹${item.price} = ₹${item.price * item.quantity}
+                </div>
               </div>
             `).join('')}
           </div>
           <div class="total">
             <p>Total Amount: ₹${verifiedOrder.totalPrice}</p>
+          </div>
+          <div class="footer">
+            <p>Thank you for your purchase!</p>
+            <p>Verified at: ${new Date().toLocaleString()}</p>
           </div>
         </body>
       </html>
@@ -146,22 +200,28 @@ const ScanQRPage: React.FC = () => {
               <div className="mb-6">
                 <div className="flex space-x-4">
                   <button
-                    onClick={() => setVerificationMethod('qr')}
-                    className={`flex-1 py-2 px-4 rounded-lg ${
+                    onClick={() => {
+                      setVerificationMethod('qr');
+                      setShowScanner(false);
+                    }}
+                    className={`flex-1 py-2 px-4 rounded-lg transition-colors ${
                       verificationMethod === 'qr'
                         ? 'bg-[var(--primary)] text-white'
-                        : 'bg-[var(--gray-100)] text-[var(--gray-700)]'
+                        : 'bg-[var(--gray-100)] text-[var(--gray-700)] hover:bg-[var(--gray-200)]'
                     }`}
                   >
                     <QrCode size={20} className="inline-block mr-2" />
                     QR Code
                   </button>
                   <button
-                    onClick={() => setVerificationMethod('payment')}
-                    className={`flex-1 py-2 px-4 rounded-lg ${
+                    onClick={() => {
+                      setVerificationMethod('payment');
+                      setShowScanner(false);
+                    }}
+                    className={`flex-1 py-2 px-4 rounded-lg transition-colors ${
                       verificationMethod === 'payment'
                         ? 'bg-[var(--primary)] text-white'
-                        : 'bg-[var(--gray-100)] text-[var(--gray-700)]'
+                        : 'bg-[var(--gray-100)] text-[var(--gray-700)] hover:bg-[var(--gray-200)]'
                     }`}
                   >
                     <CreditCard size={20} className="inline-block mr-2" />
@@ -173,38 +233,62 @@ const ScanQRPage: React.FC = () => {
               <form onSubmit={handleVerify} className="space-y-6">
                 {verificationMethod === 'qr' ? (
                   <div>
-                    {isScanning ? (
+                    {showScanner ? (
                       <div className="space-y-4">
-                        <div className="relative">
-                          <QrReader
-                            scanDelay={300}
-                            constraints={{ facingMode: 'environment' }}
-                            onResult={handleScan}
-                            className="w-full"
-                          />
+                        <div className="flex justify-between items-center">
+                          <h3 className="text-lg font-medium">Scan QR Code</h3>
                           <button
                             type="button"
-                            onClick={() => setIsScanning(false)}
-                            className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md"
+                            onClick={() => setShowScanner(false)}
+                            className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
                           >
-                            <X className="text-[var(--error)]" size={24} />
+                            <X size={20} />
                           </button>
                         </div>
-                        <p className="text-center text-[var(--gray-600)]">
-                          Position the QR code in front of your camera
-                        </p>
+                        
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <QRScanner
+                            onScanSuccess={handleScanSuccess}
+                            onScanError={handleScanError}
+                          />
+                        </div>
+                        
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <div className="flex items-start">
+                            <AlertTriangle className="text-blue-600 mr-2 mt-0.5 flex-shrink-0" size={16} />
+                            <div className="text-sm text-blue-800">
+                              <p className="font-medium mb-1">Camera Tips:</p>
+                              <ul className="list-disc list-inside space-y-1">
+                                <li>Ensure good lighting</li>
+                                <li>Hold the device steady</li>
+                                <li>Position QR code within the frame</li>
+                                <li>Try switching cameras if available</li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     ) : (
                       <div className="space-y-4">
                         <button
                           type="button"
-                          onClick={() => setIsScanning(true)}
+                          onClick={() => setShowScanner(true)}
                           className="w-full btn-primary flex items-center justify-center"
                         >
                           <Camera size={20} className="mr-2" />
-                          Start Scanning
+                          Start Camera Scanner
                         </button>
+                        
                         <div className="relative">
+                          <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-300" />
+                          </div>
+                          <div className="relative flex justify-center text-sm">
+                            <span className="px-2 bg-white text-gray-500">or</span>
+                          </div>
+                        </div>
+                        
+                        <div>
                           <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
                             QR Code Data
                           </label>
@@ -213,7 +297,7 @@ const ScanQRPage: React.FC = () => {
                             onChange={(e) => setQrData(e.target.value)}
                             className="input"
                             rows={4}
-                            placeholder="Or paste QR code data here..."
+                            placeholder="Paste QR code data here..."
                           />
                         </div>
                       </div>
@@ -237,12 +321,12 @@ const ScanQRPage: React.FC = () => {
 
                 <button
                   type="submit"
-                  disabled={verifying || (!qrData && !paymentId) || isScanning}
+                  disabled={verifying || (!qrData && !paymentId) || showScanner}
                   className="w-full btn-primary"
                 >
                   {verifying ? (
                     <span className="flex items-center justify-center">
-                      <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-purple-600 mr-2"></span>
+                      <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></span>
                       Verifying...
                     </span>
                   ) : (
@@ -286,7 +370,11 @@ const ScanQRPage: React.FC = () => {
 
               <div className="flex space-x-4">
                 <button
-                  onClick={() => setVerifiedOrder(null)}
+                  onClick={() => {
+                    setVerifiedOrder(null);
+                    setQrData('');
+                    setPaymentId('');
+                  }}
                   className="flex-1 btn-secondary"
                 >
                   Verify Another Order

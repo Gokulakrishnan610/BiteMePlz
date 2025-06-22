@@ -14,10 +14,20 @@ const CreateProductPage: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    category: 'others',
     price: '',
     stock: '',
     image: ''
   });
+
+  const categories = [
+    { value: 'food', label: 'Food' },
+    { value: 'beverages', label: 'Beverages' },
+    { value: 'snacks', label: 'Snacks' },
+    { value: 'stationery', label: 'Stationery' },
+    { value: 'electronics', label: 'Electronics' },
+    { value: 'others', label: 'Others' }
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +48,7 @@ const CreateProductPage: React.FC = () => {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -54,7 +64,7 @@ const CreateProductPage: React.FC = () => {
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
                 Product Name *
               </label>
               <input
@@ -69,7 +79,26 @@ const CreateProductPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
+                Category *
+              </label>
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                className="input"
+                required
+              >
+                {categories.map((category) => (
+                  <option key={category.value} value={category.value}>
+                    {category.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
                 Description *
               </label>
               <textarea
@@ -84,7 +113,7 @@ const CreateProductPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
                 Price (₹) *
               </label>
               <input
@@ -101,7 +130,7 @@ const CreateProductPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
                 Stock *
               </label>
               <input
@@ -117,14 +146,14 @@ const CreateProductPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
                 Product Image
               </label>
               <ImageUpload
                 onImageUpload={handleImageUpload}
                 currentImage={formData.image}
               />
-              <p className="text-sm text-[var(--gray-500)] mt-1">
+              <p className="text-sm text-[var(--muted-text)] mt-1">
                 Upload a product image or leave empty to use default
               </p>
             </div>

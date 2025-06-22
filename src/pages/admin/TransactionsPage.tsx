@@ -11,7 +11,10 @@ import {
   TrendingUp,
   TrendingDown,
   DollarSign,
-  Users
+  Users,
+  X,
+  BarChart3,
+  PieChart
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -274,7 +277,7 @@ const TransactionsPage: React.FC = () => {
       <div className="card p-4">
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
           <div>
-            <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+            <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
               Shop
             </label>
             <select
@@ -292,7 +295,7 @@ const TransactionsPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+            <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
               Type
             </label>
             <select
@@ -310,7 +313,7 @@ const TransactionsPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+            <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
               Status
             </label>
             <select
@@ -326,7 +329,7 @@ const TransactionsPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+            <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
               Start Date
             </label>
             <input
@@ -338,7 +341,7 @@ const TransactionsPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
+            <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
               End Date
             </label>
             <input
@@ -362,7 +365,7 @@ const TransactionsPage: React.FC = () => {
       <div className="card">
         {loading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--primary)]"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--accent-purple)]"></div>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -382,8 +385,8 @@ const TransactionsPage: React.FC = () => {
               <tbody>
                 {transactions.map((transaction) => (
                   <tr key={transaction._id}>
-                    <td>{new Date(transaction.createdAt).toLocaleString()}</td>
-                    <td>{transaction.shop?.name || 'Unknown'}</td>
+                    <td className="text-[var(--secondary-text)]">{new Date(transaction.createdAt).toLocaleString()}</td>
+                    <td className="text-[var(--primary-text)]">{transaction.shop?.name || 'Unknown'}</td>
                     <td>
                       <span className={`badge ${
                         transaction.type === 'payment' ? 'badge-success' :
@@ -395,7 +398,7 @@ const TransactionsPage: React.FC = () => {
                         {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
                       </span>
                     </td>
-                    <td>₹{transaction.amount}</td>
+                    <td className="text-[var(--primary-text)]">₹{transaction.amount}</td>
                     <td>
                       <span className={`badge ${
                         transaction.status === 'success' ? 'badge-success' :
@@ -407,15 +410,15 @@ const TransactionsPage: React.FC = () => {
                     </td>
                     <td>
                       <div>
-                        <p className="font-medium">{transaction.user.name}</p>
-                        <p className="text-sm text-[var(--gray-500)]">{transaction.user.rollNo}</p>
+                        <p className="font-medium text-[var(--primary-text)]">{transaction.user.name}</p>
+                        <p className="text-sm text-[var(--muted-text)]">{transaction.user.rollNo}</p>
                       </div>
                     </td>
-                    <td>{transaction.order?.orderId || '-'}</td>
+                    <td className="text-[var(--secondary-text)]">{transaction.order?.orderId || '-'}</td>
                     <td>
                       <button
                         onClick={() => handleTransactionClick(transaction)}
-                        className="p-2 text-[var(--primary)] hover:bg-[var(--gray-100)] rounded"
+                        className="p-2 text-[var(--accent-purple)] hover:bg-[var(--hover-bg)] rounded transition-colors"
                       >
                         <Eye size={18} />
                       </button>
@@ -429,11 +432,11 @@ const TransactionsPage: React.FC = () => {
 
         {!loading && transactions.length === 0 && (
           <div className="text-center py-12">
-            <Receipt size={48} className="text-[var(--gray-400)] mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-[var(--gray-600)] mb-2">
+            <Receipt size={48} className="text-[var(--muted-text)] mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-[var(--secondary-text)] mb-2">
               No Transactions Found
             </h2>
-            <p className="text-[var(--gray-500)]">
+            <p className="text-[var(--muted-text)]">
               Try adjusting your filters to see more results.
             </p>
           </div>
@@ -443,68 +446,68 @@ const TransactionsPage: React.FC = () => {
       {/* Transaction Details Modal */}
       {selectedTransaction && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-[var(--card-bg)] rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-[var(--border-color)]">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-semibold">Transaction Details</h3>
+                <h3 className="text-xl font-semibold text-[var(--primary-text)]">Transaction Details</h3>
                 <button
                   onClick={() => setSelectedTransaction(null)}
-                  className="text-[var(--gray-500)] hover:text-[var(--gray-700)]"
+                  className="text-[var(--muted-text)] hover:text-[var(--primary-text)] transition-colors"
                 >
-                  ×
+                  <X size={24} />
                 </button>
               </div>
 
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-[var(--gray-700)]">Shop</label>
-                    <p className="mt-1">{selectedTransaction.shop?.name || 'Unknown'}</p>
+                    <label className="block text-sm font-medium text-[var(--secondary-text)]">Shop</label>
+                    <p className="mt-1 text-[var(--primary-text)]">{selectedTransaction.shop?.name || 'Unknown'}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[var(--gray-700)]">Type</label>
-                    <p className="mt-1">{selectedTransaction.type}</p>
+                    <label className="block text-sm font-medium text-[var(--secondary-text)]">Type</label>
+                    <p className="mt-1 text-[var(--primary-text)]">{selectedTransaction.type}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[var(--gray-700)]">Amount</label>
-                    <p className="mt-1">₹{selectedTransaction.amount}</p>
+                    <label className="block text-sm font-medium text-[var(--secondary-text)]">Amount</label>
+                    <p className="mt-1 text-[var(--primary-text)]">₹{selectedTransaction.amount}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[var(--gray-700)]">Status</label>
-                    <p className="mt-1">{selectedTransaction.status}</p>
+                    <label className="block text-sm font-medium text-[var(--secondary-text)]">Status</label>
+                    <p className="mt-1 text-[var(--primary-text)]">{selectedTransaction.status}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[var(--gray-700)]">Payment Method</label>
-                    <p className="mt-1">{selectedTransaction.paymentMethod || '-'}</p>
+                    <label className="block text-sm font-medium text-[var(--secondary-text)]">Payment Method</label>
+                    <p className="mt-1 text-[var(--primary-text)]">{selectedTransaction.paymentMethod || '-'}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[var(--gray-700)]">Date</label>
-                    <p className="mt-1">{new Date(selectedTransaction.createdAt).toLocaleString()}</p>
+                    <label className="block text-sm font-medium text-[var(--secondary-text)]">Date</label>
+                    <p className="mt-1 text-[var(--primary-text)]">{new Date(selectedTransaction.createdAt).toLocaleString()}</p>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[var(--gray-700)]">Description</label>
-                  <p className="mt-1">{selectedTransaction.description}</p>
+                  <label className="block text-sm font-medium text-[var(--secondary-text)]">Description</label>
+                  <p className="mt-1 text-[var(--primary-text)]">{selectedTransaction.description}</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[var(--gray-700)]">User</label>
-                  <p className="mt-1">{selectedTransaction.user.name} ({selectedTransaction.user.rollNo})</p>
-                  <p className="text-sm text-[var(--gray-500)]">{selectedTransaction.user.email}</p>
+                  <label className="block text-sm font-medium text-[var(--secondary-text)]">User</label>
+                  <p className="mt-1 text-[var(--primary-text)]">{selectedTransaction.user.name} ({selectedTransaction.user.rollNo})</p>
+                  <p className="text-sm text-[var(--muted-text)]">{selectedTransaction.user.email}</p>
                 </div>
 
                 {selectedTransaction.order && (
                   <div>
-                    <label className="block text-sm font-medium text-[var(--gray-700)]">Order</label>
-                    <p className="mt-1">{selectedTransaction.order.orderId} - ₹{selectedTransaction.order.totalPrice}</p>
+                    <label className="block text-sm font-medium text-[var(--secondary-text)]">Order</label>
+                    <p className="mt-1 text-[var(--primary-text)]">{selectedTransaction.order.orderId} - ₹{selectedTransaction.order.totalPrice}</p>
                   </div>
                 )}
 
                 {selectedTransaction.metadata && Object.keys(selectedTransaction.metadata).length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-[var(--gray-700)]">Additional Details</label>
-                    <pre className="mt-1 text-sm bg-[var(--gray-100)] p-3 rounded overflow-x-auto">
+                    <label className="block text-sm font-medium text-[var(--secondary-text)]">Additional Details</label>
+                    <pre className="mt-1 text-sm bg-[var(--secondary-bg)] p-3 rounded overflow-x-auto text-[var(--primary-text)]">
                       {JSON.stringify(selectedTransaction.metadata, null, 2)}
                     </pre>
                   </div>
