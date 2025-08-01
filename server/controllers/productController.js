@@ -31,7 +31,16 @@ const getProductById = asyncHandler(async (req, res) => {
 // @route   POST /api/products
 // @access  Private/ShopAdmin
 const createProduct = asyncHandler(async (req, res) => {
-  const { name, image, description, price, stock } = req.body;
+  const { name, image, description, price, stock, category } = req.body;
+  
+  // Validate category
+  const validCategories = ['food', 'beverages', 'snacks', 'stationery', 'electronics', 'others'];
+  const normalizedCategory = category ? category.toLowerCase().trim() : 'others';
+  
+  if (!validCategories.includes(normalizedCategory)) {
+    res.status(400);
+    throw new Error('Invalid category provided');
+  }
   
   // If shop admin, use their shop
   let shopId;
@@ -58,6 +67,7 @@ const createProduct = asyncHandler(async (req, res) => {
     shop: shopId,
     image: image || '/uploads/default-product.jpg',
     description,
+    category: normalizedCategory,
     price,
     stock,
   });
@@ -90,10 +100,24 @@ const updateProduct = asyncHandler(async (req, res) => {
     throw new Error('Not authorized');
   }
 
+  // Validate category if provided
+  let normalizedCategory = product.category; // Keep existing category as default
+  if (req.body.category !== undefined) {
+    const validCategories = ['food', 'beverages', 'snacks', 'stationery', 'electronics', 'others'];
+    normalizedCategory = req.body.category.toLowerCase().trim();
+    
+    if (!validCategories.includes(normalizedCategory)) {
+      res.status(400);
+      throw new Error('Invalid category provided');
+    }
+  }
+
+  // Update fields
   product.name = req.body.name || product.name;
   product.description = req.body.description || product.description;
   product.image = req.body.image || product.image;
-  product.price = req.body.price || product.price;
+  product.category = normalizedCategory;
+  product.price = req.body.price !== undefined ? req.body.price : product.price;
   product.stock = req.body.stock !== undefined ? req.body.stock : product.stock;
   product.isAvailable = req.body.isAvailable !== undefined ? req.body.isAvailable : product.isAvailable;
 

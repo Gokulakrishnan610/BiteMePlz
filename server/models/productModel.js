@@ -14,6 +14,13 @@ const productSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    category: {
+      type: String,
+      required: true,
+      enum: ['food', 'beverages', 'snacks', 'stationery', 'electronics', 'others'],
+      lowercase: true,
+      // Remove the default value to prevent it from overriding actual values
+    },
     price: {
       type: Number,
       required: true,

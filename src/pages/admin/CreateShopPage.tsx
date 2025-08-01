@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Store, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ImageUpload from '../../components/ImageUpload';
 
 const CreateShopPage: React.FC = () => {
   const navigate = useNavigate();
@@ -89,6 +90,10 @@ const CreateShopPage: React.FC = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleImageUpload = (imagePath: string) => {
+    setFormData({ ...formData, shopImage: imagePath });
+  };
+
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Create New Shop</h1>
@@ -148,18 +153,14 @@ const CreateShopPage: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Shop Image URL
+                Shop Image
               </label>
-              <input
-                type="url"
-                name="shopImage"
-                value={formData.shopImage}
-                onChange={handleChange}
-                className="input"
-                placeholder="https://example.com/image.jpg"
+              <ImageUpload
+                onImageUpload={handleImageUpload}
+                currentImage={formData.shopImage}
               />
               <p className="text-sm text-[var(--gray-500)] mt-1">
-                Leave empty to use default image
+                Upload a shop image or leave empty to use default
               </p>
             </div>
 

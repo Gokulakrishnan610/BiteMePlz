@@ -1,0 +1,108 @@
+// Common types used across the application
+export interface User {
+  _id: string;
+  name: string;
+  email: string;
+  rollNo?: string;
+  role: 'admin' | 'shopAdmin' | 'student';
+  shop?: string;
+  balance?: number;
+  isVerified?: boolean;
+}
+
+export interface Shop {
+  _id: string;
+  name: string;
+  description: string;
+  location: string;
+  image?: string;
+  isActive: boolean;
+  isOpen: boolean;
+  finalValidityTime: string;
+  qrValidityMinutes: number;
+  shopAdmin: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Product {
+  _id: string;
+  name: string;
+  description: string;
+  category: string; // Added missing category field
+  price: number;
+  stock: number;
+  image: string;
+  shop: string;
+  isAvailable: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrderItem {
+  product: string;
+  name: string;
+  image: string;
+  price: number;
+  quantity: number;
+  stock?: number;
+}
+
+export interface Order {
+  _id: string;
+  orderId: string;
+  user: User | string;
+  shop: Shop | string;
+  orderItems: OrderItem[];
+  totalPrice: number;
+  isPaid: boolean;
+  isVerified: boolean;
+  status: 'pending' | 'completed' | 'expired';
+  qrCode?: string;
+  qrValidUntil?: string;
+  balanceAmount: number;
+  finalValidity: string;
+  paymentResult?: {
+    razorpay_order_id?: string;
+    razorpay_payment_id?: string;
+    razorpay_signature?: string;
+    status?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Transaction {
+  _id: string;
+  shop: Shop | string;
+  order: Order | string;
+  user: User | string;
+  type: 'payment' | 'refund' | 'verification' | 'expiry' | 'cancellation';
+  amount: number;
+  status: 'success' | 'failed' | 'pending';
+  paymentMethod?: 'balance' | 'razorpay';
+  description: string;
+  metadata?: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CartItem extends OrderItem {
+  stock: number;
+}
+
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  currentPage: number;
+  totalPages: number;
+  total: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}

@@ -115,18 +115,18 @@ const OrdersPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h1 className="text-2xl font-bold">Orders</h1>
-        <div className="flex items-center gap-2 bg-white rounded-lg p-3 shadow-sm">
-          <Calendar size={20} className="text-[var(--primary)]" />
+        <div className="flex items-center gap-2 bg-black border border-purple-500 rounded-lg p-3 shadow-sm">
+          <Calendar size={20} className="text-purple-400" />
           <input
             type="date"
             value={selectedDate}
             onChange={(e) => handleDateFilter(e.target.value)}
-            className="border-none focus:ring-0 p-0"
+            className="bg-black text-white border-none focus:ring-purple-500 p-0"
           />
           {selectedDate && (
             <button
               onClick={clearDateFilter}
-              className="text-[var(--gray-500)] hover:text-[var(--gray-700)]"
+              className="text-gray-400 hover:text-white"
             >
               <X size={16} />
             </button>
@@ -142,31 +142,37 @@ const OrdersPage: React.FC = () => {
                 <th>Order ID</th>
                 <th>Customer</th>
                 <th>Items</th>
-                <th 
-                  className="cursor-pointer hover:bg-gray-50"
+                <th
+                  className={`cursor-pointer transition hover:bg-purple-100 ${
+                    sortField === 'total' ? 'bg-purple-100 font-semibold text-purple-800' : ''
+                  }`}
                   onClick={() => handleSort('total')}
                 >
                   <div className="flex items-center">
                     Total
-                    <ArrowUpDown size={16} className="ml-1" />
+                    <ArrowUpDown size={16} className="ml-1 text-purple-700" />
                   </div>
                 </th>
-                <th 
-                  className="cursor-pointer hover:bg-gray-50"
+                <th
+                  className={`cursor-pointer transition hover:bg-purple-100 ${
+                    sortField === 'status' ? 'bg-purple-100 font-semibold text-purple-800' : ''
+                  }`}
                   onClick={() => handleSort('status')}
                 >
                   <div className="flex items-center">
                     Status
-                    <ArrowUpDown size={16} className="ml-1" />
+                    <ArrowUpDown size={16} className="ml-1 text-purple-700" />
                   </div>
                 </th>
-                <th 
-                  className="cursor-pointer hover:bg-gray-50"
+                <th
+                  className={`cursor-pointer transition hover:bg-purple-100 ${
+                    sortField === 'date' ? 'bg-purple-100 font-semibold text-purple-800' : ''
+                  }`}
                   onClick={() => handleSort('date')}
                 >
                   <div className="flex items-center">
                     Date
-                    <ArrowUpDown size={16} className="ml-1" />
+                    <ArrowUpDown size={16} className="ml-1 text-purple-700" />
                   </div>
                 </th>
               </tr>
@@ -193,14 +199,18 @@ const OrdersPage: React.FC = () => {
                   <td className="font-medium">₹{order.totalPrice}</td>
                   <td>
                     <div className="space-y-1">
-                      <span className={`badge ${
-                        order.isPaid ? 'badge-success' : 'badge-error'
-                      }`}>
+                      <span
+                        className={`badge ${
+                          order.isPaid ? 'badge-success' : 'badge-error'
+                        }`}
+                      >
                         {order.isPaid ? 'Paid' : 'Pending'}
                       </span>
-                      <span className={`badge ${
-                        order.isVerified ? 'badge-success' : 'badge-warning'
-                      }`}>
+                      <span
+                        className={`badge ${
+                          order.isVerified ? 'badge-success' : 'badge-warning'
+                        }`}
+                      >
                         {order.isVerified ? 'Verified' : 'Not Verified'}
                       </span>
                     </div>

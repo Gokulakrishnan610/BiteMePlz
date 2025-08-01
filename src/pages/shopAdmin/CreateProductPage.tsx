@@ -5,6 +5,7 @@ import { Package } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import Loader from '../../components/Loader';
+import ImageUpload from '../../components/ImageUpload';
 
 const CreateProductPage: React.FC = () => {
   const navigate = useNavigate();
@@ -13,32 +14,65 @@ const CreateProductPage: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    category: 'others', // Default to 'others'
     price: '',
     stock: '',
     image: ''
   });
+
+  const categories = [
+    { value: 'food', label: 'Food' },
+    { value: 'beverages', label: 'Beverages' },
+    { value: 'snacks', label: 'Snacks' },
+    { value: 'stationery', label: 'Stationery' },
+    { value: 'electronics', label: 'Electronics' },
+    { value: 'others', label: 'Others' }
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      await axios.post('/api/products', {
-        ...formData,
+      console.log('Creating product with data:', formData);
+      
+      const createData = {
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        category: formData.category.toLowerCase().trim(), // Ensure lowercase
         price: Number(formData.price),
-        stock: Number(formData.stock)
-      });
+        stock: Number(formData.stock),
+        image: formData.image
+      };
+      
+      console.log('Create payload:', createData);
+      
+      const response = await axios.post('/api/products', createData);
+      console.log('Product created successfully:', response.data);
+      
       toast.success('Product created successfully');
       navigate('/shop-admin/products');
-    } catch (error) {
-      toast.error('Failed to create product');
+    } catch (error: any) {
+      console.error('Error creating product:', error);
+      toast.error(error.response?.data?.message || 'Failed to create product');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    console.log('Form field changed:', { name, value });
+    
+    setFormData(prev => {
+      const newData = { ...prev, [name]: value };
+      console.log('Updated form data:', newData);
+      return newData;
+    });
+  };
+
+  const handleImageUpload = (imagePath: string) => {
+    setFormData(prev => ({ ...prev, image: imagePath }));
   };
 
   return (
@@ -49,8 +83,8 @@ const CreateProductPage: React.FC = () => {
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Product Name
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
+                Product Name *
               </label>
               <input
                 type="text"
@@ -59,12 +93,35 @@ const CreateProductPage: React.FC = () => {
                 onChange={handleChange}
                 className="input"
                 required
+                placeholder="Enter product name"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Description
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
+                Category *
+              </label>
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                className="input"
+                required
+              >
+                {categories.map((category) => (
+                  <option key={category.value} value={category.value}>
+                    {category.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-[var(--muted-text)] mt-1">
+                Selected: {categories.find(cat => cat.value === formData.category)?.label || formData.category}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
+                Description *
               </label>
               <textarea
                 name="description"
@@ -73,12 +130,13 @@ const CreateProductPage: React.FC = () => {
                 className="input"
                 rows={3}
                 required
+                placeholder="Enter product description"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Price (₹)
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
+                Price (₹) *
               </label>
               <input
                 type="number"
@@ -89,12 +147,13 @@ const CreateProductPage: React.FC = () => {
                 min="0"
                 step="0.01"
                 required
+                placeholder="Enter price"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Stock
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
+                Stock *
               </label>
               <input
                 type="number"
@@ -104,21 +163,21 @@ const CreateProductPage: React.FC = () => {
                 className="input"
                 min="0"
                 required
+                placeholder="Enter stock quantity"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Image URL
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
+                Product Image
               </label>
-              <input
-                type="url"
-                name="image"
-                value={formData.image}
-                onChange={handleChange}
-                className="input"
-                placeholder="https://example.com/image.jpg"
+              <ImageUpload
+                onImageUpload={handleImageUpload}
+                currentImage={formData.image}
               />
+              <p className="text-sm text-[var(--muted-text)] mt-1">
+                Upload a product image or leave empty to use default
+              </p>
             </div>
           </div>
 

@@ -714,31 +714,32 @@ const AnalyticsPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="card p-6">
-                  <h3 className="text-xl font-semibold mb-4">Conversion Funnel (Live)</h3>
-                  <div className="space-y-4">
-                    {analytics.conversionFunnel && (
-                      <>
-                        <div className="flex justify-between items-center p-3 bg-blue-50 rounded">
-                          <span>Total Visits</span>
-                          <span className="font-bold">{analytics.conversionFunnel.totalVisits}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 bg-yellow-50 rounded">
-                          <span>Orders Created</span>
-                          <span className="font-bold">{analytics.conversionFunnel.ordersCreated}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 bg-green-50 rounded">
-                          <span>Orders Paid</span>
-                          <span className="font-bold">{analytics.conversionFunnel.ordersPaid}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 bg-purple-50 rounded">
-                          <span>Orders Verified</span>
-                          <span className="font-bold">{analytics.conversionFunnel.ordersVerified}</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
+              <div className="card p-6 bg-white shadow-lg rounded-2xl">
+  <h3 className="text-xl font-semibold mb-4 text-gray-800">Conversion Funnel (Live)</h3>
+  <div className="space-y-4">
+    {analytics.conversionFunnel && (
+      <>
+        <div className="flex justify-between items-center p-4 bg-blue-100 text-blue-900 rounded-lg font-medium">
+          <span>Total Visits</span>
+          <span className="font-bold">{analytics.conversionFunnel.totalVisits}</span>
+        </div>
+        <div className="flex justify-between items-center p-4 bg-yellow-100 text-yellow-900 rounded-lg font-medium">
+          <span>Orders Created</span>
+          <span className="font-bold">{analytics.conversionFunnel.ordersCreated}</span>
+        </div>
+        <div className="flex justify-between items-center p-4 bg-green-100 text-green-900 rounded-lg font-medium">
+          <span>Orders Paid</span>
+          <span className="font-bold">{analytics.conversionFunnel.ordersPaid}</span>
+        </div>
+        <div className="flex justify-between items-center p-4 bg-purple-100 text-purple-900 rounded-lg font-medium">
+          <span>Orders Verified</span>
+          <span className="font-bold">{analytics.conversionFunnel.ordersVerified}</span>
+        </div>
+      </>
+    )}
+  </div>
+</div>
+
               </div>
 
               {/* Top Shops */}

@@ -4,10 +4,12 @@ import axios from 'axios';
 import { Package, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Loader from '../../components/Loader';
+import ImageUpload from '../../components/ImageUpload';
 
-interface Product {
+interface ProductFormData {
   name: string;
   description: string;
+  category: string;
   price: number;
   stock: number;
   image: string;
@@ -20,28 +22,73 @@ const EditProductPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState<Product>({
+  const [formData, setFormData] = useState<ProductFormData>({
     name: '',
     description: '',
+    category: 'others',
     price: 0,
     stock: 0,
     image: '',
     isAvailable: true
   });
 
+  const categories = [
+    { value: 'food', label: 'Food' },
+    { value: 'beverages', label: 'Beverages' },
+    { value: 'snacks', label: 'Snacks' },
+    { value: 'stationery', label: 'Stationery' },
+    { value: 'electronics', label: 'Electronics' },
+    { value: 'others', label: 'Others' }
+  ];
+
   useEffect(() => {
     const fetchProduct = async () => {
       try {
         const { data } = await axios.get(`/api/products/${id}`);
-        setFormData(data);
+        console.log('Fetched product data:', data);
+        
+        // Normalize the category to ensure it matches our enum values
+        const normalizedCategory = data.category ? data.category.toLowerCase().trim() : 'others';
+        const validCategories = ['food', 'beverages', 'snacks', 'stationery', 'electronics', 'others'];
+        const finalCategory = validCategories.includes(normalizedCategory) ? normalizedCategory : 'others';
+        
+        console.log('Category normalization:', {
+          original: data.category,
+          normalized: normalizedCategory,
+          final: finalCategory
+        });
+        
+        setFormData({
+          name: data.name || '',
+          description: data.description || '',
+          category: finalCategory,
+          price: data.price || 0,
+          stock: data.stock || 0,
+          image: data.image || '',
+          isAvailable: data.isAvailable !== undefined ? data.isAvailable : true
+        });
+        
+        console.log('Form data set to:', {
+          name: data.name || '',
+          description: data.description || '',
+          category: finalCategory,
+          price: data.price || 0,
+          stock: data.stock || 0,
+          image: data.image || '',
+          isAvailable: data.isAvailable !== undefined ? data.isAvailable : true
+        });
+        
         setLoading(false);
       } catch (err) {
+        console.error('Error fetching product:', err);
         setError('Failed to load product');
         setLoading(false);
       }
     };
 
-    fetchProduct();
+    if (id) {
+      fetchProduct();
+    }
   }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,24 +96,64 @@ const EditProductPage: React.FC = () => {
     setSaving(true);
 
     try {
-      await axios.put(`/api/products/${id}`, formData);
+      console.log('Submitting form data:', formData);
+      
+      const updateData = {
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        category: formData.category.toLowerCase().trim(), // Ensure lowercase
+        price: Number(formData.price),
+        stock: Number(formData.stock),
+        image: formData.image,
+        isAvailable: formData.isAvailable
+      };
+      
+      console.log('Update payload:', updateData);
+      
+      const response = await axios.put(`/api/products/${id}`, updateData);
+      console.log('Product updated successfully:', response.data);
+      
       toast.success('Product updated successfully');
       navigate('/shop-admin/products');
-    } catch (error) {
-      toast.error('Failed to update product');
+    } catch (error: any) {
+      console.error('Error updating product:', error);
+      toast.error(error.response?.data?.message || 'Failed to update product');
     } finally {
       setSaving(false);
     }
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
-    const value = e.target.type === 'checkbox' 
-      ? (e.target as HTMLInputElement).checked 
-      : e.target.value;
+    const { name, value, type } = e.target;
     
-    setFormData({ ...formData, [e.target.name]: value });
+    console.log('Form field changed:', { name, value, type });
+    
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData(prev => {
+        const newData = { ...prev, [name]: checked };
+        console.log('Updated form data (checkbox):', newData);
+        return newData;
+      });
+    } else if (type === 'number') {
+      setFormData(prev => {
+        const newData = { ...prev, [name]: Number(value) };
+        console.log('Updated form data (number):', newData);
+        return newData;
+      });
+    } else {
+      setFormData(prev => {
+        const newData = { ...prev, [name]: value };
+        console.log('Updated form data (text/select):', newData);
+        return newData;
+      });
+    }
+  };
+
+  const handleImageUpload = (imagePath: string) => {
+    setFormData(prev => ({ ...prev, image: imagePath }));
   };
 
   if (loading) {
@@ -92,8 +179,8 @@ const EditProductPage: React.FC = () => {
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Product Name
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
+                Product Name *
               </label>
               <input
                 type="text"
@@ -106,8 +193,30 @@ const EditProductPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Description
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
+                Category *
+              </label>
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                className="input"
+                required
+              >
+                {categories.map((category) => (
+                  <option key={category.value} value={category.value}>
+                    {category.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-[var(--muted-text)] mt-1">
+                Current: {categories.find(cat => cat.value === formData.category)?.label || formData.category}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
+                Description *
               </label>
               <textarea
                 name="description"
@@ -120,8 +229,8 @@ const EditProductPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Price (₹)
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
+                Price (₹) *
               </label>
               <input
                 type="number"
@@ -136,8 +245,8 @@ const EditProductPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Stock
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
+                Stock *
               </label>
               <input
                 type="number"
@@ -151,17 +260,16 @@ const EditProductPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Image URL
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
+                Product Image
               </label>
-              <input
-                type="url"
-                name="image"
-                value={formData.image}
-                onChange={handleChange}
-                className="input"
-                placeholder="https://example.com/image.jpg"
+              <ImageUpload
+                onImageUpload={handleImageUpload}
+                currentImage={formData.image}
               />
+              <p className="text-sm text-[var(--muted-text)] mt-1">
+                Upload a new image or keep the current one
+              </p>
             </div>
 
             <div className="flex items-center">
@@ -170,9 +278,9 @@ const EditProductPage: React.FC = () => {
                 name="isAvailable"
                 checked={formData.isAvailable}
                 onChange={handleChange}
-                className="h-4 w-4 text-[var(--primary)] border-[var(--gray-300)] rounded"
+                className="h-4 w-4 text-[var(--accent-purple)] border-[var(--border-color)] rounded focus:ring-[var(--accent-purple)]"
               />
-              <label className="ml-2 text-sm text-[var(--gray-700)]">
+              <label className="ml-2 text-sm text-[var(--secondary-text)]">
                 Product is available for sale
               </label>
             </div>

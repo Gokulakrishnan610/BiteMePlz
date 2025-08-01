@@ -24,17 +24,22 @@ import shopRoutes from './routes/shopRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
+import shopLogRoutes from './routes/shopLogRoutes.js';
+import studentAnalyticsRoutes from './routes/studentAnalyticsRoutes.js';
 import { errorHandler, notFound } from './middleware/errorMiddleware.js';
 import Order from './models/orderModel.js';
 import Shop from './models/shopModel.js';
 import User from './models/userModel.js';
 import { handleExpiredQR, handleFinalValidityExpired } from './controllers/orderController.js';
+import { logShopActivity } from './utils/shopLogger.js';
 
 const app = express();
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Routes
 app.use('/api/users', userRoutes);
@@ -42,9 +47,13 @@ app.use('/api/shops', shopRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/shop-logs', shopLogRoutes);
+app.use('/api/student-analytics', studentAnalyticsRoutes);
 
-// Uploads folder
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Uploads folder - serve static files
+const uploadsPath = path.join(__dirname, '../uploads');
+app.use('/uploads', express.static(uploadsPath));
 
 // Production setup
 if (process.env.NODE_ENV === 'production') {
@@ -84,6 +93,20 @@ const checkFinalValidityAndResetWallets = async () => {
       if (now >= finalValidityTime) {
         console.log(`Final validity expired for shop ${shop.name} at ${finalValidityTime}`);
         
+        // Log the automatic closure
+        await logShopActivity({
+          shop: shop._id,
+          action: 'final_validity_expired',
+          performedBy: shop.shopAdmin,
+          previousState: { finalValidityTime: shop.finalValidityTime },
+          newState: { status: 'expired' },
+          metadata: { 
+            expiredAt: now,
+            autoExpiry: true
+          },
+          description: `Shop automatically closed due to final validity expiry at ${finalValidityTime.toLocaleString()}`
+        });
+
         // Get all unverified orders for this shop
         const orders = await Order.find({
           shop: shop._id,
@@ -112,6 +135,25 @@ const checkFinalValidityAndResetWallets = async () => {
       const result = await User.updateMany({}, { $set: { balance: 0 } });
       console.log(`Final validity expired for shops: ${walletsResetForShops.join(', ')}`);
       console.log(`Reset ${result.modifiedCount} user wallets to zero`);
+      
+      // Log wallet reset activity
+      for (const shopName of walletsResetForShops) {
+        const shop = await Shop.findOne({ name: shopName });
+        if (shop) {
+          await logShopActivity({
+            shop: shop._id,
+            action: 'auto_close',
+            performedBy: shop.shopAdmin,
+            previousState: { walletsActive: true },
+            newState: { walletsActive: false },
+            metadata: { 
+              walletsReset: result.modifiedCount,
+              resetAt: new Date()
+            },
+            description: `All user wallets reset to zero due to final validity expiry`
+          });
+        }
+      }
     }
     
   } catch (error) {
@@ -162,6 +204,7 @@ const startServer = async () => {
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      console.log(`Uploads directory: ${uploadsPath}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

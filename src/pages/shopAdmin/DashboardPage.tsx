@@ -135,7 +135,7 @@ const DashboardPage: React.FC = () => {
       const validityDate = new Date();
       validityDate.setHours(Number(hh), Number(mm), 0, 0);
       
-      // If the time is earlier than current time, set it to tomorrow
+      // If the time is earlier than current time, set it for tomorrow
       if (validityDate <= now) {
         validityDate.setDate(validityDate.getDate() + 1);
       }
@@ -239,50 +239,70 @@ const DashboardPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <h1 className="text-2xl font-bold text-[var(--primary-text)]">Dashboard</h1>
         <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-          <div className="flex items-center gap-2 bg-white rounded-lg p-3 shadow-sm flex-1 md:flex-initial">
-            <Clock size={20} className="text-[var(--primary)]" />
-            <input
-              type="time"
-              value={finalValidity}
-              onChange={(e) => setFinalValidity(e.target.value)}
-              className="border-none focus:ring-0 p-0"
-            />
-            <button
-              onClick={updateFinalValidity}
-              disabled={updating}
-              className="btn-primary py-1 px-3 text-sm"
-            >
-              {updating ? 'Saving...' : 'Save'}
-            </button>
+          {/* Final Validity Time Control */}
+          <div className="card p-4 flex items-center gap-3 min-w-[280px]">
+            <Clock size={20} className="text-[var(--accent-purple)] flex-shrink-0" />
+            <div className="flex-1">
+              <label className="form-label text-xs mb-1 block">Final Validity Time</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="time"
+                  value={finalValidity}
+                  onChange={(e) => setFinalValidity(e.target.value)}
+                  className="form-control text-sm py-1 px-2 min-w-[100px]"
+                />
+                <button
+                  onClick={updateFinalValidity}
+                  disabled={updating}
+                  className="btn-primary py-1 px-3 text-sm whitespace-nowrap"
+                >
+                  {updating ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2 bg-white rounded-lg p-3 shadow-sm flex-1 md:flex-initial">
-            <QrCode size={20} className="text-[var(--primary)]" />
-            <input
-              type="number"
-              value={qrValidityMinutes}
-              onChange={(e) => setQrValidityMinutes(e.target.value)}
-              min="1"
-              max="60"
-              className="border-none focus:ring-0 p-0 w-16"
-            />
-            <span className="text-sm text-[var(--gray-600)]">min</span>
-            <button
-              onClick={updateQRValidity}
-              disabled={updatingQR}
-              className="btn-primary py-1 px-3 text-sm"
-            >
-              {updatingQR ? 'Saving...' : 'Save'}
-            </button>
+
+          {/* QR Validity Control */}
+          <div className="card p-4 flex items-center gap-3 min-w-[250px]">
+            <QrCode size={20} className="text-[var(--accent-purple)] flex-shrink-0" />
+            <div className="flex-1">
+              <label className="form-label text-xs mb-1 block">QR Validity (minutes)</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={qrValidityMinutes}
+                  onChange={(e) => setQrValidityMinutes(e.target.value)}
+                  min="1"
+                  max="60"
+                  className="form-control text-sm py-1 px-2 w-16"
+                />
+                <button
+                  onClick={updateQRValidity}
+                  disabled={updatingQR}
+                  className="btn-primary py-1 px-3 text-sm whitespace-nowrap"
+                >
+                  {updatingQR ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
           </div>
+
+          {/* Shop Toggle */}
           <button
             onClick={handleToggleShop}
             disabled={closing}
-            className={`py-1 px-3 text-sm flex items-center gap-2 ${shop?.isOpen ? 'btn-error' : 'btn-success'}`}
+            className={`card p-4 flex items-center gap-3 transition-all duration-200 hover:scale-105 ${
+              shop?.isOpen 
+                ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700' 
+                : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700'
+            }`}
           >
             <Power size={20} />
-            {closing ? (shop?.isOpen ? 'Closing...' : 'Opening...') : (shop?.isOpen ? 'Close Shop' : 'Open Shop')}
+            <span className="font-medium">
+              {closing ? (shop?.isOpen ? 'Closing...' : 'Opening...') : (shop?.isOpen ? 'Close Shop' : 'Open Shop')}
+            </span>
           </button>
         </div>
       </div>
@@ -337,14 +357,14 @@ const DashboardPage: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card p-6">
-          <h2 className="text-xl font-semibold mb-4">Monthly Sales</h2>
+          <h2 className="text-xl font-semibold mb-4 text-[var(--primary-text)]">Monthly Sales</h2>
           <div className="h-[300px]">
             <Line data={salesData} options={{ maintainAspectRatio: false }} />
           </div>
         </div>
 
         <div className="card p-6">
-          <h2 className="text-xl font-semibold mb-4">Top Products</h2>
+          <h2 className="text-xl font-semibold mb-4 text-[var(--primary-text)]">Top Products</h2>
           <div className="h-[300px]">
             <Bar 
               data={topProductsData} 
@@ -362,68 +382,80 @@ const DashboardPage: React.FC = () => {
       </div>
 
       <div className="card mt-6">
-        <h3 className="text-xl font-semibold mb-4">Daily Order Statistics</h3>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsBarChart data={analytics?.dailyStats || []}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="_id.date" 
-                tickFormatter={(date: string) => new Date(date).toLocaleDateString('en-IN', { weekday: 'short' })}
-              />
-              <YAxis />
-              <RechartsTooltip />
-              <RechartsLegend />
-              <RechartsBar dataKey="totalOrders" name="Total Orders" fill="#3B82F6" />
-              <RechartsBar dataKey="paidOrders" name="Paid Orders" fill="#10B981" />
-              <RechartsBar dataKey="verifiedOrders" name="Verified Orders" fill="#8B5CF6" />
-              <RechartsBar dataKey="expiredOrders" name="Expired Orders" fill="#EF4444" />
-            </RechartsBarChart>
-          </ResponsiveContainer>
+        <div className="card-header">
+          <h3 className="text-xl font-semibold text-[var(--primary-text)]">Daily Order Statistics</h3>
+        </div>
+        <div className="card-body">
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <RechartsBarChart data={analytics?.dailyStats || []}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="_id.date" 
+                  tickFormatter={(date: string) => new Date(date).toLocaleDateString('en-IN', { weekday: 'short' })}
+                />
+                <YAxis />
+                <RechartsTooltip />
+                <RechartsLegend />
+                <RechartsBar dataKey="totalOrders" name="Total Orders" fill="#3B82F6" />
+                <RechartsBar dataKey="paidOrders" name="Paid Orders" fill="#10B981" />
+                <RechartsBar dataKey="verifiedOrders" name="Verified Orders" fill="#8B5CF6" />
+                <RechartsBar dataKey="expiredOrders" name="Expired Orders" fill="#EF4444" />
+              </RechartsBarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         <div className="card">
-          <h3 className="text-xl font-semibold mb-4">Monthly Revenue</h3>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <RechartsBarChart data={analytics?.monthlySales || []}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="_id.month" 
-                  tickFormatter={(month: number) => new Date(2024, month - 1).toLocaleString('default', { month: 'short' })}
-                />
-                <YAxis />
-                <RechartsTooltip />
-                <RechartsLegend />
-                <RechartsBar dataKey="total" name="Revenue" fill="#8B5CF6" />
-              </RechartsBarChart>
-            </ResponsiveContainer>
+          <div className="card-header">
+            <h3 className="text-xl font-semibold text-[var(--primary-text)]">Monthly Revenue</h3>
+          </div>
+          <div className="card-body">
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsBarChart data={analytics?.monthlySales || []}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="_id.month" 
+                    tickFormatter={(month: number) => new Date(2024, month - 1).toLocaleString('default', { month: 'short' })}
+                  />
+                  <YAxis />
+                  <RechartsTooltip />
+                  <RechartsLegend />
+                  <RechartsBar dataKey="total" name="Revenue" fill="#8B5CF6" />
+                </RechartsBarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
         <div className="card">
-          <h3 className="text-xl font-semibold mb-4">Top Selling Products</h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Units Sold</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {analytics?.topProducts.map((product, index) => (
-                  <tr key={index}>
-                    <td className="px-6 py-4 whitespace-nowrap">{product.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{product.totalSold}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">₹{product.totalRevenue}</td>
+          <div className="card-header">
+            <h3 className="text-xl font-semibold text-[var(--primary-text)]">Top Selling Products</h3>
+          </div>
+          <div className="card-body">
+            <div className="enhanced-table">
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <th className="text-left">Product</th>
+                    <th className="text-right">Units Sold</th>
+                    <th className="text-right">Revenue</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {analytics?.topProducts.map((product, index) => (
+                    <tr key={index}>
+                      <td className="font-medium text-[var(--primary-text)]">{product.name}</td>
+                      <td className="text-right text-[var(--secondary-text)]">{product.totalSold}</td>
+                      <td className="text-right text-[var(--accent-purple)] font-medium">₹{product.totalRevenue}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
