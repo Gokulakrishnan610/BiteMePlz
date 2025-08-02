@@ -1,10 +1,10 @@
 import asyncHandler from 'express-async-handler';
 import crypto from 'crypto';
 import Razorpay from 'razorpay';
-import Order from '../models/orderModel.js';
-import Product from '../models/productModel.js';
-import Shop from '../models/shopModel.js';
-import User from '../models/userModel.js';
+import { OrderService } from '../services/databaseService.js';
+import { ProductService } from '../services/databaseService.js';
+import { ShopService } from '../services/databaseService.js';
+import { UserService } from '../services/databaseService.js';
 import { logTransaction } from '../utils/transactionLogger.js';
 
 const instance = new Razorpay({
@@ -25,17 +25,17 @@ const getQRValidityTime = (minutes) => {
 
 const handleExpiredQR = async (order) => {
   try {
-    console.log(`Processing QR expiry for order ${order._id}`);
+    console.log(`Processing QR expiry for order ${order.id}`);
     
-    const shop = await Shop.findById(order.shop);
+    const shop = await ShopService.findById(order.shop);
     if (!shop) {
-      console.error('Shop not found for order:', order._id);
+      console.error('Shop not found for order:', order.id);
       return;
     }
 
     // Check if order is already expired or verified
-    if (order.status === 'expired' || order.isVerified) {
-      console.log(`Order ${order._id} already expired or verified, skipping`);
+    if (order.status === 'expired' || order.is_verified) {
+      console.log(`Order ${order.id} already expired or verified, skipping`);
       return;
     }
 
@@ -43,59 +43,62 @@ const handleExpiredQR = async (order) => {
     const now = new Date();
 
     // Check if final validity is reached
-    if (now >= shop.finalValidityTime) {
-      console.log(`Order ${order._id} reached final validity, processing as final validity expiry`);
+    if (now >= shop.final_validity_time) {
+      console.log(`Order ${order.id} reached final validity, processing as final validity expiry`);
       await handleFinalValidityExpired(order);
       return;
     }
 
     // Return products to stock only if QR is expired and order is not verified
-    for (const item of order.orderItems) {
-      const product = await Product.findById(item.product);
+    for (const item of order.order_items) {
+      const product = await ProductService.findById(item.product);
       if (product) {
-        product.stock += item.quantity;
-        await product.save();
+        await ProductService.findByIdAndUpdate(product.id, {
+          stock: product.stock + item.quantity
+        });
         console.log(`Returned ${item.quantity} units of ${product.name} to stock`);
       }
     }
 
     // Return balance to user's wallet if not verified and has balance amount
-    if (!order.isVerified && order.balanceAmount > 0) {
-      const user = await User.findById(order.user);
+    if (!order.is_verified && order.balance_amount > 0) {
+      const user = await UserService.findById(order.user);
       if (user) {
         // Log refund event
-        console.log(`Refunding ₹${order.balanceAmount} to user ${user._id} for order ${order._id}`);
+        console.log(`Refunding ₹${order.balance_amount} to user ${user.id} for order ${order.id}`);
         
         const previousBalance = user.balance;
         
         // Add balance back to user's wallet
-        user.balance += order.balanceAmount;
-        await user.save();
+        await UserService.findByIdAndUpdate(user.id, {
+          balance: user.balance + order.balance_amount
+        });
         
         // Log transaction
         await logTransaction({
           shop: order.shop,
-          order: order._id,
+          order: order.id,
           user: order.user,
           type: 'refund',
-          amount: order.balanceAmount,
-          paymentMethod: order.paymentResult?.razorpay_payment_id ? 'razorpay' : 'balance',
+          amount: order.balance_amount,
+          paymentMethod: order.payment_result?.razorpay_payment_id ? 'razorpay' : 'balance',
           description: 'QR code expired - amount refunded to wallet',
           metadata: {
-            orderId: order.orderId,
-            qrExpiry: order.qrValidUntil,
+            orderId: order.order_id,
+            qrExpiry: order.qr_valid_until,
             previousBalance,
-            newBalance: user.balance,
-            balanceAmount: order.balanceAmount
+            newBalance: user.balance + order.balance_amount,
+            balanceAmount: order.balance_amount
           }
         });
         
         // Update order
-        order.status = 'expired';
-        order.balanceAmount = 0;
-        await order.save();
+        await OrderService.findByIdAndUpdate(order.id, {
+          status: 'expired',
+          balance_amount: 0
+        });
         
-        console.log(`Successfully refunded balance to user ${user._id}`);
+        console.log(`Successfully refunded balance to user ${user.id}`);
       }
     }
 

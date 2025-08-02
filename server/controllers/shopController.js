@@ -1,8 +1,8 @@
 import asyncHandler from 'express-async-handler';
-import Shop from '../models/shopModel.js';
-import User from '../models/userModel.js';
-import Product from '../models/productModel.js';
-import Order from '../models/orderModel.js';
+import { ShopService } from '../services/databaseService.js';
+import { UserService } from '../services/databaseService.js';
+import { ProductService } from '../services/databaseService.js';
+import { OrderService } from '../services/databaseService.js';
 import { handleFinalValidityExpired } from './orderController.js';
 import { logShopActivity } from '../utils/shopLogger.js';
 
@@ -10,7 +10,7 @@ import { logShopActivity } from '../utils/shopLogger.js';
 // @route   GET /api/shops
 // @access  Public
 const getShops = asyncHandler(async (req, res) => {
-  const shops = await Shop.find({ isActive: true });
+  const shops = await ShopService.find({ is_active: true });
   res.json(shops);
 });
 
@@ -18,7 +18,7 @@ const getShops = asyncHandler(async (req, res) => {
 // @route   GET /api/shops/:id
 // @access  Public
 const getShopById = asyncHandler(async (req, res) => {
-  const shop = await Shop.findById(req.params.id).populate('products');
+  const shop = await ShopService.findById(req.params.id);
 
   if (shop) {
     res.json(shop);
@@ -32,7 +32,7 @@ const getShopById = asyncHandler(async (req, res) => {
 // @route   PUT /api/shops/:id
 // @access  Private/Admin or ShopAdmin
 const updateShop = asyncHandler(async (req, res) => {
-  const shop = await Shop.findById(req.params.id);
+  const shop = await ShopService.findById(req.params.id);
 
   if (!shop) {
     res.status(404);
@@ -42,7 +42,7 @@ const updateShop = asyncHandler(async (req, res) => {
   // Check if user is admin or the shop admin of this shop
   if (
     req.user.role !== 'admin' && 
-    (req.user.role !== 'shopAdmin' || shop.shopAdmin.toString() !== req.user._id.toString())
+    (req.user.role !== 'shopAdmin' || shop.shop_admin.toString() !== req.user._id.toString())
   ) {
     res.status(401);
     throw new Error('Not authorized');
@@ -54,10 +54,10 @@ const updateShop = asyncHandler(async (req, res) => {
     description: shop.description,
     location: shop.location,
     image: shop.image,
-    isActive: shop.isActive,
-    isOpen: shop.isOpen,
-    finalValidityTime: shop.finalValidityTime,
-    qrValidityMinutes: shop.qrValidityMinutes
+    is_active: shop.is_active,
+    is_open: shop.is_open,
+    final_validity_time: shop.final_validity_time,
+    qr_validity_minutes: shop.qr_validity_minutes
   };
 
   // Validate finalValidityTime if it's being updated
@@ -76,22 +76,24 @@ const updateShop = asyncHandler(async (req, res) => {
     }
   }
 
-  shop.name = req.body.name || shop.name;
-  shop.description = req.body.description || shop.description;
-  shop.location = req.body.location || shop.location;
-  shop.image = req.body.image || shop.image;
-  shop.isActive = req.body.isActive !== undefined ? req.body.isActive : shop.isActive;
-  shop.isOpen = req.body.isOpen !== undefined ? req.body.isOpen : shop.isOpen;
+  const updateData = {
+    name: req.body.name || shop.name,
+    description: req.body.description || shop.description,
+    location: req.body.location || shop.location,
+    image: req.body.image || shop.image,
+    is_active: req.body.isActive !== undefined ? req.body.isActive : shop.is_active,
+    is_open: req.body.isOpen !== undefined ? req.body.isOpen : shop.is_open,
+  };
   
   if (req.body.finalValidityTime) {
-    shop.finalValidityTime = new Date(req.body.finalValidityTime);
+    updateData.final_validity_time = new Date(req.body.finalValidityTime);
   }
 
   if (req.body.qrValidityMinutes) {
-    shop.qrValidityMinutes = req.body.qrValidityMinutes;
+    updateData.qr_validity_minutes = req.body.qrValidityMinutes;
   }
 
-  const updatedShop = await shop.save();
+  const updatedShop = await ShopService.findByIdAndUpdate(shop.id, updateData);
 
   // Store new state for logging
   const newState = {
@@ -99,25 +101,25 @@ const updateShop = asyncHandler(async (req, res) => {
     description: updatedShop.description,
     location: updatedShop.location,
     image: updatedShop.image,
-    isActive: updatedShop.isActive,
-    isOpen: updatedShop.isOpen,
-    finalValidityTime: updatedShop.finalValidityTime,
-    qrValidityMinutes: updatedShop.qrValidityMinutes
+    is_active: updatedShop.is_active,
+    is_open: updatedShop.is_open,
+    final_validity_time: updatedShop.final_validity_time,
+    qr_validity_minutes: updatedShop.qr_validity_minutes
   };
 
   // Determine what was updated
   const changes = [];
-  if (previousState.finalValidityTime !== newState.finalValidityTime) {
+  if (previousState.final_validity_time !== newState.final_validity_time) {
     changes.push('final validity time');
   }
-  if (previousState.qrValidityMinutes !== newState.qrValidityMinutes) {
+  if (previousState.qr_validity_minutes !== newState.qr_validity_minutes) {
     changes.push('QR validity duration');
   }
-  if (previousState.isOpen !== newState.isOpen) {
-    changes.push(newState.isOpen ? 'opened shop' : 'closed shop');
+  if (previousState.is_open !== newState.is_open) {
+    changes.push(newState.is_open ? 'opened shop' : 'closed shop');
   }
-  if (previousState.isActive !== newState.isActive) {
-    changes.push(newState.isActive ? 'activated shop' : 'deactivated shop');
+  if (previousState.is_active !== newState.is_active) {
+    changes.push(newState.is_active ? 'activated shop' : 'deactivated shop');
   }
 
   // Log the activity
@@ -127,7 +129,7 @@ const updateShop = asyncHandler(async (req, res) => {
                   'settings_updated';
     
     await logShopActivity({
-      shop: shop._id,
+      shop: shop.id,
       action,
       performedBy: req.user._id,
       previousState,
@@ -148,7 +150,7 @@ const updateShop = asyncHandler(async (req, res) => {
 // @route   DELETE /api/shops/:id
 // @access  Private/Admin
 const deleteShop = asyncHandler(async (req, res) => {
-  const shop = await Shop.findById(req.params.id);
+  const shop = await ShopService.findById(req.params.id);
 
   if (!shop) {
     res.status(404);
@@ -175,17 +177,17 @@ const deleteShop = asyncHandler(async (req, res) => {
   });
 
   // Delete associated products
-  await Product.deleteMany({ shop: shop._id });
+  await ProductService.deleteMany({ shop: shop.id });
   
   // Update shop admin user
-  if (shop.shopAdmin) {
-    await User.findByIdAndUpdate(shop.shopAdmin, { 
+  if (shop.shop_admin) {
+    await UserService.findByIdAndUpdate(shop.shop_admin, { 
       role: 'student',
-      $unset: { shop: "" }
+      shop: null
     });
   }
 
-  await shop.deleteOne();
+  await ShopService.findByIdAndDelete(shop.id);
   res.json({ message: 'Shop removed' });
 });
 
@@ -193,7 +195,7 @@ const deleteShop = asyncHandler(async (req, res) => {
 // @route   GET /api/shops/:id/analytics
 // @access  Private/Admin or ShopAdmin
 const getShopAnalytics = asyncHandler(async (req, res) => {
-  const shop = await Shop.findById(req.params.id);
+  const shop = await ShopService.findById(req.params.id);
 
   if (!shop) {
     res.status(404);
@@ -203,7 +205,7 @@ const getShopAnalytics = asyncHandler(async (req, res) => {
   // Check if user is admin or the shop admin of this shop
   if (
     req.user.role !== 'admin' && 
-    (req.user.role !== 'shopAdmin' || shop.shopAdmin.toString() !== req.user._id.toString())
+    (req.user.role !== 'shopAdmin' || shop.shop_admin.toString() !== req.user._id.toString())
   ) {
     res.status(401);
     throw new Error('Not authorized');

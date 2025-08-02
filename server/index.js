@@ -18,7 +18,6 @@ console.log('Environment variables loaded:', {
 
 import express from 'express';
 import cors from 'cors';
-import connectDB from './config/db.js';
 import userRoutes from './routes/userRoutes.js';
 import shopRoutes from './routes/shopRoutes.js';
 import productRoutes from './routes/productRoutes.js';
@@ -28,11 +27,14 @@ import uploadRoutes from './routes/uploadRoutes.js';
 import shopLogRoutes from './routes/shopLogRoutes.js';
 import studentAnalyticsRoutes from './routes/studentAnalyticsRoutes.js';
 import { errorHandler, notFound } from './middleware/errorMiddleware.js';
-import Order from './models/orderModel.js';
-import Shop from './models/shopModel.js';
-import User from './models/userModel.js';
+import { OrderService } from './services/databaseService.js';
+import { ShopService } from './services/databaseService.js';
+import { UserService } from './services/databaseService.js';
 import { handleExpiredQR, handleFinalValidityExpired } from './controllers/orderController.js';
 import { logShopActivity } from './utils/shopLogger.js';
+
+// Import Supabase after environment variables are loaded
+import { connectSupabase } from './config/supabase.js';
 
 const app = express();
 
@@ -80,14 +82,14 @@ const checkFinalValidityAndResetWallets = async () => {
     console.log('Checking final validity times for all shops...');
     
     // Get all active shops
-    const shops = await Shop.find({ isActive: true });
+    const shops = await ShopService.find({ is_active: true });
     const now = new Date();
     
     let walletsResetForShops = [];
     let shouldResetWallets = false;
     
     for (const shop of shops) {
-      const finalValidityTime = new Date(shop.finalValidityTime);
+      const finalValidityTime = new Date(shop.final_validity_time);
       
       // Check if final validity time has passed
       if (now >= finalValidityTime) {
@@ -95,10 +97,10 @@ const checkFinalValidityAndResetWallets = async () => {
         
         // Log the automatic closure
         await logShopActivity({
-          shop: shop._id,
+          shop: shop.id,
           action: 'final_validity_expired',
-          performedBy: shop.shopAdmin,
-          previousState: { finalValidityTime: shop.finalValidityTime },
+          performedBy: shop.shop_admin,
+          previousState: { finalValidityTime: shop.final_validity_time },
           newState: { status: 'expired' },
           metadata: { 
             expiredAt: now,
@@ -108,20 +110,20 @@ const checkFinalValidityAndResetWallets = async () => {
         });
 
         // Get all unverified orders for this shop
-        const orders = await Order.find({
-          shop: shop._id,
-          isPaid: true,
-          isVerified: false,
-          status: { $ne: 'expired' }
+        const orders = await OrderService.find({
+          shop_id: shop.id,
+          is_paid: true,
+          is_verified: false,
+          status: 'pending'
         });
 
         // Process each order
         for (const order of orders) {
           try {
             await handleFinalValidityExpired(order);
-            console.log(`Processed expired order ${order._id} for shop ${shop.name}`);
+            console.log(`Processed expired order ${order.id} for shop ${shop.name}`);
           } catch (error) {
-            console.error(`Failed to process order ${order._id}:`, error);
+            console.error(`Failed to process order ${order.id}:`, error);
           }
         }
         
@@ -132,18 +134,24 @@ const checkFinalValidityAndResetWallets = async () => {
     
     // If any shop's final validity has expired, reset all wallets to zero
     if (shouldResetWallets) {
-      const result = await User.updateMany({}, { $set: { balance: 0 } });
+      // Update all users to set balance to 0
+      const users = await UserService.find({});
+      for (const user of users) {
+        await UserService.findByIdAndUpdate(user.id, { balance: 0 });
+      }
+      const result = { modifiedCount: users.length };
       console.log(`Final validity expired for shops: ${walletsResetForShops.join(', ')}`);
       console.log(`Reset ${result.modifiedCount} user wallets to zero`);
       
       // Log wallet reset activity
       for (const shopName of walletsResetForShops) {
-        const shop = await Shop.findOne({ name: shopName });
+        const shops = await ShopService.find({ name: shopName });
+        const shop = shops[0];
         if (shop) {
-          await logShopActivity({
-            shop: shop._id,
-            action: 'auto_close',
-            performedBy: shop.shopAdmin,
+                      await logShopActivity({
+              shop: shop.id,
+              action: 'auto_close',
+              performedBy: shop.shopAdmin,
             previousState: { walletsActive: true },
             newState: { walletsActive: false },
             metadata: { 
@@ -161,28 +169,28 @@ const checkFinalValidityAndResetWallets = async () => {
   }
 };
 
-// Connect to MongoDB and start server
+// Connect to Supabase and start server
 const startServer = async () => {
   try {
-    await connectDB();
-    console.log('MongoDB connected successfully');
+    await connectSupabase();
+    console.log('Supabase connected successfully');
 
     // Set up periodic check for expired orders (every 2 minutes)
     setInterval(async () => {
       try {
         console.log('Starting periodic expired orders check...');
         const now = new Date();
-        const orders = await Order.find({
-          isPaid: true,
-          isVerified: false,
-          status: { $ne: 'expired' }
+        const orders = await OrderService.find({
+          is_paid: true,
+          is_verified: false,
+          status: 'pending'
         });
 
         console.log(`Found ${orders.length} orders to check for expiry`);
 
         for (const order of orders) {
-          const qrExpiry = new Date(order.qrValidUntil);
-          const finalValidity = new Date(order.finalValidity);
+          const qrExpiry = new Date(order.qr_valid_until);
+          const finalValidity = new Date(order.final_validity);
           
           if (now >= finalValidity) {
             await handleFinalValidityExpired(order);
