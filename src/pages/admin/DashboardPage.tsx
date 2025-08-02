@@ -64,10 +64,15 @@ interface DashboardStats {
   }>;
 }
 
-const DashboardPage: React.FC = () => {
+interface AdminDashboardPageProps {
+  setMaintenanceMode: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+const DashboardPage: React.FC<AdminDashboardPageProps> = ({ setMaintenanceMode }) => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [maintenanceMode, setLocalMaintenanceMode] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -124,7 +129,7 @@ const DashboardPage: React.FC = () => {
           orders,
           avgOrderValue
         };
-      }).sort((a, b) => b.revenue - a.revenue);
+      }).sort((a: { shopName: string; revenue: number; orders: number; avgOrderValue: number }, b: { shopName: string; revenue: number; orders: number; avgOrderValue: number }) => b.revenue - a.revenue);
 
       // Generate daily stats for last 7 days
       const dailyStats = Array.from({ length: 7 }, (_, i) => {
@@ -490,7 +495,7 @@ const DashboardPage: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-green-600">₹{order.totalPrice}</p>
-                  <p className="text-xs text-gray-500">{order.shopName || 'Unknown Shop'}</p>
+                  <p className="text-xs text-gray-500">{order.shop?.name || 'Unknown Shop'}</p>
                 </div>
               </div>
             ))}
@@ -522,6 +527,25 @@ const DashboardPage: React.FC = () => {
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Maintenance Mode Toggle */}
+      <div className="card p-6">
+        <h2 className="text-xl font-semibold mb-4">Maintenance Mode</h2>
+        <div className="flex items-center">
+          <p className="text-gray-600 mr-4">
+            {`The site is currently in ${maintenanceMode ? 'maintenance' : 'operational'} mode.`}
+          </p>
+          <button
+            onClick={() => {
+              setLocalMaintenanceMode((prev) => !prev);
+              setMaintenanceMode((prev) => !prev);
+            }}
+            className={`btn ${maintenanceMode ? 'btn-danger' : 'btn-primary'}`}
+          >
+            {maintenanceMode ? 'Disable Maintenance Mode' : 'Enable Maintenance Mode'}
+          </button>
         </div>
       </div>
     </div>

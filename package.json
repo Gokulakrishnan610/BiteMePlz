@@ -31,6 +31,7 @@
     "nodemailer": "^6.9.9",
     "razorpay": "^2.9.2",
     "react": "^18.3.1",
+    "react-bootstrap": "^2.10.10",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^18.3.1",
     "react-hot-toast": "^2.4.1",

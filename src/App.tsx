@@ -37,6 +37,7 @@ import AnalyticsPage from './pages/admin/AnalyticsPage';
 import FinancialReportsPage from './pages/admin/FinancialReportsPage';
 import ShopLogsPage from './pages/shopAdmin/ShopLogsPage';
 import StudentAnalyticsPage from './pages/shopAdmin/StudentAnalyticsPage';
+import MaintenancePage from './pages/admin/MaintenancePage';
 
 // Shop Admin Pages
 import ShopAdminDashboardPage from './pages/shopAdmin/DashboardPage';
@@ -53,6 +54,17 @@ import LocalhostNotification from './components/LocalhostNotification';
 
 function App() {
   const { loading } = useAuth();
+  const [maintenanceMode, setMaintenanceMode] = React.useState(false);
+
+  // Optionally, you can persist this in localStorage or fetch from backend
+  // React.useEffect(() => {
+  //   const stored = localStorage.getItem('maintenanceMode');
+  //   if (stored) setMaintenanceMode(stored === 'true');
+  // }, []);
+
+  if (maintenanceMode) {
+    return <MaintenancePage />;
+  }
 
   if (loading) {
     return (
@@ -140,7 +152,10 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<AdminDashboardPage />} />
+            <Route 
+              index 
+              element={<AdminDashboardPage setMaintenanceMode={setMaintenanceMode} />} 
+            />
             <Route path="shops" element={<AdminShopsPage />} />
             <Route path="shops/:id" element={<AdminShopDetailsPage />} />
             <Route path="shops/:id/edit" element={<AdminEditShopPage />} />

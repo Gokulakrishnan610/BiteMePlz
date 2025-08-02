@@ -11,17 +11,45 @@ const shopLogSchema = mongoose.Schema(
       type: String,
       required: true,
       enum: [
+        // Shop management actions
         'shop_opened',
         'shop_closed',
-        'validity_updated',
-        'qr_validity_updated',
         'shop_created',
         'shop_activated',
         'shop_deactivated',
+        'shop_deleted',
+        'shop_updated',
         'manual_close',
         'auto_close',
         'final_validity_expired',
-        'settings_updated'
+        'settings_updated',
+        'validity_updated',
+        'qr_validity_updated',
+        
+        // Product management actions
+        'product_created',
+        'product_updated',
+        'product_deleted',
+        'product_activated',
+        'product_deactivated',
+        'stock_updated',
+        'price_updated',
+        
+        // Order management actions
+        'order_verified',
+        'order_cancelled',
+        'order_refunded',
+        
+        // System actions
+        'login_attempt',
+        'logout',
+        'password_changed',
+        'profile_updated',
+        
+        // Financial actions
+        'payment_received',
+        'refund_processed',
+        'balance_updated'
       ]
     },
     performedBy: {
@@ -50,6 +78,16 @@ const shopLogSchema = mongoose.Schema(
     },
     userAgent: {
       type: String
+    },
+    severity: {
+      type: String,
+      enum: ['low', 'medium', 'high', 'critical'],
+      default: 'medium'
+    },
+    category: {
+      type: String,
+      enum: ['shop', 'product', 'order', 'user', 'system', 'financial'],
+      default: 'shop'
     }
   },
   {
@@ -61,6 +99,8 @@ const shopLogSchema = mongoose.Schema(
 shopLogSchema.index({ shop: 1, createdAt: -1 });
 shopLogSchema.index({ action: 1, createdAt: -1 });
 shopLogSchema.index({ performedBy: 1, createdAt: -1 });
+shopLogSchema.index({ category: 1, createdAt: -1 });
+shopLogSchema.index({ severity: 1, createdAt: -1 });
 
 const ShopLog = mongoose.model('ShopLog', shopLogSchema);
 
