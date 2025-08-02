@@ -94,7 +94,7 @@ const AdminLayout: React.FC = () => {
             </h3>
             <div className="space-y-2">
               <SidebarLink to="/admin/shop-logs" icon={FileText} active={isActive('/admin/shop-logs')} closeSidebar={closeSidebar} label="Shop Logs" />
-              <SidebarLink to="/admin/student-analytics" icon={Activity} active={isActive('/admin/student-analytics')} closeSidebar={closeSidebar} label="Student Analytics" />
+              {/* <SidebarLink to="/admin/student-analytics" icon={Activity} active={isActive('/admin/student-analytics')} closeSidebar={closeSidebar} label="Student Analytics" /> */}
             </div>
           </div>
         </nav>

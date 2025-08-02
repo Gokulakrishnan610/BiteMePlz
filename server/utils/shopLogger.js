@@ -28,7 +28,7 @@ export const logShopActivity = async ({
     }
 
     const log = await ShopLog.create(logEntry);
-    console.log(`Shop activity logged: ${action} for shop ${shop}`);
+    console.log(`Shop activity logged: ${action} for shop ${shop} by user ${performedBy}`);
     return log;
   } catch (error) {
     console.error('Failed to log shop activity:', error);
