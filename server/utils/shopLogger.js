@@ -12,20 +12,22 @@ export const logShopActivity = async ({
 }) => {
   try {
     const logEntry = {
-      shop,
+      shop_id: shop,
       action,
-      performedBy,
-      previousState,
-      newState,
-      metadata,
-      description
+      performed_by: performedBy,
+      details: {
+        previousState,
+        newState,
+        metadata: {
+          ...metadata,
+          ...(req && {
+            ipAddress: req.ip || req.connection.remoteAddress,
+            userAgent: req.get('User-Agent')
+          })
+        },
+        description
+      }
     };
-
-    // Add request info if available
-    if (req) {
-      logEntry.ipAddress = req.ip || req.connection.remoteAddress;
-      logEntry.userAgent = req.get('User-Agent');
-    }
 
     const log = await ShopLogService.create(logEntry);
     console.log(`Shop activity logged: ${action} for shop ${shop} by user ${performedBy}`);
@@ -46,31 +48,38 @@ export const getShopLogs = async (shopId, options = {}) => {
     performedBy
   } = options;
 
-  const query = { shop: shopId };
+  const query = { shop_id: shopId };
   
   if (action) query.action = action;
-  if (performedBy) query.performedBy = performedBy;
-  if (startDate || endDate) {
-    query.createdAt = {};
-    if (startDate) query.createdAt.$gte = new Date(startDate);
-    if (endDate) query.createdAt.$lte = new Date(endDate);
+  if (performedBy) query.performed_by = performedBy;
+  try {
+    let logs = await ShopLogService.find(query);
+    
+    // Apply date filtering manually since Supabase doesn't support complex queries
+    if (startDate || endDate) {
+      logs = logs.filter(log => {
+        const logDate = new Date(log.created_at);
+        if (startDate && logDate < new Date(startDate)) return false;
+        if (endDate && logDate > new Date(endDate)) return false;
+        return true;
+      });
+    }
+    
+    // Apply pagination manually
+    const startIndex = (parseInt(page) - 1) * parseInt(limit);
+    const endIndex = startIndex + parseInt(limit);
+    const paginatedLogs = logs.slice(startIndex, endIndex);
+
+    return {
+      logs: paginatedLogs,
+      totalPages: Math.ceil(logs.length / parseInt(limit)),
+      currentPage: parseInt(page),
+      total: logs.length
+    };
+  } catch (error) {
+    console.error('Error getting shop logs:', error);
+    throw error;
   }
-
-  const logs = await ShopLogService.find(query)
-    .populate('performedBy', 'name email role')
-    .populate('shop', 'name')
-    .sort({ createdAt: -1 })
-    .limit(limit * 1)
-    .skip((page - 1) * limit);
-
-  const total = await ShopLogService.countDocuments(query);
-
-  return {
-    logs,
-    totalPages: Math.ceil(total / limit),
-    currentPage: page,
-    total
-  };
 };
 
 export const getShopActivityStats = async (shopId, period = '30d') => {
@@ -91,42 +100,40 @@ export const getShopActivityStats = async (shopId, period = '30d') => {
       startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   }
 
-  const stats = await ShopLogService.aggregate([
-    {
-      $match: {
-        shop: shopId,
-        createdAt: { $gte: startDate }
-      }
-    },
-    {
-      $group: {
-        _id: '$action',
-        count: { $sum: 1 },
-        lastOccurrence: { $max: '$createdAt' }
-      }
-    }
-  ]);
+  try {
+    const logs = await ShopLogService.find({ 
+      shop_id: shopId
+    }).then(logs => logs.filter(log => new Date(log.created_at) >= startDate));
 
-  const dailyActivity = await ShopLogService.aggregate([
-    {
-      $match: {
-        shop: shopId,
-        createdAt: { $gte: startDate }
-      }
-    },
-    {
-      $group: {
-        _id: {
-          date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-          action: '$action'
-        },
-        count: { $sum: 1 }
-      }
-    },
-    {
-      $sort: { '_id.date': 1 }
-    }
-  ]);
+    // Calculate stats manually
+    const actionCounts = {};
+    const dailyActivity = {};
+    
+    logs.forEach(log => {
+      // Count actions
+      actionCounts[log.action] = (actionCounts[log.action] || 0) + 1;
+      
+      // Group by date
+      const date = new Date(log.created_at).toDateString();
+      dailyActivity[date] = (dailyActivity[date] || 0) + 1;
+    });
 
-  return { stats, dailyActivity };
+    const stats = Object.entries(actionCounts).map(([action, count]) => ({
+      _id: action,
+      count,
+      lastOccurrence: logs
+        .filter(log => log.action === action)
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0]?.created_at
+    }));
+
+    const dailyActivityArray = Object.entries(dailyActivity).map(([date, count]) => ({
+      _id: { date, action: 'all' },
+      count
+    }));
+
+    return { stats, dailyActivity: dailyActivityArray };
+  } catch (error) {
+    console.error('Error getting shop activity stats:', error);
+    throw error;
+  }
 };

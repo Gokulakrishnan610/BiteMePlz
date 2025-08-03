@@ -30,11 +30,12 @@ const registerUser = asyncHandler(async (req, res) => {
   const otpExpiry = new Date();
   otpExpiry.setMinutes(otpExpiry.getMinutes() + 10); // OTP valid for 10 minutes
 
+  const hashedPassword = await bcrypt.hash(password, 10);
   const user = await UserService.create({
     name,
     email,
     roll_no: rollNo,
-    password,
+    password: hashedPassword,
     otp: {
       code: otp,
       expiresAt: otpExpiry
@@ -300,8 +301,9 @@ const resetPassword = asyncHandler(async (req, res) => {
   }
 
   // Reset the password
+  const hashedNewPassword = await bcrypt.hash(newPassword, 10);
   await UserService.findByIdAndUpdate(user.id, {
-    password: newPassword,
+    password: hashedNewPassword,
     password_reset_token: null
   });
 
@@ -366,22 +368,31 @@ const resendResetOTP = asyncHandler(async (req, res) => {
 const authUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
+  console.log('Login attempt for email:', email);
+
   const user = await UserService.findByEmail(email);
 
   if (!user) {
+    console.log('User not found for email:', email);
     res.status(401);
     throw new Error('Invalid email or password');
   }
 
+  console.log('User found:', { id: user.id, email: user.email, role: user.role, isVerified: user.is_verified });
+
   if (!user.is_verified) {
+    console.log('User not verified:', email);
     res.status(401);
     throw new Error('Please verify your email first');
   }
 
   // Compare password using bcrypt
+  console.log('Comparing passwords...');
   const isPasswordValid = await bcrypt.compare(password, user.password);
+  console.log('Password comparison result:', isPasswordValid);
   
   if (isPasswordValid) {
+    console.log('Login successful for:', email);
     res.json({
       _id: user.id,
       name: user.name,
@@ -392,6 +403,7 @@ const authUser = asyncHandler(async (req, res) => {
       token: generateToken(user.id),
     });
   } else {
+    console.log('Invalid password for:', email);
     res.status(401);
     throw new Error('Invalid email or password');
   }
@@ -538,11 +550,12 @@ const deleteUser = asyncHandler(async (req, res) => {
 
     try {
       // Create user first
+      const hashedPassword = await bcrypt.hash(password, 10);
       createdUser = await UserService.create({
         name,
         email,
         roll_no: rollNo,
-        password,
+        password: hashedPassword,
         role: 'shopAdmin',
         is_verified: true, // Shop admin accounts are pre-verified
       });
@@ -682,11 +695,12 @@ const createInitialAdmin = async () => {
     const adminExists = users.length > 0;
     
     if (!adminExists) {
+      const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'admin123', 10);
       await UserService.create({
         name: 'Admin',
         email: process.env.ADMIN_EMAIL || 'admin@example.com',
         roll_no: 'ADMIN001',
-        password: process.env.ADMIN_PASSWORD || 'admin123',
+        password: hashedPassword,
         role: 'admin',
         is_verified: true,
       });

@@ -92,10 +92,10 @@ const getProducts = asyncHandler(async (req, res) => {
     // Now try the actual query
     let query = {};
     if (shopId) {
-      query = { shop: shopId, isAvailable: true };
+      query = { shop: shopId, is_available: true };
       console.log('[ProductController] Using shop-specific query:', query);
     } else {
-      query = { isAvailable: true };
+      query = { is_available: true };
       console.log('[ProductController] Using general query (no shop filter):', query);
     }
     

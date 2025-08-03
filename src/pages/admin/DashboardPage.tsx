@@ -117,7 +117,7 @@ const DashboardPage: React.FC<AdminDashboardPageProps> = ({ setMaintenanceMode }
 
       // Calculate shop performance
       const shopPerformance = shops.map((shop: any) => {
-        const shopOrders = allOrders.filter((order: any) => order.shop?._id === shop._id);
+        const shopOrders = allOrders.filter((order: any) => order.shop?.id === shop.id || order.shop?._id === shop._id);
         const shopRevenue = shopOrders.reduce((sum: number, order: any) => sum + (order.totalPrice || 0), 0);
         const shopOrderCount = shopOrders.length;
         const avgOrderValue = shopOrderCount > 0 ? shopRevenue / shopOrderCount : 0;
@@ -155,16 +155,22 @@ const DashboardPage: React.FC<AdminDashboardPageProps> = ({ setMaintenanceMode }
       }
 
       // Calculate transaction types
-      const transactionTypes = [];
-      const typeMap = new Map();
+      const transactionTypes: Array<{
+        type: string;
+        count: number;
+        amount: number;
+        percentage: number;
+      }> = [];
+      const typeMap = new Map<string, { count: number; amount: number }>();
       
       allTransactions.forEach((transaction: any) => {
         const type = transaction.type || 'unknown';
         if (!typeMap.has(type)) {
           typeMap.set(type, { count: 0, amount: 0 });
         }
-        typeMap.get(type).count++;
-        typeMap.get(type).amount += transaction.amount || 0;
+        const typeData = typeMap.get(type)!;
+        typeData.count++;
+        typeData.amount += transaction.amount || 0;
       });
 
       typeMap.forEach((value, key) => {
@@ -210,7 +216,7 @@ const DashboardPage: React.FC<AdminDashboardPageProps> = ({ setMaintenanceMode }
       
       for (const shop of shops.data) {
         try {
-          const { data } = await api.get(`/orders/shop/${shop._id}`);
+          const { data } = await api.get(`/orders/shop/${shop.id || shop._id}`);
           allOrders.push(...data);
         } catch (error) {
           console.error(`Failed to fetch orders for shop ${shop.name}:`, error);
@@ -231,7 +237,7 @@ const DashboardPage: React.FC<AdminDashboardPageProps> = ({ setMaintenanceMode }
       
       for (const shop of shops.data) {
         try {
-          const { data } = await api.get(`/transactions/shop/${shop._id}`);
+          const { data } = await api.get(`/transactions/shop/${shop.id || shop._id}`);
           allTransactions.push(...data);
         } catch (error) {
           console.error(`Failed to fetch transactions for shop ${shop.name}:`, error);
