@@ -89,24 +89,24 @@ const checkFinalValidityAndResetWallets = async () => {
     let shouldResetWallets = false;
     
     for (const shop of shops) {
-      const finalValidityTime = new Date(shop.final_validity_time);
+      const final_validity_time = new Date(shop.final_validity_time);
       
       // Check if final validity time has passed
-      if (now >= finalValidityTime) {
-        console.log(`Final validity expired for shop ${shop.name} at ${finalValidityTime}`);
+      if (now >= final_validity_time) {
+        console.log(`Final validity expired for shop ${shop.name} at ${final_validity_time}`);
         
         // Log the automatic closure
         await logShopActivity({
           shop: shop.id,
           action: 'final_validity_expired',
           performedBy: shop.shop_admin,
-          previousState: { finalValidityTime: shop.final_validity_time },
+          previousState: { final_validity_time: shop.final_validity_time },
           newState: { status: 'expired' },
           metadata: { 
             expiredAt: now,
             autoExpiry: true
           },
-          description: `Shop automatically closed due to final validity expiry at ${finalValidityTime.toLocaleString()}`
+          description: `Shop automatically closed due to final validity expiry at ${final_validity_time.toLocaleString()}`
         });
 
         // Get all unverified orders for this shop

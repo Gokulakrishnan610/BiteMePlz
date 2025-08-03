@@ -32,7 +32,7 @@ export const logTransaction = async ({
   }
 };
 
-export const getShopTransactions = async (shopId, options = {}) => {
+export const getShopTransactions = async (shop_id, options = {}) => {
   const {
     page = 1,
     limit = 50,
@@ -42,7 +42,7 @@ export const getShopTransactions = async (shopId, options = {}) => {
     status
   } = options;
 
-  const query = { shop_id: shopId };
+  const query = { shop_id: shop_id };
   
   if (type) query.type = type;
   if (status) query.status = status;
@@ -68,7 +68,7 @@ export const getShopTransactions = async (shopId, options = {}) => {
   };
 };
 
-export const getShopTransactionStats = async (shopId, period = '30d') => {
+export const getShopTransactionStats = async (shop_id, period = '30d') => {
   const now = new Date();
   let startDate;
 
@@ -86,9 +86,9 @@ export const getShopTransactionStats = async (shopId, period = '30d') => {
       startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   }
 
-  const stats = await TransactionService.getTransactionStats(shopId, startDate);
+  const stats = await TransactionService.getTransactionStats(shop_id, startDate);
 
-  const dailyStats = await TransactionService.getDailyTransactionStats(shopId, startDate);
+  const dailyStats = await TransactionService.getDailyTransactionStats(shop_id, startDate);
 
   return { stats, dailyStats };
 };

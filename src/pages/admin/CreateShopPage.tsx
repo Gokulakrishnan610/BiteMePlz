@@ -16,7 +16,7 @@ const CreateShopPage: React.FC = () => {
     shopDescription: '',
     shopLocation: '',
     shopImage: '',
-    finalValidityTime: '18:30', // Default to 6:30 PM
+    final_validity_time: '18:30', // Default to 6:30 PM
     qrValidityMinutes: '20'
   });
 
@@ -50,7 +50,7 @@ const CreateShopPage: React.FC = () => {
 
       // Create final validity time for today
       const now = new Date();
-      const [hours, minutes] = formData.finalValidityTime.split(':');
+      const [hours, minutes] = formData.final_validity_time.split(':');
       const finalValidityDate = new Date();
       finalValidityDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
       
@@ -67,7 +67,7 @@ const CreateShopPage: React.FC = () => {
         shopDescription: formData.shopDescription,
         shopLocation: formData.shopLocation,
         shopImage: formData.shopImage || undefined,
-        finalValidityTime: finalValidityDate.toISOString(),
+        final_validity_time: finalValidityDate.toISOString(),
         qrValidityMinutes: qrMinutes
       };
 
@@ -172,8 +172,8 @@ const CreateShopPage: React.FC = () => {
                 </label>
                 <input
                   type="time"
-                  name="finalValidityTime"
-                  value={formData.finalValidityTime}
+                  name="final_validity_time"
+                  value={formData.final_validity_time}
                   onChange={handleChange}
                   className="input"
                   required

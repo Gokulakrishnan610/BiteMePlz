@@ -641,12 +641,12 @@ export const TransactionService = {
   },
 
   // Get transaction statistics
-  async getTransactionStats(shopId, startDate) {
+  async getTransactionStats(shop_id, startDate) {
     try {
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
-        .eq('shop_id', shopId)
+        .eq('shop_id', shop_id)
         .gte('created_at', startDate.toISOString());
       
       if (error) throw error;
@@ -669,12 +669,12 @@ export const TransactionService = {
   },
 
   // Get daily transaction statistics
-  async getDailyTransactionStats(shopId, startDate) {
+  async getDailyTransactionStats(shop_id, startDate) {
     try {
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
-        .eq('shop_id', shopId)
+        .eq('shop_id', shop_id)
         .gte('created_at', startDate.toISOString());
       
       if (error) throw error;

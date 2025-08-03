@@ -18,7 +18,7 @@ const router = express.Router();
 
 router.route('/').post(protect, createOrder);
 router.route('/myorders').get(protect, getMyOrders);
-router.route('/shop/:shopId').get(protect, getShopOrders);
+router.route('/shop/:shop_id').get(protect, getShopOrders);
 router.route('/payment/:paymentId').get(protect, shopAdmin, getOrderByPaymentId);
 router.route('/check-expiry/:orderId').get(protect, checkExpiryAndRefund);
 router.route('/:id')

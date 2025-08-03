@@ -38,7 +38,7 @@ export const trackStudentActivity = async ({
 
 export const getStudentBehaviorAnalytics = async (options = {}) => {
   const {
-    shopId,
+    shop_id,
     userId,
     startDate,
     endDate,
@@ -47,7 +47,7 @@ export const getStudentBehaviorAnalytics = async (options = {}) => {
 
   const matchQuery = {};
   
-  if (shopId) matchQuery.shop = shopId;
+  if (shop_id) matchQuery.shop = shop_id;
   if (userId) matchQuery.user = userId;
   if (activity) matchQuery.activity = activity;
   if (startDate || endDate) {
@@ -194,7 +194,7 @@ export const getStudentBehaviorAnalytics = async (options = {}) => {
   };
 };
 
-export const getAdvancedStudentInsights = async (shopId, period = '30d') => {
+export const getAdvancedStudentInsights = async (shop_id, period = '30d') => {
   const now = new Date();
   let startDate;
 
@@ -216,7 +216,7 @@ export const getAdvancedStudentInsights = async (shopId, period = '30d') => {
   const customerSegmentation = await StudentAnalyticsService.aggregate([
     {
       $match: {
-        shop: shopId,
+        shop: shop_id,
         timestamp: { $gte: startDate }
       }
     },
@@ -270,7 +270,7 @@ export const getAdvancedStudentInsights = async (shopId, period = '30d') => {
   const abandonmentAnalysis = await StudentAnalyticsService.aggregate([
     {
       $match: {
-        shop: shopId,
+        shop: shop_id,
         timestamp: { $gte: startDate },
         activity: { $in: ['cart_add', 'checkout_start', 'payment_attempt', 'order_placed'] }
       }

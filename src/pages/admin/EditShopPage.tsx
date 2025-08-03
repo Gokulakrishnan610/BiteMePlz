@@ -11,9 +11,9 @@ interface Shop {
   description: string;
   location: string;
   image: string;
-  isActive: boolean;
-  isOpen: boolean;
-  finalValidityTime: string;
+  is_active: boolean;
+  is_open: boolean;
+  final_validity_time: string;
   qrValidityMinutes: number;
 }
 
@@ -28,9 +28,9 @@ const EditShopPage: React.FC = () => {
     description: '',
     location: '',
     image: '',
-    isActive: true,
-    isOpen: true,
-    finalValidityTime: '18:30',
+    is_active: true,
+    is_open: true,
+    final_validity_time: '18:30',
     qrValidityMinutes: '20'
   });
 
@@ -41,8 +41,8 @@ const EditShopPage: React.FC = () => {
         setShop(data);
         
         // Format the time for the input
-        const validityTime = data.finalValidityTime 
-          ? new Date(data.finalValidityTime).toLocaleTimeString('en-US', {
+        const validityTime = data.final_validity_time 
+          ? new Date(data.final_validity_time).toLocaleTimeString('en-US', {
               hour12: false,
               hour: '2-digit',
               minute: '2-digit'
@@ -54,9 +54,9 @@ const EditShopPage: React.FC = () => {
           description: data.description || '',
           location: data.location || '',
           image: data.image || '',
-          isActive: data.isActive ?? true,
-          isOpen: data.isOpen ?? true,
-          finalValidityTime: validityTime,
+          is_active: data.is_active ?? true,
+          is_open: data.is_open ?? true,
+          final_validity_time: validityTime,
           qrValidityMinutes: (data.qrValidityMinutes || 20).toString()
         });
         setLoading(false);
@@ -89,7 +89,7 @@ const EditShopPage: React.FC = () => {
 
       // Create final validity time for today
       const now = new Date();
-      const [hours, minutes] = formData.finalValidityTime.split(':');
+      const [hours, minutes] = formData.final_validity_time.split(':');
       const finalValidityDate = new Date();
       finalValidityDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
       
@@ -103,9 +103,9 @@ const EditShopPage: React.FC = () => {
         description: formData.description,
         location: formData.location,
         image: formData.image || undefined,
-        isActive: formData.isActive,
-        isOpen: formData.isOpen,
-        finalValidityTime: finalValidityDate.toISOString(),
+        is_active: formData.is_active,
+        is_open: formData.is_open,
+        final_validity_time: finalValidityDate.toISOString(),
         qrValidityMinutes: qrMinutes
       };
 
@@ -230,8 +230,8 @@ const EditShopPage: React.FC = () => {
                 </label>
                 <input
                   type="time"
-                  name="finalValidityTime"
-                  value={formData.finalValidityTime}
+                  name="final_validity_time"
+                  value={formData.final_validity_time}
                   onChange={handleChange}
                   className="input"
                   required
@@ -267,8 +267,8 @@ const EditShopPage: React.FC = () => {
               <div className="flex items-center">
                 <input
                   type="checkbox"
-                  name="isActive"
-                  checked={formData.isActive}
+                  name="is_active"
+                  checked={formData.is_active}
                   onChange={handleChange}
                   className="h-4 w-4 text-[var(--primary)] border-[var(--gray-300)] rounded"
                 />
@@ -280,8 +280,8 @@ const EditShopPage: React.FC = () => {
               <div className="flex items-center">
                 <input
                   type="checkbox"
-                  name="isOpen"
-                  checked={formData.isOpen}
+                  name="is_open"
+                  checked={formData.is_open}
                   onChange={handleChange}
                   className="h-4 w-4 text-[var(--primary)] border-[var(--gray-300)] rounded"
                 />

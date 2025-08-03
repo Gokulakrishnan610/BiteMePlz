@@ -11,7 +11,7 @@ interface VerifiedOrder {
     name: string;
     rollNo: string;
   };
-  orderItems: Array<{
+  order_items: Array<{
     name: string;
     quantity: number;
     price: number;
@@ -150,7 +150,7 @@ const ScanQRPage: React.FC = () => {
           </div>
           <div class="items">
             <h3>Items Purchased:</h3>
-            ${verifiedOrder.orderItems.map(item => `
+            ${verifiedOrder.order_items.map(item => `
               <div class="item">
                 <div style="display: flex; justify-content: space-between;">
                   <span>${item.name}</span>
@@ -354,7 +354,7 @@ const ScanQRPage: React.FC = () => {
                 <div className="mt-4">
                   <h4 className="font-semibold mb-2">Items</h4>
                   <div className="space-y-2">
-                    {verifiedOrder.orderItems.map((item, index) => (
+                    {verifiedOrder.order_items.map((item, index) => (
                       <div key={index} className="flex justify-between">
                         <span>{item.name} x {item.quantity}</span>
                         <span>₹{item.price * item.quantity}</span>

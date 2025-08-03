@@ -13,7 +13,7 @@ interface Order {
   isPaid: boolean;
   isVerified: boolean;
   status: 'pending' | 'completed' | 'expired';
-  orderItems: Array<{
+  order_items: Array<{
     name: string;
     quantity: number;
     image: string;
@@ -188,7 +188,7 @@ const OrdersPage: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                {order.orderItems.map((item, index) => (
+                {order.order_items.map((item, index) => (
                   <div key={index} className="flex items-center">
                     <img
                       src={item.image}

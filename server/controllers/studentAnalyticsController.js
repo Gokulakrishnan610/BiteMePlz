@@ -2,23 +2,23 @@ import asyncHandler from 'express-async-handler';
 import { StudentAnalyticsService } from '../services/databaseService.js';
 
 // @desc    Get student behavior analytics for a shop
-// @route   GET /api/student-analytics/shop/:shopId
+// @route   GET /api/student-analytics/shop/:shop_id
 // @access  Private/Admin or ShopAdmin
 const getShopStudentAnalytics = asyncHandler(async (req, res) => {
-  const { shopId } = req.params;
+  const { shop_id } = req.params;
   const { startDate, endDate, activity, userId } = req.query;
 
   // Check authorization
   if (
     req.user.role !== 'admin' && 
-    (req.user.role !== 'shopAdmin' || req.user.shop.toString() !== shopId)
+    (req.user.role !== 'shopAdmin' || req.user.shop.toString() !== shop_id)
   ) {
     res.status(401);
     throw new Error('Not authorized');
   }
 
   const analytics = await StudentAnalyticsService.getStudentBehaviorAnalytics({
-    shopId,
+    shop_id,
     startDate,
     endDate,
     activity,
@@ -29,22 +29,22 @@ const getShopStudentAnalytics = asyncHandler(async (req, res) => {
 });
 
 // @desc    Get advanced student insights
-// @route   GET /api/student-analytics/shop/:shopId/insights
+// @route   GET /api/student-analytics/shop/:shop_id/insights
 // @access  Private/Admin or ShopAdmin
 const getAdvancedStudentAnalytics = asyncHandler(async (req, res) => {
-  const { shopId } = req.params;
+  const { shop_id } = req.params;
   const { period } = req.query;
 
   // Check authorization
   if (
     req.user.role !== 'admin' && 
-    (req.user.role !== 'shopAdmin' || req.user.shop.toString() !== shopId)
+    (req.user.role !== 'shopAdmin' || req.user.shop.toString() !== shop_id)
   ) {
     res.status(401);
     throw new Error('Not authorized');
   }
 
-  const insights = await StudentAnalyticsService.getAdvancedStudentInsights(shopId, period);
+  const insights = await StudentAnalyticsService.getAdvancedStudentInsights(shop_id, period);
   res.json(insights);
 });
 

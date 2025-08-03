@@ -45,9 +45,9 @@ interface Shop {
   name: string;
   description: string;
   location: string;
-  isActive: boolean;
-  isOpen: boolean;
-  finalValidityTime: string;
+  is_active: boolean;
+  is_open: boolean;
+  final_validity_time: string;
   qrValidityMinutes: number;
   createdAt: string;
 }
@@ -302,11 +302,11 @@ const ShopDetailsPage: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <span className={`badge ${shop.isActive ? 'badge-success' : 'badge-error'}`}>
-            {shop.isActive ? 'Active' : 'Inactive'}
+          <span className={`badge ${shop.is_active ? 'badge-success' : 'badge-error'}`}>
+            {shop.is_active ? 'Active' : 'Inactive'}
           </span>
-          <span className={`badge ${shop.isOpen ? 'badge-success' : 'badge-error'}`}>
-            {shop.isOpen ? 'Open' : 'Closed'}
+          <span className={`badge ${shop.is_open ? 'badge-success' : 'badge-error'}`}>
+            {shop.is_open ? 'Open' : 'Closed'}
           </span>
         </div>
       </div>

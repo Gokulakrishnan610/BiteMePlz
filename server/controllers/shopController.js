@@ -54,9 +54,9 @@ const updateShop = asyncHandler(async (req, res) => {
     description: shop.description,
     location: shop.location,
     image: shop.image,
-    isActive: shop.is_active,
-    isOpen: shop.is_open,
-    finalValidityTime: shop.final_validity_time,
+    is_active: shop.is_active,
+    is_open: shop.is_open,
+    final_validity_time: shop.final_validity_time,
     qrValidityMinutes: shop.qr_validity_minutes
   };
 
@@ -101,25 +101,25 @@ const updateShop = asyncHandler(async (req, res) => {
     description: updatedShop.description,
     location: updatedShop.location,
     image: updatedShop.image,
-    isActive: updatedShop.is_active,
-    isOpen: updatedShop.is_open,
-    finalValidityTime: updatedShop.final_validity_time,
+    is_active: updatedShop.is_active,
+    is_open: updatedShop.is_open,
+    final_validity_time: updatedShop.final_validity_time,
     qrValidityMinutes: updatedShop.qr_validity_minutes
   };
 
   // Determine what was updated
   const changes = [];
-  if (previousState.finalValidityTime !== newState.finalValidityTime) {
+  if (previousState.final_validity_time !== newState.final_validity_time) {
     changes.push('final validity time');
   }
   if (previousState.qrValidityMinutes !== newState.qrValidityMinutes) {
     changes.push('QR validity duration');
   }
-  if (previousState.isOpen !== newState.isOpen) {
-    changes.push(newState.isOpen ? 'opened shop' : 'closed shop');
+  if (previousState.is_open !== newState.is_open) {
+    changes.push(newState.is_open ? 'opened shop' : 'closed shop');
   }
-  if (previousState.isActive !== newState.isActive) {
-    changes.push(newState.isActive ? 'activated shop' : 'deactivated shop');
+  if (previousState.is_active !== newState.is_active) {
+    changes.push(newState.is_active ? 'activated shop' : 'deactivated shop');
   }
 
   // Log the activity
@@ -164,7 +164,7 @@ const deleteShop = asyncHandler(async (req, res) => {
     performedBy: req.user.id,
     previousState: {
       name: shop.name,
-      isActive: shop.is_active
+      is_active: shop.is_active
     },
     newState: {
       deleted: true
@@ -350,8 +350,8 @@ const closeShop = asyncHandler(async (req, res) => {
 
   // Store previous state
   const previousState = {
-    isOpen: shop.is_open,
-    finalValidityTime: shop.final_validity_time
+    is_open: shop.is_open,
+    final_validity_time: shop.final_validity_time
   };
 
   // Close the shop
@@ -364,7 +364,7 @@ const closeShop = asyncHandler(async (req, res) => {
     performedBy: req.user.id,
     previousState,
     newState: {
-      isOpen: false,
+      is_open: false,
       closedAt: new Date()
     },
     metadata: {
@@ -431,33 +431,33 @@ const toggleShopStatus = asyncHandler(async (req, res) => {
 
   // Store previous state
   const previousState = {
-    isOpen: shop.is_open
+    is_open: shop.is_open
   };
 
   // Toggle the shop status
-  const newIsOpen = !shop.is_open;
-  await ShopService.findByIdAndUpdate(shop.id, { is_open: newIsOpen });
+  const newis_open = !shop.is_open;
+  await ShopService.findByIdAndUpdate(shop.id, { is_open: newis_open });
 
   // Log the toggle action
   await logShopActivity({
     shop: shop.id,
-    action: newIsOpen ? 'shop_opened' : 'shop_closed',
+    action: newis_open ? 'shop_opened' : 'shop_closed',
     performedBy: req.user.id,
     previousState,
     newState: {
-      isOpen: newIsOpen,
+      is_open: newis_open,
       toggledAt: new Date()
     },
     metadata: {
       manualToggle: true,
       toggledBy: req.user.name
     },
-    description: `Shop ${newIsOpen ? 'opened' : 'closed'} by ${req.user.name}`,
+    description: `Shop ${newis_open ? 'opened' : 'closed'} by ${req.user.name}`,
     req
   });
 
   // If closing the shop, process unverified orders and set all wallets to zero
-  if (!newIsOpen) {
+  if (!newis_open) {
     // Get all unverified orders for this shop
     const orders = await OrderService.find({
       shop_id: shop.id,
@@ -487,25 +487,16 @@ const toggleShopStatus = asyncHandler(async (req, res) => {
       }
     }
 
-    // Set all users' wallet balances to zero
-    const users = await UserService.find({});
-    let walletResetCount = 0;
-    for (const user of users) {
-      await UserService.findByIdAndUpdate(user.id, { balance: 0 });
-      walletResetCount++;
-    }
-    console.log(`Reset ${walletResetCount} user wallets to zero`);
-
     res.json({
-      message: `Shop closed successfully. ${expiredCount} orders expired. ${walletResetCount} user wallets reset to zero.${failedOrders.length > 0 ? ` ${failedOrders.length} orders failed to process.` : ''}`,
-      shop: { ...shop, is_open: newIsOpen },
-      walletsReset: walletResetCount,
+      message: `Shop closed successfully. ${expiredCount} orders expired.${failedOrders.length > 0 ? ` ${failedOrders.length} orders failed to process.` : ''}`,
+      shop: { ...shop, is_open: newis_open },
       failedOrders: failedOrders.length > 0 ? failedOrders : undefined
     });
+
   } else {
     res.json({
-      message: `Shop ${newIsOpen ? 'opened' : 'closed'} successfully.`,
-      shop: { ...shop, is_open: newIsOpen }
+      message: `Shop ${newis_open ? 'opened' : 'closed'} successfully.`,
+      shop: { ...shop, is_open: newis_open }
     });
   }
 });

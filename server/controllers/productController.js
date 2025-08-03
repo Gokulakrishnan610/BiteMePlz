@@ -69,10 +69,10 @@ const getAllProducts = asyncHandler(async (req, res) => {
 // @route   GET /api/products
 // @access  Public
 const getProducts = asyncHandler(async (req, res) => {
-  const shopId = req.query.shop;
+  const shop_id = req.query.shop;
   
-  console.log('[ProductController] Fetching products with shop ID:', shopId);
-  console.log('[ProductController] Shop ID type:', typeof shopId);
+  console.log('[ProductController] Fetching products with shop ID:', shop_id);
+  console.log('[ProductController] Shop ID type:', typeof shop_id);
   
   try {
     // First, let's try a simple query without filters to see if the table works
@@ -91,8 +91,8 @@ const getProducts = asyncHandler(async (req, res) => {
     
     // Now try the actual query
     let query = {};
-    if (shopId) {
-      query = { shop: shopId, is_available: true };
+    if (shop_id) {
+      query = { shop: shop_id, is_available: true };
       console.log('[ProductController] Using shop-specific query:', query);
     } else {
       query = { is_available: true };
@@ -100,8 +100,8 @@ const getProducts = asyncHandler(async (req, res) => {
     }
     
     // Check if the shop exists first
-    if (shopId) {
-      const shop = await ShopService.findById(shopId);
+    if (shop_id) {
+      const shop = await ShopService.findById(shop_id);
       console.log('[ProductController] Shop lookup result:', shop ? 'Found' : 'Not found');
       if (!shop) {
         console.log('[ProductController] Shop not found, returning empty array');
@@ -129,7 +129,7 @@ const getProducts = asyncHandler(async (req, res) => {
     res.status(500).json({
       error: 'Failed to fetch products',
       details: error.message,
-      shopId: shopId
+      shop_id: shop_id
     });
   }
 });
@@ -161,17 +161,17 @@ const createProduct = asyncHandler(async (req, res) => {
     throw new Error('Invalid category provided');
   }
   // If shop admin, use their shop
-  let shopId;
+  let shop_id;
   if (req.user.role === 'shopAdmin') {
-    shopId = req.user.shop;
+    shop_id = req.user.shop;
   } else if (req.user.role === 'admin') {
     // If admin, use provided shop
-    shopId = req.body.shop;
-    if (!shopId) {
+    shop_id = req.body.shop;
+    if (!shop_id) {
       res.status(400);
       throw new Error('Shop ID is required for admin');
     }
-    const shopExists = await ShopService.findById(shopId);
+    const shopExists = await ShopService.findById(shop_id);
     if (!shopExists) {
       res.status(404);
       throw new Error('Shop not found');
@@ -179,7 +179,7 @@ const createProduct = asyncHandler(async (req, res) => {
   }
   const product = await ProductService.create({
     name,
-    shop: shopId,
+    shop: shop_id,
     image: image || '/uploads/default-product.jpg',
     description,
     category: normalizedCategory,
@@ -189,7 +189,7 @@ const createProduct = asyncHandler(async (req, res) => {
   if (product) {
     // Log product creation
     await logShopActivity({
-      shop: shopId,
+      shop: shop_id,
       action: 'product_created',
       performedBy: req.user.id || req.user._id,
       newState: product,
@@ -241,7 +241,7 @@ const updateProduct = asyncHandler(async (req, res) => {
     category: normalizedCategory,
     price: req.body.price !== undefined ? req.body.price : product.price,
     stock: req.body.stock !== undefined ? req.body.stock : product.stock,
-    isAvailable: req.body.isAvailable !== undefined ? req.body.isAvailable : product.isAvailable,
+    is_available: req.body.is_available !== undefined ? req.body.is_available : product.is_available,
   };
   
   const updatedProduct = await ProductService.findByIdAndUpdate(req.params.id, updateData);

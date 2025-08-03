@@ -9,7 +9,7 @@ import { protect, admin, shopAdmin } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 router.route('/all').get(protect, admin, getAllShopLogs);
-router.route('/:shopId').get(protect, getShopActivityLogs);
-router.route('/:shopId/stats').get(protect, getShopActivityStatistics);
+router.route('/:shop_id').get(protect, getShopActivityLogs);
+router.route('/:shop_id/stats').get(protect, getShopActivityStatistics);
 
 export default router;

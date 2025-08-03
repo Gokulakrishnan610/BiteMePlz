@@ -150,7 +150,7 @@ const StudentAnalyticsPage: React.FC = () => {
       setLoading(true);
       
       const params = new URLSearchParams();
-      if (selectedShop) params.append('shopId', selectedShop);
+      if (selectedShop) params.append('shop_id', selectedShop);
       if (dateRange.startDate) params.append('startDate', dateRange.startDate);
       if (dateRange.endDate) params.append('endDate', dateRange.endDate);
       if (filters.activity) params.append('activity', filters.activity);

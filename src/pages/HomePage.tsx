@@ -9,8 +9,8 @@ interface Shop {
   description: string;
   location: string;
   image: string;
-  isOpen: boolean;
-  finalValidityTime: string;
+  is_open: boolean;
+  final_validity_time: string;
 }
 
 const HomePage: React.FC = () => {
@@ -33,11 +33,11 @@ const HomePage: React.FC = () => {
     fetchShops();
   }, []);
 
-  const getTimeUntilClosure = (finalValidityTime: string) => {
-    if (!finalValidityTime) return null;
+  const getTimeUntilClosure = (final_validity_time: string) => {
+    if (!final_validity_time) return null;
     
     const now = new Date();
-    const finalValidity = new Date(finalValidityTime);
+    const finalValidity = new Date(final_validity_time);
     const timeDiff = finalValidity.getTime() - now.getTime();
     
     if (timeDiff <= 0) return null;
@@ -142,8 +142,8 @@ const HomePage: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {shops.map((shop, index) => {
-              const timeUntilClosure = getTimeUntilClosure(shop.finalValidityTime);
-              const isOpen = shop.isOpen && timeUntilClosure;
+              const timeUntilClosure = getTimeUntilClosure(shop.final_validity_time);
+              const is_open = shop.is_open && timeUntilClosure;
               
               return (
                 <Link
@@ -163,11 +163,11 @@ const HomePage: React.FC = () => {
                     
                     {/* Status Badge */}
                     <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md ${
-                      isOpen 
+                      is_open 
                         ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
                         : 'bg-red-500/20 text-red-400 border border-red-500/30'
                     }`}>
-                      {isOpen ? 'Open' : 'Closed'}
+                      {is_open ? 'Open' : 'Closed'}
                     </div>
 
                     {/* Rating Badge */}
@@ -215,8 +215,8 @@ const HomePage: React.FC = () => {
                     {/* Footer */}
                     <div className="flex items-center justify-between pt-4 border-t border-[var(--border-color)]">
                       <div className="flex items-center space-x-2 text-[var(--muted-text)]">
-                        <div className={`w-2 h-2 rounded-full ${isOpen ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                        <span className="text-sm">{isOpen ? 'Available' : 'Closed'}</span>
+                        <div className={`w-2 h-2 rounded-full ${is_open ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                        <span className="text-sm">{is_open ? 'Available' : 'Closed'}</span>
                       </div>
                       <div className="flex items-center space-x-1 text-[var(--accent-purple)] font-medium group-hover:text-[var(--accent-violet)] transition-colors">
                         <span className="text-sm">Visit Store</span>

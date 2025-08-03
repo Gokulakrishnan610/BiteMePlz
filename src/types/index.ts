@@ -16,9 +16,9 @@ export interface Shop {
   description: string;
   location: string;
   image?: string;
-  isActive: boolean;
-  isOpen: boolean;
-  finalValidityTime: string;
+  is_active: boolean;
+  is_open: boolean;
+  final_validity_time: string;
   qrValidityMinutes: number;
   shopAdmin: string;
   createdAt: string;
@@ -34,7 +34,7 @@ export interface Product {
   stock: number;
   image: string;
   shop: string;
-  isAvailable: boolean;
+  is_available: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -53,7 +53,7 @@ export interface Order {
   orderId: string;
   user: User | string;
   shop: Shop | string;
-  orderItems: OrderItem[];
+  order_items: OrderItem[];
   totalPrice: number;
   isPaid: boolean;
   isVerified: boolean;

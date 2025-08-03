@@ -17,7 +17,7 @@ interface Order {
     name: string;
     email: string;
   };
-  orderItems: OrderItem[];
+  order_items: OrderItem[];
   totalPrice: number;
   isPaid: boolean;
   isVerified: boolean;
@@ -189,7 +189,7 @@ const OrdersPage: React.FC = () => {
                   </td>
                   <td>
                     <div className="space-y-1">
-                      {order.orderItems.map((item, index) => (
+                      {order.order_items.map((item, index) => (
                         <p key={index} className="text-sm">
                           {item.quantity}x {item.name}
                         </p>

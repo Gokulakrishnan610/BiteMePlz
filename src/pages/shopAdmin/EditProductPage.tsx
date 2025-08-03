@@ -13,7 +13,7 @@ interface ProductFormData {
   price: number;
   stock: number;
   image: string;
-  isAvailable: boolean;
+  is_available: boolean;
 }
 
 const EditProductPage: React.FC = () => {
@@ -29,7 +29,7 @@ const EditProductPage: React.FC = () => {
     price: 0,
     stock: 0,
     image: '',
-    isAvailable: true
+    is_available: true
   });
 
   const categories = [
@@ -65,7 +65,7 @@ const EditProductPage: React.FC = () => {
           price: data.price || 0,
           stock: data.stock || 0,
           image: data.image || '',
-          isAvailable: data.isAvailable !== undefined ? data.isAvailable : true
+          is_available: data.is_available !== undefined ? data.is_available : true
         });
         
         console.log('Form data set to:', {
@@ -75,7 +75,7 @@ const EditProductPage: React.FC = () => {
           price: data.price || 0,
           stock: data.stock || 0,
           image: data.image || '',
-          isAvailable: data.isAvailable !== undefined ? data.isAvailable : true
+          is_available: data.is_available !== undefined ? data.is_available : true
         });
         
         setLoading(false);
@@ -105,7 +105,7 @@ const EditProductPage: React.FC = () => {
         price: Number(formData.price),
         stock: Number(formData.stock),
         image: formData.image,
-        isAvailable: formData.isAvailable
+        is_available: formData.is_available
       };
       
       console.log('Update payload:', updateData);
@@ -275,8 +275,8 @@ const EditProductPage: React.FC = () => {
             <div className="flex items-center">
               <input
                 type="checkbox"
-                name="isAvailable"
-                checked={formData.isAvailable}
+                name="is_available"
+                checked={formData.is_available}
                 onChange={handleChange}
                 className="h-4 w-4 text-[var(--accent-purple)] border-[var(--border-color)] rounded focus:ring-[var(--accent-purple)]"
               />

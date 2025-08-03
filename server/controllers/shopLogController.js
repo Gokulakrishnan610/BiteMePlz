@@ -2,23 +2,23 @@ import asyncHandler from 'express-async-handler';
 import { ShopLogService } from '../services/databaseService.js';
 
 // @desc    Get shop activity logs
-// @route   GET /api/shop-logs/:shopId
+// @route   GET /api/shop-logs/:shop_id
 // @access  Private/Admin or ShopAdmin
 const getShopActivityLogs = asyncHandler(async (req, res) => {
-  const { shopId } = req.params;
+  const { shop_id } = req.params;
   const { page, limit, action, startDate, endDate, performedBy } = req.query;
 
   // Check authorization
   if (
     req.user.role !== 'admin' && 
-    (req.user.role !== 'shopAdmin' || req.user.shop.toString() !== shopId)
+    (req.user.role !== 'shopAdmin' || req.user.shop.toString() !== shop_id)
   ) {
     res.status(401);
     throw new Error('Not authorized');
   }
 
   try {
-    const query = { shop_id: shopId };
+    const query = { shop_id: shop_id };
     
     if (action) query.action = action;
     if (performedBy) query.performed_by = performedBy;
@@ -49,23 +49,23 @@ const getShopActivityLogs = asyncHandler(async (req, res) => {
 });
 
 // @desc    Get shop activity statistics
-// @route   GET /api/shop-logs/:shopId/stats
+// @route   GET /api/shop-logs/:shop_id/stats
 // @access  Private/Admin or ShopAdmin
 const getShopActivityStatistics = asyncHandler(async (req, res) => {
-  const { shopId } = req.params;
+  const { shop_id } = req.params;
   const { period } = req.query;
 
   // Check authorization
   if (
     req.user.role !== 'admin' && 
-    (req.user.role !== 'shopAdmin' || req.user.shop.toString() !== shopId)
+    (req.user.role !== 'shopAdmin' || req.user.shop.toString() !== shop_id)
   ) {
     res.status(401);
     throw new Error('Not authorized');
   }
 
   try {
-    const logs = await ShopLogService.find({ shop_id: shopId });
+    const logs = await ShopLogService.find({ shop_id: shop_id });
     
     // Calculate basic statistics
     const totalActions = logs.length;

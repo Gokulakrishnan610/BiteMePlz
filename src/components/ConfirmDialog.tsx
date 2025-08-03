@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 
 interface ConfirmDialogProps {
-  isOpen: boolean;
+  is_open: boolean;
   title: string;
   message: string;
   confirmText?: string;
@@ -13,7 +13,7 @@ interface ConfirmDialogProps {
 }
 
 const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
-  isOpen,
+  is_open,
   title,
   message,
   confirmText = 'Confirm',
@@ -22,7 +22,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onCancel,
   type = 'danger'
 }) => {
-  if (!isOpen) return null;
+  if (!is_open) return null;
 
   const getTypeStyles = () => {
     switch (type) {

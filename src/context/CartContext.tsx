@@ -11,8 +11,8 @@ export interface CartItem {
 
 interface CartContextType {
   cartItems: CartItem[];
-  shopId: string | null;
-  addToCart: (item: CartItem, shopId: string) => void;
+  shop_id: string | null;
+  addToCart: (item: CartItem, shop_id: string) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -32,42 +32,42 @@ export const useCart = () => {
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [shopId, setShopId] = useState<string | null>(null);
+  const [shop_id, setshop_id] = useState<string | null>(null);
 
   // Initialize cart from localStorage
   useEffect(() => {
     const storedCart = localStorage.getItem('cartItems');
-    const storedShopId = localStorage.getItem('shopId');
+    const storedshop_id = localStorage.getItem('shop_id');
     
     if (storedCart) {
       setCartItems(JSON.parse(storedCart));
     }
     
-    if (storedShopId) {
-      setShopId(storedShopId);
+    if (storedshop_id) {
+      setshop_id(storedshop_id);
     }
   }, []);
 
   // Update localStorage when cart changes
   useEffect(() => {
     localStorage.setItem('cartItems', JSON.stringify(cartItems));
-    if (shopId) {
-      localStorage.setItem('shopId', shopId);
+    if (shop_id) {
+      localStorage.setItem('shop_id', shop_id);
     } else {
-      localStorage.removeItem('shopId');
+      localStorage.removeItem('shop_id');
     }
-  }, [cartItems, shopId]);
+  }, [cartItems, shop_id]);
 
-  const addToCart = (item: CartItem, newShopId: string) => {
+  const addToCart = (item: CartItem, newshop_id: string) => {
     // If adding from a different shop, clear the cart first
-    if (shopId && shopId !== newShopId) {
+    if (shop_id && shop_id !== newshop_id) {
       if (!window.confirm('Adding items from a different shop will clear your current cart. Continue?')) {
         return;
       }
       setCartItems([]);
     }
     
-    setShopId(newShopId);
+    setshop_id(newshop_id);
     
     // Check if item already exists in cart
     const existingItem = cartItems.find(i => i.product === item.product);
@@ -90,9 +90,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const removeFromCart = (productId: string) => {
     setCartItems(cartItems.filter(item => item.product !== productId));
     
-    // If cart is empty, reset shopId
+    // If cart is empty, reset shop_id
     if (cartItems.length === 1) {
-      setShopId(null);
+      setshop_id(null);
     }
   };
 
@@ -108,7 +108,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = () => {
     setCartItems([]);
-    setShopId(null);
+    setshop_id(null);
   };
 
   const getTotalPrice = () => {
@@ -121,7 +121,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const value = {
     cartItems,
-    shopId,
+    shop_id,
     addToCart,
     removeFromCart,
     updateQuantity,

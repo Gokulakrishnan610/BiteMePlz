@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 
 interface PopupState {
-  isOpen: boolean;
+  is_open: boolean;
   type: 'success' | 'error' | 'warning' | 'info' | 'localhost';
   title: string;
   message: string;
@@ -16,21 +16,21 @@ interface PopupState {
 
 export const usePopup = () => {
   const [popup, setPopup] = useState<PopupState>({
-    isOpen: false,
+    is_open: false,
     type: 'info',
     title: '',
     message: ''
   });
 
-  const showPopup = useCallback((config: Omit<PopupState, 'isOpen'>) => {
+  const showPopup = useCallback((config: Omit<PopupState, 'is_open'>) => {
     setPopup({
       ...config,
-      isOpen: true
+      is_open: true
     });
   }, []);
 
   const closePopup = useCallback(() => {
-    setPopup(prev => ({ ...prev, isOpen: false }));
+    setPopup(prev => ({ ...prev, is_open: false }));
   }, []);
 
   const showSuccess = useCallback((title: string, message: string, options?: Partial<PopupState>) => {

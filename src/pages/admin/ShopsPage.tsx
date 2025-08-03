@@ -10,22 +10,22 @@ interface Shop {
   name: string;
   description: string;
   location: string;
-  isActive: boolean;
-  isOpen: boolean;
+  is_active: boolean;
+  is_open: boolean;
   createdAt: string;
-  finalValidityTime: string;
+  final_validity_time: string;
 }
 
 const ShopsPage: React.FC = () => {
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteDialog, setDeleteDialog] = useState<{
-    isOpen: boolean;
-    shopId: string;
+    is_open: boolean;
+    shop_id: string;
     shopName: string;
   }>({
-    isOpen: false,
-    shopId: '',
+    is_open: false,
+    shop_id: '',
     shopName: ''
   });
 
@@ -46,23 +46,23 @@ const ShopsPage: React.FC = () => {
 
   const handleDeleteClick = (shop: Shop) => {
     setDeleteDialog({
-      isOpen: true,
-      shopId: shop._id,
+      is_open: true,
+      shop_id: shop._id,
       shopName: shop.name
     });
   };
 
   const handleDeleteConfirm = async () => {
     try {
-      await axios.delete(`/api/shops/${deleteDialog.shopId}`);
+      await axios.delete(`/api/shops/${deleteDialog.shop_id}`);
       toast.success('Shop deleted successfully');
       fetchShops();
     } catch (error) {
       toast.error('Failed to delete shop');
     } finally {
       setDeleteDialog({
-        isOpen: false,
-        shopId: '',
+        is_open: false,
+        shop_id: '',
         shopName: ''
       });
     }
@@ -70,8 +70,8 @@ const ShopsPage: React.FC = () => {
 
   const handleDeleteCancel = () => {
     setDeleteDialog({
-      isOpen: false,
-      shopId: '',
+      is_open: false,
+      shop_id: '',
       shopName: ''
     });
   };
@@ -136,14 +136,14 @@ const ShopsPage: React.FC = () => {
                 </div>
                 <div className="flex space-x-1">
                   <span className={`badge ${
-                    shop.isActive ? 'badge-success' : 'badge-error'
+                    shop.is_active ? 'badge-success' : 'badge-error'
                   }`}>
-                    {shop.isActive ? 'Active' : 'Inactive'}
+                    {shop.is_active ? 'Active' : 'Inactive'}
                   </span>
                   <span className={`badge ${
-                    shop.isOpen ? 'badge-success' : 'badge-warning'
+                    shop.is_open ? 'badge-success' : 'badge-warning'
                   }`}>
-                    {shop.isOpen ? 'Open' : 'Closed'}
+                    {shop.is_open ? 'Open' : 'Closed'}
                   </span>
                 </div>
               </div>
@@ -154,7 +154,7 @@ const ShopsPage: React.FC = () => {
 
               <div className="flex items-center text-[var(--muted-text)] text-sm">
                 <Clock size={14} className="mr-1" />
-                <span className="text-[var(--secondary-text)]">Closes at {formatTime(shop.finalValidityTime)}</span>
+                <span className="text-[var(--secondary-text)]">Closes at {formatTime(shop.final_validity_time)}</span>
               </div>
             </div>
 
@@ -213,7 +213,7 @@ const ShopsPage: React.FC = () => {
       )}
 
       <ConfirmDialog
-        isOpen={deleteDialog.isOpen}
+        is_open={deleteDialog.is_open}
         title="Delete Shop"
         message={`Are you sure you want to delete "${deleteDialog.shopName}"? This action cannot be undone and will also delete all associated products and orders.`}
         confirmText="Delete Shop"

@@ -21,7 +21,7 @@ const AdminLayout: React.FC = () => {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const closeSidebar = () => setIsSidebarOpen(false);
-  const isActive = (path: string) => location.pathname === path;
+  const is_active = (path: string) => location.pathname === path;
   const isPathActive = (path: string) => location.pathname.includes(path);
 
   return (
@@ -69,9 +69,9 @@ const AdminLayout: React.FC = () => {
               Main
             </h3>
             <div className="space-y-2">
-              <SidebarLink to="/admin" icon={BarChart3} active={isActive('/admin')} closeSidebar={closeSidebar} label="Dashboard" />
+              <SidebarLink to="/admin" icon={BarChart3} active={is_active('/admin')} closeSidebar={closeSidebar} label="Dashboard" />
               <SidebarLink to="/admin/shops" icon={Store} active={isPathActive('/admin/shops')} closeSidebar={closeSidebar} label="Shops" />
-              <SidebarLink to="/admin/users" icon={Users} active={isActive('/admin/users')} closeSidebar={closeSidebar} label="Users" />
+              <SidebarLink to="/admin/users" icon={Users} active={is_active('/admin/users')} closeSidebar={closeSidebar} label="Users" />
             </div>
           </div>
 
@@ -81,9 +81,9 @@ const AdminLayout: React.FC = () => {
               Financial
             </h3>
             <div className="space-y-2">
-              <SidebarLink to="/admin/transactions" icon={Receipt} active={isActive('/admin/transactions')} closeSidebar={closeSidebar} label="Transactions" />
-              <SidebarLink to="/admin/analytics" icon={TrendingUp} active={isActive('/admin/analytics')} closeSidebar={closeSidebar} label="Analytics" />
-              <SidebarLink to="/admin/financial-reports" icon={DollarSign} active={isActive('/admin/financial-reports')} closeSidebar={closeSidebar} label="Reports" />
+              <SidebarLink to="/admin/transactions" icon={Receipt} active={is_active('/admin/transactions')} closeSidebar={closeSidebar} label="Transactions" />
+              <SidebarLink to="/admin/analytics" icon={TrendingUp} active={is_active('/admin/analytics')} closeSidebar={closeSidebar} label="Analytics" />
+              <SidebarLink to="/admin/financial-reports" icon={DollarSign} active={is_active('/admin/financial-reports')} closeSidebar={closeSidebar} label="Reports" />
             </div>
           </div>
 
@@ -93,8 +93,8 @@ const AdminLayout: React.FC = () => {
               System
             </h3>
             <div className="space-y-2">
-              <SidebarLink to="/admin/shop-logs" icon={FileText} active={isActive('/admin/shop-logs')} closeSidebar={closeSidebar} label="Shop Logs" />
-              {/* <SidebarLink to="/admin/student-analytics" icon={Activity} active={isActive('/admin/student-analytics')} closeSidebar={closeSidebar} label="Student Analytics" /> */}
+              <SidebarLink to="/admin/shop-logs" icon={FileText} active={is_active('/admin/shop-logs')} closeSidebar={closeSidebar} label="Shop Logs" />
+              {/* <SidebarLink to="/admin/student-analytics" icon={Activity} active={is_active('/admin/student-analytics')} closeSidebar={closeSidebar} label="Student Analytics" /> */}
             </div>
           </div>
         </nav>

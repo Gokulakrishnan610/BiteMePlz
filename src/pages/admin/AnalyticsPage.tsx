@@ -179,7 +179,7 @@ const AnalyticsPage: React.FC = () => {
           const { data } = await axios.get(`/api/orders/shop/${shop._id}`);
           allOrders.push(...data.map((order: any) => ({
             ...order,
-            shopId: shop._id,
+            shop_id: shop._id,
             shopName: shop.name
           })));
         } catch (error) {
@@ -204,7 +204,7 @@ const AnalyticsPage: React.FC = () => {
           if (data.transactions) {
             allTransactions.push(...data.transactions.map((t: any) => ({
               ...t,
-              shopId: shop._id,
+              shop_id: shop._id,
               shopName: shop.name
             })));
           }
@@ -227,7 +227,7 @@ const AnalyticsPage: React.FC = () => {
       const endDate = new Date(dateRange.endDate);
       
       const dateMatch = orderDate >= startDate && orderDate <= endDate;
-      const shopMatch = !selectedShop || order.shopId === selectedShop;
+      const shopMatch = !selectedShop || order.shop_id === selectedShop;
       
       return dateMatch && shopMatch;
     });
@@ -240,7 +240,7 @@ const AnalyticsPage: React.FC = () => {
       const endDate = new Date(dateRange.endDate);
       
       const dateMatch = transactionDate >= startDate && transactionDate <= endDate;
-      const shopMatch = !selectedShop || transaction.shopId === selectedShop;
+      const shopMatch = !selectedShop || transaction.shop_id === selectedShop;
       
       return dateMatch && shopMatch;
     });

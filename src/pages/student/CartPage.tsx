@@ -31,7 +31,7 @@ function loadRazorpayScript() {
 }
 
 const CartPage: React.FC = () => {
-  const { cartItems, removeFromCart, updateQuantity, clearCart, getTotalPrice, shopId } = useCart();
+  const { cartItems, removeFromCart, updateQuantity, clearCart, getTotalPrice, shop_id } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [paymentInitiated, setPaymentInitiated] = useState(false);
@@ -49,7 +49,7 @@ const CartPage: React.FC = () => {
       try {
         const [balanceRes, shopRes] = await Promise.all([
           axios.get('/api/users/profile'),
-          shopId ? axios.get(`/api/shops/${shopId}`) : Promise.resolve({ data: null })
+          shop_id ? axios.get(`/api/shops/${shop_id}`) : Promise.resolve({ data: null })
         ]);
         setRemainingBalance(balanceRes.data.balance || 0);
         setShopInfo(shopRes.data);
@@ -67,23 +67,23 @@ const CartPage: React.FC = () => {
         clearInterval(timer);
       }
     };
-  }, [user, timer, shopId]);
+  }, [user, timer, shop_id]);
 
   // Check if shop is still accepting orders
   const isShopAcceptingOrders = () => {
     if (!shopInfo) return false;
     
     const now = new Date();
-    const finalValidity = new Date(shopInfo.finalValidityTime);
+    const finalValidity = new Date(shopInfo.final_validity_time);
     
-    return now < finalValidity && shopInfo.isOpen && shopInfo.isActive;
+    return now < finalValidity && shopInfo.is_open && shopInfo.is_active;
   };
 
   const getTimeUntilClosure = () => {
     if (!shopInfo) return null;
     
     const now = new Date();
-    const finalValidity = new Date(shopInfo.finalValidityTime);
+    const finalValidity = new Date(shopInfo.final_validity_time);
     const timeDiff = finalValidity.getTime() - now.getTime();
     
     if (timeDiff <= 0) return null;
@@ -130,8 +130,8 @@ const CartPage: React.FC = () => {
       setPaymentInitiated(true);
       
       const orderResponse = await axios.post('/api/orders', {
-        orderItems: cartItems,
-        shopId,
+        order_items: cartItems,
+        shop_id,
         totalPrice: getTotalPrice(),
         paymentMethod: 'balance'
       });
@@ -155,8 +155,8 @@ const CartPage: React.FC = () => {
       setPaymentInitiated(true);
       
       const orderResponse = await axios.post('/api/orders', {
-        orderItems: cartItems,
-        shopId,
+        order_items: cartItems,
+        shop_id,
         totalPrice: getTotalPrice(),
         paymentMethod: 'razorpay'
       });

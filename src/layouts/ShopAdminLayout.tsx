@@ -32,7 +32,7 @@ const ShopAdminLayout: React.FC = () => {
     setIsSidebarOpen(false);
   };
 
-  const isActive = (path: string) => {
+  const is_active = (path: string) => {
     return location.pathname === path;
   };
 
@@ -81,7 +81,7 @@ const ShopAdminLayout: React.FC = () => {
             <Link
               to="/shop-admin"
               className={`sidebar-item rounded-xl ${
-                isActive('/shop-admin') ? 'active' : ''
+                is_active('/shop-admin') ? 'active' : ''
               }`}
               onClick={closeSidebar}
             >
@@ -103,7 +103,7 @@ const ShopAdminLayout: React.FC = () => {
             <Link
               to="/shop-admin/orders"
               className={`sidebar-item rounded-xl ${
-                isActive('/shop-admin/orders') ? 'active' : ''
+                is_active('/shop-admin/orders') ? 'active' : ''
               }`}
               onClick={closeSidebar}
             >
@@ -114,7 +114,7 @@ const ShopAdminLayout: React.FC = () => {
             <Link
               to="/shop-admin/transactions"
               className={`sidebar-item rounded-xl ${
-                isActive('/shop-admin/transactions') ? 'active' : ''
+                is_active('/shop-admin/transactions') ? 'active' : ''
               }`}
               onClick={closeSidebar}
             >
@@ -125,7 +125,7 @@ const ShopAdminLayout: React.FC = () => {
             <Link
               to="/shop-admin/scan"
               className={`sidebar-item rounded-xl ${
-                isActive('/shop-admin/scan') ? 'active' : ''
+                is_active('/shop-admin/scan') ? 'active' : ''
               }`}
               onClick={closeSidebar}
             >

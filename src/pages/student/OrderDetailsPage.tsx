@@ -19,7 +19,7 @@ interface Order {
   totalPrice: number;
   isPaid: boolean;
   isVerified: boolean;
-  orderItems: OrderItem[];
+  order_items: OrderItem[];
   qrCode: string;
   qrValidUntil: string;
   balanceAmount: number;
@@ -249,7 +249,7 @@ const OrderDetailsPage: React.FC = () => {
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-4">Order Items</h2>
               <div className="space-y-4">
-                {order.orderItems.map((item, index) => (
+                {order.order_items.map((item, index) => (
                   <div key={index} className="flex items-center">
                     <img
                       src={item.image}
@@ -288,7 +288,7 @@ const OrderDetailsPage: React.FC = () => {
                 <div className="space-y-4">
                   <div>
                     <p className="text-sm text-[var(--gray-600)]">Item Purchased</p>
-                    <p className="font-medium">{order.orderItems[0]?.name}</p>
+                    <p className="font-medium">{order.order_items[0]?.name}</p>
                   </div>
                   <div>
                     <p className="text-sm text-[var(--gray-600)]">Amount Paid</p>

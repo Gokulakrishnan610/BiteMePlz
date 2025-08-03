@@ -11,7 +11,7 @@ interface Product {
   name: string;
   price: number;
   stock: number;
-  isAvailable: boolean;
+  is_available: boolean;
   createdAt: string;
 }
 
@@ -92,9 +92,9 @@ const ProductsPage: React.FC = () => {
                   </td>
                   <td>
                     <span className={`badge ${
-                      product.isAvailable ? 'badge-success' : 'badge-error'
+                      product.is_available ? 'badge-success' : 'badge-error'
                     }`}>
-                      {product.isAvailable ? 'Available' : 'Unavailable'}
+                      {product.is_available ? 'Available' : 'Unavailable'}
                     </span>
                   </td>
                   <td>{new Date(product.createdAt).toLocaleDateString()}</td>

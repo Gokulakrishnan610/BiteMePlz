@@ -38,7 +38,7 @@ export const logShopActivity = async ({
   }
 };
 
-export const getShopLogs = async (shopId, options = {}) => {
+export const getShopLogs = async (shop_id, options = {}) => {
   const {
     page = 1,
     limit = 50,
@@ -48,7 +48,7 @@ export const getShopLogs = async (shopId, options = {}) => {
     performedBy
   } = options;
 
-  const query = { shop_id: shopId };
+  const query = { shop_id: shop_id };
   
   if (action) query.action = action;
   if (performedBy) query.performed_by = performedBy;
@@ -82,7 +82,7 @@ export const getShopLogs = async (shopId, options = {}) => {
   }
 };
 
-export const getShopActivityStats = async (shopId, period = '30d') => {
+export const getShopActivityStats = async (shop_id, period = '30d') => {
   const now = new Date();
   let startDate;
 
@@ -102,7 +102,7 @@ export const getShopActivityStats = async (shopId, period = '30d') => {
 
   try {
     const logs = await ShopLogService.find({ 
-      shop_id: shopId
+      shop_id: shop_id
     }).then(logs => logs.filter(log => new Date(log.created_at) >= startDate));
 
     // Calculate stats manually

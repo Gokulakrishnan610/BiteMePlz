@@ -135,9 +135,9 @@ class WalletService {
         'Order payment', 
         {
           orderId: orderData.orderId,
-          shopId: orderData.shopId,
+          shop_id: orderData.shop_id,
           shopName: orderData.shopName,
-          orderItems: orderData.orderItems
+          order_items: orderData.order_items
         }
       );
 
@@ -168,7 +168,7 @@ class WalletService {
         'Order refund', 
         {
           orderId: refundData.orderId,
-          shopId: refundData.shopId,
+          shop_id: refundData.shop_id,
           refundReason: refundData.reason || 'Order cancelled/expired',
           originalAmount: refundData.originalAmount
         }

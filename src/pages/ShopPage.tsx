@@ -15,7 +15,7 @@ interface Product {
   price: number;
   stock: number;
   image: string;
-  isAvailable: boolean;
+  is_available: boolean;
 }
 
 interface Shop {
@@ -24,9 +24,10 @@ interface Shop {
   description: string;
   location: string;
   image: string;
-  isOpen: boolean;
-  finalValidityTime: string;
+  is_open: boolean;
+  final_validity_time: string;
 }
+
 
 const ShopPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -54,7 +55,7 @@ const ShopPage: React.FC = () => {
         setShop(shopResponse.data);
         // Get all products, not just available ones, but filter them properly
         const allProducts = productsResponse.data || [];
-        setProducts(allProducts.filter((product: Product) => product.isAvailable));
+        setProducts(allProducts.filter((product: Product) => product.is_available));
         setLoading(false);
       } catch (err) {
         setError('Failed to load shop data');
@@ -70,18 +71,17 @@ const ShopPage: React.FC = () => {
   const isShopAcceptingOrders = () => {
     if (!shop) return false;
     
-    const now = new Date();
-    const finalValidity = new Date(shop.finalValidityTime);
-    
-    return now < finalValidity && shop.isOpen;
+    return shop.is_open;
   };
+
 
   const getTimeUntilClosure = () => {
     if (!shop) return null;
     
     const now = new Date();
-    const finalValidity = new Date(shop.finalValidityTime);
+    const finalValidity = new Date(shop.final_validity_time);
     const timeDiff = finalValidity.getTime() - now.getTime();
+
     
     if (timeDiff <= 0) return null;
     

@@ -511,7 +511,7 @@ const deleteUser = asyncHandler(async (req, res) => {
       shopDescription, 
       shopLocation, 
       shopImage,
-      finalValidityTime,
+      final_validity_time,
       qrValidityMinutes
     } = req.body;
 
@@ -521,8 +521,8 @@ const deleteUser = asyncHandler(async (req, res) => {
       throw new Error('Please fill in all required fields');
     }
 
-    // Validate finalValidityTime
-    if (!finalValidityTime) {
+    // Validate final_validity_time
+    if (!final_validity_time) {
       res.status(400);
       throw new Error('Final validity time is required');
     }
@@ -569,8 +569,8 @@ const deleteUser = asyncHandler(async (req, res) => {
         is_active: true,
         is_open: true,
         shop_admin: createdUser.id,
-        final_validity_time: new Date(finalValidityTime),
-        next_opening_time: new Date(finalValidityTime), // Set next opening time to final validity time
+        final_validity_time: new Date(final_validity_time),
+        next_opening_time: new Date(final_validity_time), // Set next opening time to final validity time
         qr_validity_minutes: qrMinutes
       });
 
