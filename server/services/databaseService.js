@@ -55,9 +55,19 @@ export const UserService = {
         .eq('id', id)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        // Handle "not found" case gracefully
+        if (error.code === 'PGRST116') {
+          return null;
+        }
+        throw error;
+      }
       return formatResponse(data);
     } catch (error) {
+      // Handle other errors
+      if (error.code === 'PGRST116') {
+        return null;
+      }
       handleSupabaseError(error, 'find user by id');
     }
   },
@@ -69,10 +79,10 @@ export const UserService = {
         .from('users')
         .select('*')
         .eq('email', email)
-        .single();
+        .limit(1);
       
       if (error) throw error;
-      return formatResponse(data);
+      return data && data.length > 0 ? formatResponse(data[0]) : null;
     } catch (error) {
       handleSupabaseError(error, 'find user by email');
     }
@@ -85,10 +95,10 @@ export const UserService = {
         .from('users')
         .select('*')
         .eq('roll_no', rollNo)
-        .single();
+        .limit(1);
       
       if (error) throw error;
-      return formatResponse(data);
+      return data && data.length > 0 ? formatResponse(data[0]) : null;
     } catch (error) {
       handleSupabaseError(error, 'find user by roll number');
     }

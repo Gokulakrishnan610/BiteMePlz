@@ -3,6 +3,8 @@ import { UserService } from '../services/databaseService.js';
 import { ShopService } from '../services/databaseService.js';
 import generateToken from '../utils/generateToken.js';
 import sendEmail from '../utils/sendEmail.js';
+import { logTransaction } from '../utils/transactionLogger.js';
+import WalletService from '../utils/walletService.js';
 
 // Generate OTP
 const generateOTP = () => {
@@ -397,23 +399,55 @@ const authUser = asyncHandler(async (req, res) => {
 // @route   GET /api/users/profile
 // @access  Private
 const getUserProfile = asyncHandler(async (req, res) => {
-  const user = await UserService.findById(req.user._id);
+  // Debug: Log the user object to see its structure
+  console.log('User object in getUserProfile:', req.user);
+  
+  // Check if user has id or _id field
+  const userId = req.user.id || req.user._id;
+  if (!userId) {
+    console.error('No user ID found in req.user:', req.user);
+    res.status(400);
+    throw new Error('User ID not found in request');
+  }
+  
+  const user = await UserService.findById(userId);
 
-  if (user) {
-    res.json({
-      _id: user.id,
-      name: user.name,
-      email: user.email,
-      rollNo: user.roll_no,
-      role: user.role,
-      shop: user.shop,
-      balance: user.balance,
-    });
-  } else {
+  if (!user) {
     res.status(404);
     throw new Error('User not found');
   }
+
+  // Avoid returning invalid shop object if it's broken/missing
+  let shop = null;
+  if (user.shop) {
+    try {
+      // Try to load the shop safely, avoid throwing
+      shop = await ShopService.findById(user.shop);
+    } catch (err) {
+      console.error('⚠ Error loading shop for user:', err.message);
+      shop = null;
+    }
+  }
+
+  res.json({
+    _id: user.id,
+    name: user.name,
+    email: user.email,
+    rollNo: user.roll_no,
+    role: user.role,
+    shop: shop ? {
+      id: shop.id,
+      name: shop.name,
+      location: shop.location,
+      image: shop.image,
+      is_open: shop.is_open,
+      next_opening_time: shop.next_opening_time ?? null,
+      // add other safe fields as needed
+    } : null,
+    balance: user.balance,
+  });
 });
+
 
 // @desc    Get all users
 // @route   GET /api/users
@@ -454,102 +488,102 @@ const deleteUser = asyncHandler(async (req, res) => {
 // @desc    Create a new shop admin
 // @route   POST /api/users/shop-admin
 // @access  Private/Admin
-const createShopAdmin = asyncHandler(async (req, res) => {
-  const { 
-    name, 
-    email, 
-    password, 
-    shopName, 
-    shopDescription, 
-    shopLocation, 
-    shopImage,
-    finalValidityTime,
-    qrValidityMinutes
-  } = req.body;
+  const createShopAdmin = asyncHandler(async (req, res) => {
+    const { 
+      name, 
+      email, 
+      password, 
+      shopName, 
+      shopDescription, 
+      shopLocation, 
+      shopImage,
+      finalValidityTime,
+      qrValidityMinutes
+    } = req.body;
 
-  // Validate required fields
-  if (!name || !email || !password || !shopName || !shopDescription || !shopLocation) {
-    res.status(400);
-    throw new Error('Please fill in all required fields');
-  }
-
-  // Validate finalValidityTime
-  if (!finalValidityTime) {
-    res.status(400);
-    throw new Error('Final validity time is required');
-  }
-
-  // Validate QR validity minutes
-  const qrMinutes = parseInt(qrValidityMinutes) || 20;
-  if (qrMinutes < 1 || qrMinutes > 60) {
-    res.status(400);
-    throw new Error('QR validity must be between 1 and 60 minutes');
-  }
-
-  // Check if user already exists
-  const userExists = await UserService.findByEmail(email);
-
-  if (userExists) {
-    res.status(400);
-    throw new Error('User already exists');
-  }
-
-  // Generate a unique roll number for shop admin
-  const rollNo = `SHOP${Date.now().toString().slice(-6)}`;
-
-  let createdUser = null;
-  let createdShop = null;
-
-  try {
-    // Create user first
-    createdUser = await UserService.create({
-      name,
-      email,
-      roll_no: rollNo,
-      password,
-      role: 'shopAdmin',
-      is_verified: true, // Shop admin accounts are pre-verified
-    });
-
-    // Create shop with user reference
-    createdShop = await ShopService.create({
-      name: shopName,
-      description: shopDescription,
-      location: shopLocation,
-      image: shopImage || '/uploads/default-shop.jpg',
-      is_active: true,
-      is_open: true,
-      shop_admin: createdUser.id,
-      final_validity_time: new Date(finalValidityTime),
-      qr_validity_minutes: qrMinutes
-    });
-
-    // Update user with shop reference
-    await UserService.findByIdAndUpdate(createdUser.id, {
-      shop: createdShop.id
-    });
-
-    res.status(201).json({
-      _id: createdUser.id,
-      name: createdUser.name,
-      email: createdUser.email,
-      rollNo: createdUser.roll_no,
-      role: createdUser.role,
-      shop: createdShop.id,
-      token: generateToken(createdUser.id),
-    });
-  } catch (error) {
-    // Clean up if any error occurs
-    if (createdUser) {
-      await UserService.findByIdAndDelete(createdUser.id);
+    // Validate required fields
+    if (!name || !email || !password || !shopName || !shopDescription || !shopLocation) {
+      res.status(400);
+      throw new Error('Please fill in all required fields');
     }
-    if (createdShop) {
-      await ShopService.findByIdAndDelete(createdShop.id);
+
+    // Validate finalValidityTime
+    if (!finalValidityTime) {
+      res.status(400);
+      throw new Error('Final validity time is required');
     }
-    res.status(400);
-    throw new Error(error.message || 'Failed to create shop admin');
-  }
-});
+
+    // Validate QR validity minutes
+    const qrMinutes = parseInt(qrValidityMinutes) || 20;
+    if (qrMinutes < 1 || qrMinutes > 60) {
+      res.status(400);
+      throw new Error('QR validity must be between 1 and 60 minutes');
+    }
+
+    // Check if user already exists
+    const userExists = await UserService.findByEmail(email);
+
+    if (userExists) {
+      res.status(400);
+      throw new Error('User already exists');
+    }
+
+    // Generate a unique roll number for shop admin
+    const rollNo = `SHOP${Date.now().toString().slice(-6)}`;
+
+    let createdUser = null;
+    let createdShop = null;
+
+    try {
+      // Create user first
+      createdUser = await UserService.create({
+        name,
+        email,
+        roll_no: rollNo,
+        password,
+        role: 'shopAdmin',
+        is_verified: true, // Shop admin accounts are pre-verified
+      });
+
+      // Create shop with user reference
+      createdShop = await ShopService.create({
+        name: shopName,
+        description: shopDescription,
+        location: shopLocation,
+        image: shopImage || '/uploads/default-shop.jpg',
+        is_active: true,
+        is_open: true,
+        shop_admin: createdUser.id,
+        final_validity_time: new Date(finalValidityTime),
+        qr_validity_minutes: qrMinutes
+      });
+
+      // Update user with shop reference
+      await UserService.findByIdAndUpdate(createdUser.id, {
+        shop: createdShop.id
+      });
+
+      res.status(201).json({
+        _id: createdUser.id,
+        name: createdUser.name,
+        email: createdUser.email,
+        rollNo: createdUser.roll_no,
+        role: createdUser.role,
+        shop: createdShop.id,
+        token: generateToken(createdUser.id),
+      });
+    } catch (error) {
+      // Clean up if any error occurs
+      if (createdUser) {
+        await UserService.findByIdAndDelete(createdUser.id);
+      }
+      if (createdShop) {
+        await ShopService.findByIdAndDelete(createdShop.id);
+      }
+      res.status(400);
+      throw new Error(error.message || 'Failed to create shop admin');
+    }
+  });
 
 // @desc    Get all shop admins
 // @route   GET /api/users/shop-admins
@@ -559,51 +593,83 @@ const getShopAdmins = asyncHandler(async (req, res) => {
   res.json(shopAdmins);
 });
 
-// @desc    Get user balance
+// @desc    Get user wallet balance
 // @route   GET /api/users/balance
 // @access  Private
 const getUserBalance = asyncHandler(async (req, res) => {
-  const user = await UserService.findById(req.user._id);
-
-  if (user) {
+  try {
+    // Debug: Log the user object to see its structure
+    console.log('User object in getUserBalance:', req.user);
+    
+    // Check if user has id or _id field
+    const userId = req.user.id || req.user._id;
+    if (!userId) {
+      console.error('No user ID found in req.user:', req.user);
+      res.status(400);
+      throw new Error('User ID not found in request');
+    }
+    
+    const balance = await WalletService.getBalance(userId);
+    
     res.json({
-      balance: user.balance
+      success: true,
+      balance: balance,
+      currency: 'INR'
     });
-  } else {
-    res.status(404);
-    throw new Error('User not found');
+  } catch (error) {
+    console.error('Error getting user balance:', error);
+    res.status(500);
+    throw new Error('Failed to get balance');
   }
 });
 
-// @desc    Update user balance
+// @desc    Update user wallet balance
 // @route   PUT /api/users/balance
 // @access  Private
 const updateUserBalance = asyncHandler(async (req, res) => {
-  const { amount, type } = req.body;
+  try {
+    const { amount, type, reason } = req.body;
 
-  const user = await UserService.findById(req.user._id);
+    // Debug: Log the user object to see its structure
+    console.log('User object in updateUserBalance:', req.user);
 
-  if (!user) {
-    res.status(404);
-    throw new Error('User not found');
+    // Check if user has id or _id field
+    const userId = req.user.id || req.user._id;
+    if (!userId) {
+      console.error('No user ID found in req.user:', req.user);
+      res.status(400);
+      throw new Error('User ID not found in request');
+    }
+
+    // Validate input
+    if (!amount || amount <= 0) {
+      res.status(400);
+      throw new Error('Invalid amount');
+    }
+
+    if (!type || !['credit', 'debit'].includes(type)) {
+      res.status(400);
+      throw new Error('Invalid transaction type');
+    }
+
+    const result = await WalletService.updateBalance(
+      userId, 
+      amount, 
+      type, 
+      reason || 'Manual update'
+    );
+
+    res.json({
+      success: true,
+      balance: result.newBalance,
+      previousBalance: result.previousBalance,
+      transaction: result.transaction
+    });
+  } catch (error) {
+    console.error('Error updating user balance:', error);
+    res.status(500);
+    throw new Error(error.message || 'Failed to update balance');
   }
-
-  if (type === 'debit' && user.balance < amount) {
-    res.status(400);
-    throw new Error('Insufficient balance');
-  }
-
-  const newBalance = type === 'credit' 
-    ? user.balance + amount 
-    : user.balance - amount;
-
-  await UserService.findByIdAndUpdate(user.id, {
-    balance: newBalance
-  });
-
-  res.json({
-    balance: newBalance
-  });
 });
 
 // Create initial admin user if it doesn't exist

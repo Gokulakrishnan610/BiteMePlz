@@ -1,6 +1,6 @@
 import asyncHandler from 'express-async-handler';
-import { ProductService } from '../services/databaseService.js';
-import { ShopService } from '../services/databaseService.js';
+import Product from '../models/productModel.js';
+import Shop from '../models/shopModel.js';
 import { logShopActivity } from '../utils/shopLogger.js';
 
 // @desc    Get all products
@@ -8,9 +8,9 @@ import { logShopActivity } from '../utils/shopLogger.js';
 // @access  Public
 const getProducts = asyncHandler(async (req, res) => {
   const shopId = req.query.shop;
-  const query = shopId ? { shop: shopId, is_available: true } : { is_available: true };
+  const query = shopId ? { shop: shopId, isAvailable: true } : { isAvailable: true };
   
-  const products = await ProductService.find(query);
+  const products = await Product.find(query);
   res.json(products);
 });
 
@@ -18,7 +18,7 @@ const getProducts = asyncHandler(async (req, res) => {
 // @route   GET /api/products/:id
 // @access  Public
 const getProductById = asyncHandler(async (req, res) => {
-  const product = await ProductService.findById(req.params.id);
+  const product = await Product.findById(req.params.id);
 
   if (product) {
     res.json(product);
@@ -51,13 +51,13 @@ const createProduct = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error('Shop ID is required for admin');
     }
-    const shopExists = await ShopService.findById(shopId);
+    const shopExists = await Shop.findById(shopId);
     if (!shopExists) {
       res.status(404);
       throw new Error('Shop not found');
     }
   }
-  const product = await ProductService.create({
+  const product = await Product.create({
     name,
     shop: shopId,
     image: image || '/uploads/default-product.jpg',
@@ -88,7 +88,7 @@ const createProduct = asyncHandler(async (req, res) => {
 // @route   PUT /api/products/:id
 // @access  Private/ShopAdmin
 const updateProduct = asyncHandler(async (req, res) => {
-  const product = await ProductService.findById(req.params.id);
+  const product = await Product.findById(req.params.id);
   if (!product) {
     res.status(404);
     throw new Error('Product not found');
@@ -112,18 +112,16 @@ const updateProduct = asyncHandler(async (req, res) => {
     }
   }
   // Store previous state for logging
-  const previousState = { ...product };
+  const previousState = { ...product.toObject() };
   // Update fields
-  const updateData = {
-    name: req.body.name || product.name,
-    description: req.body.description || product.description,
-    image: req.body.image || product.image,
-    category: normalizedCategory,
-    price: req.body.price !== undefined ? req.body.price : product.price,
-    stock: req.body.stock !== undefined ? req.body.stock : product.stock,
-    is_available: req.body.isAvailable !== undefined ? req.body.isAvailable : product.is_available,
-  };
-  const updatedProduct = await ProductService.findByIdAndUpdate(product.id, updateData);
+  product.name = req.body.name || product.name;
+  product.description = req.body.description || product.description;
+  product.image = req.body.image || product.image;
+  product.category = normalizedCategory;
+  product.price = req.body.price !== undefined ? req.body.price : product.price;
+  product.stock = req.body.stock !== undefined ? req.body.stock : product.stock;
+  product.isAvailable = req.body.isAvailable !== undefined ? req.body.isAvailable : product.isAvailable;
+  const updatedProduct = await product.save();
   // Log product update
   await logShopActivity({
     shop: product.shop,
@@ -142,7 +140,7 @@ const updateProduct = asyncHandler(async (req, res) => {
 // @route   DELETE /api/products/:id
 // @access  Private/ShopAdmin
 const deleteProduct = asyncHandler(async (req, res) => {
-  const product = await ProductService.findById(req.params.id);
+  const product = await Product.findById(req.params.id);
   if (!product) {
     res.status(404);
     throw new Error('Product not found');
@@ -155,8 +153,8 @@ const deleteProduct = asyncHandler(async (req, res) => {
     res.status(401);
     throw new Error('Not authorized');
   }
-  const previousState = { ...product };
-  await ProductService.findByIdAndDelete(product.id);
+  const previousState = { ...product.toObject() };
+  await product.deleteOne();
   // Log product deletion
   await logShopActivity({
     shop: product.shop,

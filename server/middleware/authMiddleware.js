@@ -3,6 +3,9 @@ import asyncHandler from 'express-async-handler';
 import { UserService } from '../services/databaseService.js';
 import { JWT_SECRET } from '../config/jwt.js';
 
+/**
+ * Middleware to verify JWT token and attach user to request
+ */
 const protect = asyncHandler(async (req, res, next) => {
   let token;
 
@@ -11,16 +14,20 @@ const protect = asyncHandler(async (req, res, next) => {
     req.headers.authorization.startsWith('Bearer')
   ) {
     try {
-      // Get token from header
+      // Extract token
       token = req.headers.authorization.split(' ')[1];
-      
-      // Verify token
+
+      // Decode token
       const decoded = jwt.verify(token, JWT_SECRET);
-      
-      // Get user from the token
+
+      // Get user from Supabase by ID
       const user = await UserService.findById(decoded.id);
-      
+
       if (!user) {
+        console.error('User not found for token:', {
+          userId: decoded.id,
+          token: token.substring(0, 20) + '...'
+        });
         res.status(401);
         throw new Error('Not authorized, user not found');
       }
@@ -30,33 +37,38 @@ const protect = asyncHandler(async (req, res, next) => {
     } catch (error) {
       console.error('Token verification failed:', {
         error: error.message,
-        token: token ? token.substring(0, 20) + '...' : 'No token'
+        token: token ? token.substring(0, 20) + '...' : 'No token',
+        secret: JWT_SECRET ? JWT_SECRET.substring(0, 10) + '...' : 'No secret'
       });
       res.status(401);
       throw new Error('Not authorized, token failed');
     }
-  }
-
-  if (!token) {
+  } else {
     res.status(401);
     throw new Error('Not authorized, no token');
   }
 });
 
+/**
+ * Middleware to verify if user is an admin
+ */
 const admin = (req, res, next) => {
   if (req.user && req.user.role === 'admin') {
     next();
   } else {
-    res.status(401);
+    res.status(403);
     throw new Error('Not authorized as an admin');
   }
 };
 
+/**
+ * Middleware to verify if user is a shop admin
+ */
 const shopAdmin = (req, res, next) => {
   if (req.user && req.user.role === 'shopAdmin') {
     next();
   } else {
-    res.status(401);
+    res.status(403);
     throw new Error('Not authorized as a shop admin');
   }
 };

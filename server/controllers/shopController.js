@@ -42,7 +42,7 @@ const updateShop = asyncHandler(async (req, res) => {
   // Check if user is admin or the shop admin of this shop
   if (
     req.user.role !== 'admin' && 
-    (req.user.role !== 'shopAdmin' || shop.shop_admin.toString() !== req.user._id.toString())
+    (req.user.role !== 'shopAdmin' || shop.shop_admin.toString() !== req.user.id.toString())
   ) {
     res.status(401);
     throw new Error('Not authorized');
@@ -54,10 +54,10 @@ const updateShop = asyncHandler(async (req, res) => {
     description: shop.description,
     location: shop.location,
     image: shop.image,
-    is_active: shop.is_active,
-    is_open: shop.is_open,
-    final_validity_time: shop.final_validity_time,
-    qr_validity_minutes: shop.qr_validity_minutes
+    isActive: shop.is_active,
+    isOpen: shop.is_open,
+    finalValidityTime: shop.final_validity_time,
+    qrValidityMinutes: shop.qr_validity_minutes
   };
 
   // Validate finalValidityTime if it's being updated
@@ -82,7 +82,7 @@ const updateShop = asyncHandler(async (req, res) => {
     location: req.body.location || shop.location,
     image: req.body.image || shop.image,
     is_active: req.body.isActive !== undefined ? req.body.isActive : shop.is_active,
-    is_open: req.body.isOpen !== undefined ? req.body.isOpen : shop.is_open,
+    is_open: req.body.isOpen !== undefined ? req.body.isOpen : shop.is_open
   };
   
   if (req.body.finalValidityTime) {
@@ -101,25 +101,25 @@ const updateShop = asyncHandler(async (req, res) => {
     description: updatedShop.description,
     location: updatedShop.location,
     image: updatedShop.image,
-    is_active: updatedShop.is_active,
-    is_open: updatedShop.is_open,
-    final_validity_time: updatedShop.final_validity_time,
-    qr_validity_minutes: updatedShop.qr_validity_minutes
+    isActive: updatedShop.is_active,
+    isOpen: updatedShop.is_open,
+    finalValidityTime: updatedShop.final_validity_time,
+    qrValidityMinutes: updatedShop.qr_validity_minutes
   };
 
   // Determine what was updated
   const changes = [];
-  if (previousState.final_validity_time !== newState.final_validity_time) {
+  if (previousState.finalValidityTime !== newState.finalValidityTime) {
     changes.push('final validity time');
   }
-  if (previousState.qr_validity_minutes !== newState.qr_validity_minutes) {
+  if (previousState.qrValidityMinutes !== newState.qrValidityMinutes) {
     changes.push('QR validity duration');
   }
-  if (previousState.is_open !== newState.is_open) {
-    changes.push(newState.is_open ? 'opened shop' : 'closed shop');
+  if (previousState.isOpen !== newState.isOpen) {
+    changes.push(newState.isOpen ? 'opened shop' : 'closed shop');
   }
-  if (previousState.is_active !== newState.is_active) {
-    changes.push(newState.is_active ? 'activated shop' : 'deactivated shop');
+  if (previousState.isActive !== newState.isActive) {
+    changes.push(newState.isActive ? 'activated shop' : 'deactivated shop');
   }
 
   // Log the activity
@@ -131,7 +131,7 @@ const updateShop = asyncHandler(async (req, res) => {
     await logShopActivity({
       shop: shop.id,
       action,
-      performedBy: req.user._id,
+      performedBy: req.user.id,
       previousState,
       newState,
       metadata: {
@@ -159,12 +159,12 @@ const deleteShop = asyncHandler(async (req, res) => {
 
   // Log the deletion
   await logShopActivity({
-    shop: shop._id,
+    shop: shop.id,
     action: 'shop_deleted',
-    performedBy: req.user._id,
+    performedBy: req.user.id,
     previousState: {
       name: shop.name,
-      isActive: shop.isActive
+      isActive: shop.is_active
     },
     newState: {
       deleted: true
@@ -177,7 +177,11 @@ const deleteShop = asyncHandler(async (req, res) => {
   });
 
   // Delete associated products
-  await ProductService.deleteMany({ shop: shop.id });
+  await ProductService.find({ shop: shop.id }).then(products => {
+    products.forEach(async (product) => {
+      await ProductService.findByIdAndDelete(product.id);
+    });
+  });
   
   // Update shop admin user
   if (shop.shop_admin) {
@@ -195,7 +199,7 @@ const deleteShop = asyncHandler(async (req, res) => {
 // @route   GET /api/shops/:id/analytics
 // @access  Private/Admin or ShopAdmin
 const getShopAnalytics = asyncHandler(async (req, res) => {
-  const shop = await ShopService.findById(req.params.id);
+  const shop = await Shop.findById(req.params.id);
 
   if (!shop) {
     res.status(404);
@@ -205,7 +209,7 @@ const getShopAnalytics = asyncHandler(async (req, res) => {
   // Check if user is admin or the shop admin of this shop
   if (
     req.user.role !== 'admin' && 
-    (req.user.role !== 'shopAdmin' || shop.shop_admin.toString() !== req.user._id.toString())
+    (req.user.role !== 'shopAdmin' || shop.shopAdmin.toString() !== req.user._id.toString())
   ) {
     res.status(401);
     throw new Error('Not authorized');
@@ -347,7 +351,7 @@ const getShopAnalytics = asyncHandler(async (req, res) => {
 // @route   POST /api/shops/:id/close
 // @access  Private/ShopAdmin
 const closeShop = asyncHandler(async (req, res) => {
-  const shop = await Shop.findById(req.params.id);
+  const shop = await ShopService.findById(req.params.id);
 
   if (!shop) {
     res.status(404);
@@ -357,7 +361,7 @@ const closeShop = asyncHandler(async (req, res) => {
   // Check if user is admin or the shop admin of this shop
   if (
     req.user.role !== 'admin' && 
-    (req.user.role !== 'shopAdmin' || shop.shopAdmin.toString() !== req.user._id.toString())
+    (req.user.role !== 'shopAdmin' || shop.shop_admin.toString() !== req.user.id.toString())
   ) {
     res.status(401);
     throw new Error('Not authorized');
@@ -365,19 +369,18 @@ const closeShop = asyncHandler(async (req, res) => {
 
   // Store previous state
   const previousState = {
-    isOpen: shop.isOpen,
-    finalValidityTime: shop.finalValidityTime
+    isOpen: shop.is_open,
+    finalValidityTime: shop.final_validity_time
   };
 
   // Close the shop
-  shop.isOpen = false;
-  await shop.save();
+  await ShopService.findByIdAndUpdate(shop.id, { is_open: false });
 
   // Log the manual closure
   await logShopActivity({
-    shop: shop._id,
+    shop: shop.id,
     action: 'manual_close',
-    performedBy: req.user._id,
+    performedBy: req.user.id,
     previousState,
     newState: {
       isOpen: false,
@@ -392,10 +395,10 @@ const closeShop = asyncHandler(async (req, res) => {
   });
 
   // Get all unverified orders for this shop
-  const orders = await Order.find({
-    shop: shop._id,
-    isPaid: true,
-    isVerified: false,
+  const orders = await OrderService.find({
+    shop: shop.id,
+    is_paid: true,
+    is_verified: false,
     status: { $ne: 'expired' }
   });
 
@@ -405,14 +408,14 @@ const closeShop = asyncHandler(async (req, res) => {
   
   for (const order of orders) {
     try {
-      console.log(`Processing order ${order._id} for shop closure`);
+      console.log(`Processing order ${order.id} for shop closure`);
       await handleFinalValidityExpired(order);
       expiredCount++;
-      console.log(`Successfully processed order ${order._id}`);
+      console.log(`Successfully processed order ${order.id}`);
     } catch (error) {
-      console.error(`Failed to process order ${order._id}:`, error);
+      console.error(`Failed to process order ${order.id}:`, error);
       failedOrders.push({
-        orderId: order._id,
+        orderId: order.id,
         error: error.message
       });
     }
@@ -429,7 +432,7 @@ const closeShop = asyncHandler(async (req, res) => {
 // @route   POST /api/shops/:id/toggle
 // @access  Private/ShopAdmin
 const toggleShopStatus = asyncHandler(async (req, res) => {
-  const shop = await Shop.findById(req.params.id);
+  const shop = await ShopService.findById(req.params.id);
 
   if (!shop) {
     res.status(404);
@@ -439,7 +442,7 @@ const toggleShopStatus = asyncHandler(async (req, res) => {
   // Check if user is admin or the shop admin of this shop
   if (
     req.user.role !== 'admin' && 
-    (req.user.role !== 'shopAdmin' || shop.shopAdmin.toString() !== req.user._id.toString())
+    (req.user.role !== 'shopAdmin' || shop.shop_admin.toString() !== req.user.id.toString())
   ) {
     res.status(401);
     throw new Error('Not authorized');
@@ -447,38 +450,38 @@ const toggleShopStatus = asyncHandler(async (req, res) => {
 
   // Store previous state
   const previousState = {
-    isOpen: shop.isOpen
+    isOpen: shop.is_open
   };
 
   // Toggle the shop status
-  shop.isOpen = !shop.isOpen;
-  await shop.save();
+  const newIsOpen = !shop.is_open;
+  await ShopService.findByIdAndUpdate(shop.id, { is_open: newIsOpen });
 
   // Log the toggle action
   await logShopActivity({
-    shop: shop._id,
-    action: shop.isOpen ? 'shop_opened' : 'shop_closed',
-    performedBy: req.user._id,
+    shop: shop.id,
+    action: newIsOpen ? 'shop_opened' : 'shop_closed',
+    performedBy: req.user.id,
     previousState,
     newState: {
-      isOpen: shop.isOpen,
+      isOpen: newIsOpen,
       toggledAt: new Date()
     },
     metadata: {
       manualToggle: true,
       toggledBy: req.user.name
     },
-    description: `Shop ${shop.isOpen ? 'opened' : 'closed'} by ${req.user.name}`,
+    description: `Shop ${newIsOpen ? 'opened' : 'closed'} by ${req.user.name}`,
     req
   });
 
   // If closing the shop, process unverified orders and set all wallets to zero
-  if (!shop.isOpen) {
+  if (!newIsOpen) {
     // Get all unverified orders for this shop
-    const orders = await Order.find({
-      shop: shop._id,
-      isPaid: true,
-      isVerified: false,
+    const orders = await OrderService.find({
+      shop: shop.id,
+      is_paid: true,
+      is_verified: false,
       status: { $ne: 'expired' }
     });
 
@@ -488,33 +491,38 @@ const toggleShopStatus = asyncHandler(async (req, res) => {
     
     for (const order of orders) {
       try {
-        console.log(`Processing order ${order._id} for shop closure`);
+        console.log(`Processing order ${order.id} for shop closure`);
         await handleFinalValidityExpired(order);
         expiredCount++;
-        console.log(`Successfully processed order ${order._id}`);
+        console.log(`Successfully processed order ${order.id}`);
       } catch (error) {
-        console.error(`Failed to process order ${order._id}:`, error);
+        console.error(`Failed to process order ${order.id}:`, error);
         failedOrders.push({
-          orderId: order._id,
+          orderId: order.id,
           error: error.message
         });
       }
     }
 
     // Set all users' wallet balances to zero
-    const walletResetResult = await User.updateMany({}, { $set: { balance: 0 } });
-    console.log(`Reset ${walletResetResult.modifiedCount} user wallets to zero`);
+    const users = await UserService.find({});
+    let walletResetCount = 0;
+    for (const user of users) {
+      await UserService.findByIdAndUpdate(user.id, { balance: 0 });
+      walletResetCount++;
+    }
+    console.log(`Reset ${walletResetCount} user wallets to zero`);
 
     res.json({
-      message: `Shop closed successfully. ${expiredCount} orders expired. ${walletResetResult.modifiedCount} user wallets reset to zero.${failedOrders.length > 0 ? ` ${failedOrders.length} orders failed to process.` : ''}`,
-      shop,
-      walletsReset: walletResetResult.modifiedCount,
+      message: `Shop closed successfully. ${expiredCount} orders expired. ${walletResetCount} user wallets reset to zero.${failedOrders.length > 0 ? ` ${failedOrders.length} orders failed to process.` : ''}`,
+      shop: { ...shop, is_open: newIsOpen },
+      walletsReset: walletResetCount,
       failedOrders: failedOrders.length > 0 ? failedOrders : undefined
     });
   } else {
     res.json({
-      message: `Shop ${shop.isOpen ? 'opened' : 'closed'} successfully.`,
-      shop
+      message: `Shop ${newIsOpen ? 'opened' : 'closed'} successfully.`,
+      shop: { ...shop, is_open: newIsOpen }
     });
   }
 });
@@ -525,21 +533,26 @@ const toggleShopStatus = asyncHandler(async (req, res) => {
 const resetAllWallets = asyncHandler(async (req, res) => {
   try {
     // Set all users' wallet balances to zero
-    const result = await User.updateMany({}, { $set: { balance: 0 } });
+    const users = await UserService.find({});
+    let walletResetCount = 0;
+    for (const user of users) {
+      await UserService.findByIdAndUpdate(user.id, { balance: 0 });
+      walletResetCount++;
+    }
     
-    console.log(`Reset ${result.modifiedCount} user wallets to zero due to final validity expiry`);
+    console.log(`Reset ${walletResetCount} user wallets to zero due to final validity expiry`);
     
     // Log the wallet reset activity for all shops
-    const shops = await Shop.find({ isActive: true });
+    const shops = await ShopService.find({ is_active: true });
     for (const shop of shops) {
       await logShopActivity({
-        shop: shop._id,
+        shop: shop.id,
         action: 'auto_close',
-        performedBy: req.user._id,
+        performedBy: req.user.id,
         previousState: { walletsActive: true },
         newState: { walletsActive: false },
         metadata: { 
-          walletsReset: result.modifiedCount,
+          walletsReset: walletResetCount,
           resetAt: new Date(),
           adminReset: true
         },
@@ -549,8 +562,8 @@ const resetAllWallets = asyncHandler(async (req, res) => {
     }
     
     res.json({
-      message: `Successfully reset ${result.modifiedCount} user wallets to zero`,
-      walletsReset: result.modifiedCount
+      message: `Successfully reset ${walletResetCount} user wallets to zero`,
+      walletsReset: walletResetCount
     });
   } catch (error) {
     console.error('Error resetting wallets:', error);
