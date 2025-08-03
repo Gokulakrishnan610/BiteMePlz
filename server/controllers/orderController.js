@@ -490,7 +490,7 @@ const getShopOrders = asyncHandler(async (req, res) => {
     throw new Error('Not authorized');
   }
 
-  const orders = await OrderService.find({ shop: shopId })
+  const orders = await OrderService.find({ shop_id: shopId })
     .populate('user', 'name email')
     .sort('-createdAt');
   res.json(orders);
@@ -509,7 +509,7 @@ const getOrderByPaymentId = asyncHandler(async (req, res) => {
 
   if (
     req.user.role !== 'admin' && 
-    (req.user.role !== 'shopAdmin' || order.shop.toString() !== req.user.shop.toString())
+    (req.user.role !== 'shopAdmin' || order.shop_id.toString() !== req.user.shop.toString())
   ) {
     res.status(401);
     throw new Error('Not authorized');
@@ -546,7 +546,7 @@ const continuePayment = asyncHandler(async (req, res) => {
   }
 
   // Check if shop is still accepting orders
-  const shop = await ShopService.findById(order.shop);
+  const shop = await ShopService.findById(order.shop_id);
   if (!shop || !shop.isAcceptingOrders()) {
     res.status(400);
     throw new Error('Shop is no longer accepting orders');
@@ -761,7 +761,7 @@ const verifyOrderQR = asyncHandler(async (req, res) => {
   
   if (
     req.user.role !== 'admin' && 
-    (req.user.role !== 'shopAdmin' || order.shop.toString() !== req.user.shop.toString())
+    (req.user.role !== 'shopAdmin' || order.shop_id.toString() !== req.user.shop.toString())
   ) {
     res.status(401);
     throw new Error('Not authorized');

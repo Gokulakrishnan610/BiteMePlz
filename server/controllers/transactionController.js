@@ -80,7 +80,7 @@ const getTransactionDetails = asyncHandler(async (req, res) => {
   // Check authorization
   if (
     req.user.role !== 'admin' && 
-    (req.user.role !== 'shopAdmin' || transaction.shop._id.toString() !== req.user.shop.toString())
+    (req.user.role !== 'shopAdmin' || transaction.shop_id.toString() !== req.user.shop.toString())
   ) {
     res.status(401);
     throw new Error('Not authorized');
