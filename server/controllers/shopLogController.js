@@ -17,16 +17,35 @@ const getShopActivityLogs = asyncHandler(async (req, res) => {
     throw new Error('Not authorized');
   }
 
-  const result = await ShopLogService.getShopLogs(shopId, {
-    page: parseInt(page) || 1,
-    limit: parseInt(limit) || 50,
-    action,
-    startDate,
-    endDate,
-    performedBy
-  });
+  try {
+    const query = { shop_id: shopId };
+    
+    if (action) query.action = action;
+    if (performedBy) query.performed_by = performedBy;
+    if (startDate || endDate) {
+      query.created_at = {};
+      if (startDate) query.created_at.$gte = new Date(startDate);
+      if (endDate) query.created_at.$lte = new Date(endDate);
+    }
 
-  res.json(result);
+    const logs = await ShopLogService.find(query);
+    
+    // Apply pagination manually
+    const startIndex = (parseInt(page) || 1 - 1) * (parseInt(limit) || 50);
+    const endIndex = startIndex + (parseInt(limit) || 50);
+    const paginatedLogs = logs.slice(startIndex, endIndex);
+
+    res.json({
+      logs: paginatedLogs,
+      totalPages: Math.ceil(logs.length / (parseInt(limit) || 50)),
+      currentPage: parseInt(page) || 1,
+      total: logs.length
+    });
+  } catch (error) {
+    console.error('Error fetching shop activity logs:', error);
+    res.status(500);
+    throw new Error('Failed to fetch shop activity logs');
+  }
 });
 
 // @desc    Get shop activity statistics
@@ -45,8 +64,39 @@ const getShopActivityStatistics = asyncHandler(async (req, res) => {
     throw new Error('Not authorized');
   }
 
-  const stats = await ShopLogService.getShopActivityStats(shopId, period);
-  res.json(stats);
+  try {
+    const logs = await ShopLogService.find({ shop_id: shopId });
+    
+    // Calculate basic statistics
+    const totalActions = logs.length;
+    const actionCounts = {};
+    const dailyActivity = {};
+    
+    logs.forEach(log => {
+      // Count actions
+      actionCounts[log.action] = (actionCounts[log.action] || 0) + 1;
+      
+      // Group by date
+      const date = new Date(log.created_at).toDateString();
+      dailyActivity[date] = (dailyActivity[date] || 0) + 1;
+    });
+
+    const stats = {
+      totalActions,
+      actionCounts,
+      dailyActivity: Object.entries(dailyActivity).map(([date, count]) => ({
+        date,
+        count
+      })),
+      period: period || 'all'
+    };
+
+    res.json(stats);
+  } catch (error) {
+    console.error('Error fetching shop activity statistics:', error);
+    res.status(500);
+    throw new Error('Failed to fetch shop activity statistics');
+  }
 });
 
 // @desc    Get all shop logs (admin only)
@@ -58,26 +108,32 @@ const getAllShopLogs = asyncHandler(async (req, res) => {
   const query = {};
   
   if (action) query.action = action;
-  if (shop) query.shop = shop;
+  if (shop) query.shop_id = shop;
   if (startDate || endDate) {
-    query.createdAt = {};
-    if (startDate) query.createdAt.$gte = new Date(startDate);
-    if (endDate) query.createdAt.$lte = new Date(endDate);
+    query.created_at = {};
+    if (startDate) query.created_at.$gte = new Date(startDate);
+    if (endDate) query.created_at.$lte = new Date(endDate);
   }
 
-  const logs = await ShopLogService.findAll(query, {
-    limit: limit * 1,
-    offset: (page - 1) * limit
-  });
+  try {
+    const logs = await ShopLogService.find(query);
+    
+    // Apply pagination manually since Supabase doesn't have built-in pagination
+    const startIndex = (parseInt(page) - 1) * parseInt(limit);
+    const endIndex = startIndex + parseInt(limit);
+    const paginatedLogs = logs.slice(startIndex, endIndex);
 
-  const total = await ShopLogService.countDocuments(query);
-
-  res.json({
-    logs,
-    totalPages: Math.ceil(total / limit),
-    currentPage: parseInt(page),
-    total
-  });
+    res.json({
+      logs: paginatedLogs,
+      totalPages: Math.ceil(logs.length / parseInt(limit)),
+      currentPage: parseInt(page),
+      total: logs.length
+    });
+  } catch (error) {
+    console.error('Error fetching shop logs:', error);
+    res.status(500);
+    throw new Error('Failed to fetch shop logs');
+  }
 });
 
 export {

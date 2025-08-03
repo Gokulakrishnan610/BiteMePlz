@@ -557,6 +557,7 @@ const deleteUser = asyncHandler(async (req, res) => {
         is_open: true,
         shop_admin: createdUser.id,
         final_validity_time: new Date(finalValidityTime),
+        next_opening_time: new Date(finalValidityTime), // Set next opening time to final validity time
         qr_validity_minutes: qrMinutes
       });
 
