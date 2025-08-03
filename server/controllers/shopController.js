@@ -60,9 +60,9 @@ const updateShop = asyncHandler(async (req, res) => {
     qrValidityMinutes: shop.qr_validity_minutes
   };
 
-  // Validate finalValidityTime if it's being updated
-  if (req.body.finalValidityTime) {
-    const validityTime = new Date(req.body.finalValidityTime);
+  // Validate final_validity_time if it's being updated
+  if (req.body.final_validity_time) {
+    const validityTime = new Date(req.body.final_validity_time);
     if (isNaN(validityTime.getTime())) {
       res.status(400);
       throw new Error('Invalid date format for final validity time');
@@ -81,16 +81,16 @@ const updateShop = asyncHandler(async (req, res) => {
     description: req.body.description || shop.description,
     location: req.body.location || shop.location,
     image: req.body.image || shop.image,
-    is_active: req.body.isActive !== undefined ? req.body.isActive : shop.is_active,
-    is_open: req.body.isOpen !== undefined ? req.body.isOpen : shop.is_open
+    is_active: req.body.is_active !== undefined ? req.body.is_active : shop.is_active,
+    is_open: req.body.is_open !== undefined ? req.body.is_open : shop.is_open
   };
   
-  if (req.body.finalValidityTime) {
-    updateData.final_validity_time = new Date(req.body.finalValidityTime);
+  if (req.body.final_validity_time) {
+    updateData.final_validity_time = new Date(req.body.final_validity_time);
   }
 
-  if (req.body.qrValidityMinutes) {
-    updateData.qr_validity_minutes = req.body.qrValidityMinutes;
+  if (req.body.qr_validity_minutes) {
+    updateData.qr_validity_minutes = req.body.qr_validity_minutes;
   }
 
   const updatedShop = await ShopService.findByIdAndUpdate(shop.id, updateData);
@@ -124,8 +124,8 @@ const updateShop = asyncHandler(async (req, res) => {
 
   // Log the activity
   if (changes.length > 0) {
-    const action = req.body.finalValidityTime ? 'validity_updated' : 
-                  req.body.qrValidityMinutes ? 'qr_validity_updated' : 
+    const action = req.body.final_validity_time ? 'validity_updated' : 
+                  req.body.qr_validity_minutes ? 'qr_validity_updated' : 
                   'settings_updated';
     
     await logShopActivity({
@@ -460,17 +460,19 @@ const toggleShopStatus = asyncHandler(async (req, res) => {
   if (!newIsOpen) {
     // Get all unverified orders for this shop
     const orders = await OrderService.find({
-      shop: shop.id,
+      shop_id: shop.id,
       is_paid: true,
-      is_verified: false,
-      status: { $ne: 'expired' }
+      is_verified: false
     });
+    
+    // Filter out expired orders manually since Supabase doesn't support $ne
+    const activeOrders = orders.filter(order => order.status !== 'expired');
 
     // Process each order
     let expiredCount = 0;
     let failedOrders = [];
     
-    for (const order of orders) {
+    for (const order of activeOrders) {
       try {
         console.log(`Processing order ${order.id} for shop closure`);
         await handleFinalValidityExpired(order);

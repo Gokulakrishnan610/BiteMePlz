@@ -13,13 +13,13 @@ export const logTransaction = async ({
 }) => {
   try {
     const transaction = await TransactionService.createTransaction({
-      shop,
-      order,
-      user,
+      shop_id: shop,
+      order_id: order,
+      user_id: user,
       type,
       amount,
       status,
-      paymentMethod,
+      payment_method: paymentMethod,
       description,
       metadata
     });
@@ -42,7 +42,7 @@ export const getShopTransactions = async (shopId, options = {}) => {
     status
   } = options;
 
-  const query = { shop: shopId };
+  const query = { shop_id: shopId };
   
   if (type) query.type = type;
   if (status) query.status = status;

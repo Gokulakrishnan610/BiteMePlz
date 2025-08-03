@@ -490,10 +490,30 @@ const getShopOrders = asyncHandler(async (req, res) => {
     throw new Error('Not authorized');
   }
 
-  const orders = await OrderService.find({ shop_id: shopId })
-    .populate('user', 'name email')
-    .sort('-createdAt');
-  res.json(orders);
+  const orders = await OrderService.find({ shop_id: shopId });
+  
+  // For Supabase, we need to manually populate user data
+  const ordersWithUsers = await Promise.all(
+    orders.map(async (order) => {
+      try {
+        const user = await UserService.findById(order.user_id);
+        return {
+          ...order,
+          user: user ? { name: user.name, email: user.email } : null
+        };
+      } catch (error) {
+        console.error('Error fetching user for order:', error);
+        return {
+          ...order,
+          user: null
+        };
+      }
+    })
+  );
+  
+  // Sort by created_at in descending order
+  ordersWithUsers.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  res.json(ordersWithUsers);
 });
 
 const getOrderByPaymentId = asyncHandler(async (req, res) => {

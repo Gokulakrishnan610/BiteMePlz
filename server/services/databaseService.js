@@ -570,6 +570,159 @@ export const TransactionService = {
     } catch (error) {
       handleSupabaseError(error, 'update transaction');
     }
+  },
+
+  // Get transactions with pagination and filtering
+  async getTransactions(filter = {}, options = {}) {
+    try {
+      let query = supabase.from('transactions').select('*');
+      
+      // Apply filters
+      Object.keys(filter).forEach(key => {
+        if (key === 'createdAt' && filter[key].$gte) {
+          query = query.gte('created_at', filter[key].$gte);
+        } else if (key === 'createdAt' && filter[key].$lte) {
+          query = query.lte('created_at', filter[key].$lte);
+        } else {
+          query = query.eq(key, filter[key]);
+        }
+      });
+      
+      // Apply pagination
+      const { page = 1, limit = 50 } = options;
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+      query = query.range(from, to);
+      
+      // Apply sorting - convert camelCase to snake_case for database columns
+      if (options.sort) {
+        Object.keys(options.sort).forEach(key => {
+          const dbColumn = key === 'createdAt' ? 'created_at' : key;
+          query = query.order(dbColumn, { ascending: options.sort[key] === 1 });
+        });
+      } else {
+        query = query.order('created_at', { ascending: false });
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      return data.map(item => formatResponse(item));
+    } catch (error) {
+      handleSupabaseError(error, 'get transactions');
+    }
+  },
+
+  // Get transaction count
+  async getTransactionCount(filter = {}) {
+    try {
+      let query = supabase.from('transactions').select('*', { count: 'exact', head: true });
+      
+      // Apply filters - convert camelCase to snake_case for database columns
+      Object.keys(filter).forEach(key => {
+        if (key === 'createdAt' && filter[key].$gte) {
+          query = query.gte('created_at', filter[key].$gte);
+        } else if (key === 'createdAt' && filter[key].$lte) {
+          query = query.lte('created_at', filter[key].$lte);
+        } else {
+          // Convert camelCase field names to snake_case for database
+          const dbColumn = key === 'createdAt' ? 'created_at' : key;
+          query = query.eq(dbColumn, filter[key]);
+        }
+      });
+      
+      const { count, error } = await query;
+      
+      if (error) throw error;
+      return count || 0;
+    } catch (error) {
+      handleSupabaseError(error, 'get transaction count');
+    }
+  },
+
+  // Get transaction statistics
+  async getTransactionStats(shopId, startDate) {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('shop_id', shopId)
+        .gte('created_at', startDate.toISOString());
+      
+      if (error) throw error;
+      
+      const transactions = data || [];
+      const totalAmount = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+      const successfulTransactions = transactions.filter(t => t.status === 'success').length;
+      const failedTransactions = transactions.filter(t => t.status === 'failed').length;
+      
+      return {
+        totalTransactions: transactions.length,
+        totalAmount,
+        successfulTransactions,
+        failedTransactions,
+        averageTransactionValue: transactions.length > 0 ? totalAmount / transactions.length : 0
+      };
+    } catch (error) {
+      handleSupabaseError(error, 'get transaction stats');
+    }
+  },
+
+  // Get daily transaction statistics
+  async getDailyTransactionStats(shopId, startDate) {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('shop_id', shopId)
+        .gte('created_at', startDate.toISOString());
+      
+      if (error) throw error;
+      
+      const transactions = data || [];
+      const dailyStats = {};
+      
+      transactions.forEach(transaction => {
+        const date = new Date(transaction.created_at).toISOString().split('T')[0];
+        if (!dailyStats[date]) {
+          dailyStats[date] = {
+            date,
+            count: 0,
+            amount: 0,
+            successful: 0,
+            failed: 0
+          };
+        }
+        
+        dailyStats[date].count++;
+        dailyStats[date].amount += transaction.amount || 0;
+        if (transaction.status === 'success') {
+          dailyStats[date].successful++;
+        } else if (transaction.status === 'failed') {
+          dailyStats[date].failed++;
+        }
+      });
+      
+      return Object.values(dailyStats).sort((a, b) => a.date.localeCompare(b.date));
+    } catch (error) {
+      handleSupabaseError(error, 'get daily transaction stats');
+    }
+  },
+
+  // Create transaction with proper data structure
+  async createTransaction(transactionData) {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert([transactionData])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return formatResponse(data);
+    } catch (error) {
+      handleSupabaseError(error, 'create transaction');
+    }
   }
 };
 

@@ -60,10 +60,12 @@ interface Analytics {
 }
 
 interface Shop {
-  _id: string;
-  isOpen: boolean;
-  finalValidity: string;
-  qrValidityMinutes: number;
+  id: string;
+  _id?: string;
+  name: string;
+  is_open: boolean;
+  final_validity_time: string;
+  qr_validity_minutes: number;
 }
 
 const DashboardPage: React.FC = () => {
@@ -81,25 +83,46 @@ const DashboardPage: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        if (!user?.shop) return;
+        if (!user?.shop) {
+          console.log('No shop found for user:', user);
+          setError('No shop associated with this account');
+          setLoading(false);
+          return;
+        }
+        
+        console.log('Fetching data for shop:', user.shop);
         
         const [analyticsRes, shopRes] = await Promise.all([
           api.get(`/shops/${user.shop}/analytics`),
           api.get(`/shops/${user.shop}`)
         ]);
+        
+        console.log('Analytics response:', analyticsRes.data);
+        console.log('Shop response:', shopRes.data);
+        
         setAnalytics(analyticsRes.data);
         setShop(shopRes.data);
-        setFinalValidity(shopRes.data.finalValidityTime
-          ? (() => {
-              const d = new Date(shopRes.data.finalValidityTime);
-              // Convert to IST by adding 5.5 hours
-              d.setHours(d.getHours() + 5.5);
-              return d.toISOString().substring(11, 16);
-            })()
-          : '17:00');
-        setQrValidityMinutes(shopRes.data.qrValidityMinutes.toString());
+        
+        // Handle final validity time
+        if (shopRes.data.final_validity_time) {
+          const d = new Date(shopRes.data.final_validity_time);
+          // Convert to IST by adding 5.5 hours
+          d.setHours(d.getHours() + 5.5);
+          setFinalValidity(d.toISOString().substring(11, 16));
+        } else {
+          setFinalValidity('17:00');
+        }
+        
+        // Handle QR validity minutes
+        if (shopRes.data.qr_validity_minutes) {
+          setQrValidityMinutes(shopRes.data.qr_validity_minutes.toString());
+        } else {
+          setQrValidityMinutes('20');
+        }
+        
         setLoading(false);
       } catch (err) {
+        console.error('Error fetching shop data:', err);
         setError('Failed to load data');
         setLoading(false);
       }
@@ -141,12 +164,12 @@ const DashboardPage: React.FC = () => {
       }
       
       const { data } = await api.put(`/shops/${user.shop}`, {
-        finalValidityTime: validityDate.toISOString()
+        final_validity_time: validityDate.toISOString()
       });
       
       // Update local state with the new time
-      setFinalValidity(data.finalValidityTime
-        ? new Date(data.finalValidityTime).toLocaleTimeString('en-US', {
+      setFinalValidity(data.final_validity_time
+        ? new Date(data.final_validity_time).toLocaleTimeString('en-US', {
             hour12: false,
             hour: '2-digit',
             minute: '2-digit'
@@ -173,10 +196,10 @@ const DashboardPage: React.FC = () => {
 
       setUpdatingQR(true);
       const { data } = await api.put(`/shops/${user.shop}`, {
-        qrValidityMinutes: minutes
+        qr_validity_minutes: minutes
       });
       setShop(data);
-      setQrValidityMinutes(data.qrValidityMinutes.toString());
+      setQrValidityMinutes(data.qr_validity_minutes.toString());
       toast.success('QR validity time updated successfully');
     } catch (error: any) {
       toast.error(error.message || 'Failed to update QR validity time');
@@ -294,14 +317,14 @@ const DashboardPage: React.FC = () => {
             onClick={handleToggleShop}
             disabled={closing}
             className={`card p-4 flex items-center gap-3 transition-all duration-200 hover:scale-105 ${
-              shop?.isOpen 
+              shop?.is_open 
                 ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700' 
                 : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700'
             }`}
           >
             <Power size={20} />
             <span className="font-medium">
-              {closing ? (shop?.isOpen ? 'Closing...' : 'Opening...') : (shop?.isOpen ? 'Close Shop' : 'Open Shop')}
+              {closing ? (shop?.is_open ? 'Closing...' : 'Opening...') : (shop?.is_open ? 'Close Shop' : 'Open Shop')}
             </span>
           </button>
         </div>
