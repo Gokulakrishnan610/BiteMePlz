@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import { Package, ShoppingBag, TrendingUp, AlertCircle, Power, Clock, QrCode } from 'lucide-react';
 import { Line, Bar } from 'react-chartjs-2';
@@ -84,8 +84,8 @@ const DashboardPage: React.FC = () => {
         if (!user?.shop) return;
         
         const [analyticsRes, shopRes] = await Promise.all([
-          axios.get(`/api/shops/${user.shop}/analytics`),
-          axios.get(`/api/shops/${user.shop}`)
+          api.get(`/shops/${user.shop}/analytics`),
+          api.get(`/shops/${user.shop}`)
         ]);
         setAnalytics(analyticsRes.data);
         setShop(shopRes.data);
@@ -112,7 +112,7 @@ const DashboardPage: React.FC = () => {
     if (!user?.shop) return;
     try {
       setClosing(true);
-      const { data } = await axios.post(`/api/shops/${user.shop}/toggle`);
+      const { data } = await api.post(`/shops/${user.shop}/toggle`);
       setShop(data.shop);
       toast.success(data.message);
     } catch (error: any) {
@@ -140,7 +140,7 @@ const DashboardPage: React.FC = () => {
         validityDate.setDate(validityDate.getDate() + 1);
       }
       
-      const { data } = await axios.put(`/api/shops/${user.shop}`, {
+      const { data } = await api.put(`/shops/${user.shop}`, {
         finalValidityTime: validityDate.toISOString()
       });
       
@@ -172,7 +172,7 @@ const DashboardPage: React.FC = () => {
       }
 
       setUpdatingQR(true);
-      const { data } = await axios.put(`/api/shops/${user.shop}`, {
+      const { data } = await api.put(`/shops/${user.shop}`, {
         qrValidityMinutes: minutes
       });
       setShop(data);
