@@ -5,6 +5,7 @@ import generateToken from '../utils/generateToken.js';
 import sendEmail from '../utils/sendEmail.js';
 import { logTransaction } from '../utils/transactionLogger.js';
 import WalletService from '../utils/walletService.js';
+import bcrypt from 'bcryptjs'; // Added bcrypt import
 
 // Generate OTP
 const generateOTP = () => {
@@ -377,9 +378,10 @@ const authUser = asyncHandler(async (req, res) => {
     throw new Error('Please verify your email first');
   }
 
-  // For now, we'll use a simple password check since we don't have matchPassword method
-  // You may need to implement password hashing in the UserService
-  if (user.password === password) {
+  // Compare password using bcrypt
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+  
+  if (isPasswordValid) {
     res.json({
       _id: user.id,
       name: user.name,

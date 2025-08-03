@@ -1,4 +1,4 @@
-import StudentAnalytics from '../models/studentAnalyticsModel.js';
+import { StudentAnalyticsService } from '../services/databaseService.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export const trackStudentActivity = async ({
@@ -27,7 +27,7 @@ export const trackStudentActivity = async ({
       timestamp: new Date()
     };
 
-    const analytics = await StudentAnalytics.create(analyticsEntry);
+    const analytics = await StudentAnalyticsService.create(analyticsEntry);
     console.log(`Student activity tracked: ${activity} for user ${user}`);
     return analytics;
   } catch (error) {
@@ -57,7 +57,7 @@ export const getStudentBehaviorAnalytics = async (options = {}) => {
   }
 
   // User journey analysis
-  const userJourneys = await StudentAnalytics.aggregate([
+  const userJourneys = await StudentAnalyticsService.aggregate([
     { $match: matchQuery },
     {
       $group: {
@@ -91,7 +91,7 @@ export const getStudentBehaviorAnalytics = async (options = {}) => {
   ]);
 
   // Conversion funnel analysis
-  const conversionFunnel = await StudentAnalytics.aggregate([
+  const conversionFunnel = await StudentAnalyticsService.aggregate([
     { $match: matchQuery },
     {
       $group: {
@@ -109,7 +109,7 @@ export const getStudentBehaviorAnalytics = async (options = {}) => {
   ]);
 
   // Popular products analysis
-  const popularProducts = await StudentAnalytics.aggregate([
+  const popularProducts = await StudentAnalyticsService.aggregate([
     {
       $match: {
         ...matchQuery,
@@ -146,7 +146,7 @@ export const getStudentBehaviorAnalytics = async (options = {}) => {
   ]);
 
   // Time-based activity patterns
-  const activityPatterns = await StudentAnalytics.aggregate([
+  const activityPatterns = await StudentAnalyticsService.aggregate([
     { $match: matchQuery },
     {
       $group: {
@@ -161,7 +161,7 @@ export const getStudentBehaviorAnalytics = async (options = {}) => {
   ]);
 
   // User engagement metrics
-  const engagementMetrics = await StudentAnalytics.aggregate([
+  const engagementMetrics = await StudentAnalyticsService.aggregate([
     { $match: matchQuery },
     {
       $group: {
@@ -213,7 +213,7 @@ export const getAdvancedStudentInsights = async (shopId, period = '30d') => {
   }
 
   // Customer segmentation based on behavior
-  const customerSegmentation = await StudentAnalytics.aggregate([
+  const customerSegmentation = await StudentAnalyticsService.aggregate([
     {
       $match: {
         shop: shopId,
@@ -267,7 +267,7 @@ export const getAdvancedStudentInsights = async (shopId, period = '30d') => {
   ]);
 
   // Abandonment analysis
-  const abandonmentAnalysis = await StudentAnalytics.aggregate([
+  const abandonmentAnalysis = await StudentAnalyticsService.aggregate([
     {
       $match: {
         shop: shopId,

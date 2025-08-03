@@ -1,4 +1,4 @@
-import ShopLog from '../models/shopLogModel.js';
+import { ShopLogService } from '../services/databaseService.js';
 
 export const logShopActivity = async ({
   shop,
@@ -27,7 +27,7 @@ export const logShopActivity = async ({
       logEntry.userAgent = req.get('User-Agent');
     }
 
-    const log = await ShopLog.create(logEntry);
+    const log = await ShopLogService.create(logEntry);
     console.log(`Shop activity logged: ${action} for shop ${shop} by user ${performedBy}`);
     return log;
   } catch (error) {
@@ -56,14 +56,14 @@ export const getShopLogs = async (shopId, options = {}) => {
     if (endDate) query.createdAt.$lte = new Date(endDate);
   }
 
-  const logs = await ShopLog.find(query)
+  const logs = await ShopLogService.find(query)
     .populate('performedBy', 'name email role')
     .populate('shop', 'name')
     .sort({ createdAt: -1 })
     .limit(limit * 1)
     .skip((page - 1) * limit);
 
-  const total = await ShopLog.countDocuments(query);
+  const total = await ShopLogService.countDocuments(query);
 
   return {
     logs,
@@ -91,7 +91,7 @@ export const getShopActivityStats = async (shopId, period = '30d') => {
       startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   }
 
-  const stats = await ShopLog.aggregate([
+  const stats = await ShopLogService.aggregate([
     {
       $match: {
         shop: shopId,
@@ -107,7 +107,7 @@ export const getShopActivityStats = async (shopId, period = '30d') => {
     }
   ]);
 
-  const dailyActivity = await ShopLog.aggregate([
+  const dailyActivity = await ShopLogService.aggregate([
     {
       $match: {
         shop: shopId,

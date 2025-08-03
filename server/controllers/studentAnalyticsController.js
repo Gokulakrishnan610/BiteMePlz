@@ -1,6 +1,5 @@
 import asyncHandler from 'express-async-handler';
-import { getStudentBehaviorAnalytics, getAdvancedStudentInsights } from '../utils/studentAnalytics.js';
-import StudentAnalytics from '../models/studentAnalyticsModel.js';
+import { StudentAnalyticsService } from '../services/databaseService.js';
 
 // @desc    Get student behavior analytics for a shop
 // @route   GET /api/student-analytics/shop/:shopId
@@ -18,7 +17,7 @@ const getShopStudentAnalytics = asyncHandler(async (req, res) => {
     throw new Error('Not authorized');
   }
 
-  const analytics = await getStudentBehaviorAnalytics({
+  const analytics = await StudentAnalyticsService.getStudentBehaviorAnalytics({
     shopId,
     startDate,
     endDate,
@@ -45,7 +44,7 @@ const getAdvancedStudentAnalytics = asyncHandler(async (req, res) => {
     throw new Error('Not authorized');
   }
 
-  const insights = await getAdvancedStudentInsights(shopId, period);
+  const insights = await StudentAnalyticsService.getAdvancedStudentInsights(shopId, period);
   res.json(insights);
 });
 
@@ -55,48 +54,17 @@ const getAdvancedStudentAnalytics = asyncHandler(async (req, res) => {
 const getOverallStudentAnalytics = asyncHandler(async (req, res) => {
   const { startDate, endDate, activity } = req.query;
 
-  const analytics = await getStudentBehaviorAnalytics({
+  const analytics = await StudentAnalyticsService.getStudentBehaviorAnalytics({
     startDate,
     endDate,
     activity
   });
 
   // Get cross-shop insights
-  const crossShopInsights = await StudentAnalytics.aggregate([
-    {
-      $match: {
-        timestamp: {
-          $gte: startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-          $lte: endDate ? new Date(endDate) : new Date()
-        }
-      }
-    },
-    {
-      $group: {
-        _id: '$user',
-        shopsVisited: { $addToSet: '$shop' },
-        totalActivities: { $sum: 1 },
-        orders: {
-          $sum: { $cond: [{ $eq: ['$activity', 'order_placed'] }, 1, 0] }
-        }
-      }
-    },
-    {
-      $addFields: {
-        shopCount: { $size: '$shopsVisited' }
-      }
-    },
-    {
-      $group: {
-        _id: null,
-        avgShopsPerUser: { $avg: '$shopCount' },
-        multiShopUsers: {
-          $sum: { $cond: [{ $gt: ['$shopCount', 1] }, 1, 0] }
-        },
-        totalUsers: { $sum: 1 }
-      }
-    }
-  ]);
+  const crossShopInsights = await StudentAnalyticsService.aggregateCrossShopInsights({
+    startDate,
+    endDate
+  });
 
   res.json({
     ...analytics,
@@ -110,8 +78,8 @@ const getOverallStudentAnalytics = asyncHandler(async (req, res) => {
 const trackActivity = asyncHandler(async (req, res) => {
   const { shop, activity, sessionId, productId, orderId, metadata } = req.body;
 
-  const analyticsEntry = await StudentAnalytics.create({
-    user: req.user._id,
+  const analyticsEntry = await StudentAnalyticsService.createAnalyticsEntry({
+    userId: req.user._id,
     shop,
     activity,
     sessionId,
