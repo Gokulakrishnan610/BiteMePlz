@@ -7,17 +7,20 @@ export interface CartItem {
   price: number;
   quantity: number;
   stock: number;
+  shop_id: string;
+  shop_name: string;
 }
 
 interface CartContextType {
   cartItems: CartItem[];
-  shop_id: string | null;
-  addToCart: (item: CartItem, shop_id: string) => void;
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  addToCart: (item: CartItem) => void;
+  removeFromCart: (productId: string, shop_id: string) => void;
+  updateQuantity: (productId: string, shop_id: string, quantity: number) => void;
   clearCart: () => void;
   getTotalPrice: () => number;
   getTotalItems: () => number;
+  getItemsByShop: () => { [shop_id: string]: { items: CartItem[], shop_name: string } };
+  getShopIds: () => string[];
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -32,51 +35,32 @@ export const useCart = () => {
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [shop_id, setshop_id] = useState<string | null>(null);
 
   // Initialize cart from localStorage
   useEffect(() => {
     const storedCart = localStorage.getItem('cartItems');
-    const storedshop_id = localStorage.getItem('shop_id');
     
     if (storedCart) {
       setCartItems(JSON.parse(storedCart));
-    }
-    
-    if (storedshop_id) {
-      setshop_id(storedshop_id);
     }
   }, []);
 
   // Update localStorage when cart changes
   useEffect(() => {
     localStorage.setItem('cartItems', JSON.stringify(cartItems));
-    if (shop_id) {
-      localStorage.setItem('shop_id', shop_id);
-    } else {
-      localStorage.removeItem('shop_id');
-    }
-  }, [cartItems, shop_id]);
+  }, [cartItems]);
 
-  const addToCart = (item: CartItem, newshop_id: string) => {
-    // If adding from a different shop, clear the cart first
-    if (shop_id && shop_id !== newshop_id) {
-      if (!window.confirm('Adding items from a different shop will clear your current cart. Continue?')) {
-        return;
-      }
-      setCartItems([]);
-    }
-    
-    setshop_id(newshop_id);
-    
-    // Check if item already exists in cart
-    const existingItem = cartItems.find(i => i.product === item.product);
+  const addToCart = (item: CartItem) => {
+    // Check if item already exists in cart (same product from same shop)
+    const existingItem = cartItems.find(i => 
+      i.product === item.product && i.shop_id === item.shop_id
+    );
     
     if (existingItem) {
       // Update quantity if it exists
       setCartItems(
         cartItems.map(i =>
-          i.product === item.product
+          i.product === item.product && i.shop_id === item.shop_id
             ? { ...i, quantity: Math.min(i.quantity + item.quantity, i.stock) }
             : i
         )
@@ -87,20 +71,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const removeFromCart = (productId: string) => {
-    setCartItems(cartItems.filter(item => item.product !== productId));
-    
-    // If cart is empty, reset shop_id
-    if (cartItems.length === 1) {
-      setshop_id(null);
-    }
+  const removeFromCart = (productId: string, shop_id: string) => {
+    setCartItems(cartItems.filter(item => 
+      !(item.product === productId && item.shop_id === shop_id)
+    ));
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = (productId: string, shop_id: string, quantity: number) => {
     setCartItems(
       cartItems.map(item =>
-        item.product === productId
-          ? { ...item, quantity: Math.max(1, Math.min(quantity, item.stock)) }
+        item.product === productId && item.shop_id === shop_id
+          ? { ...item, quantity: Math.min(quantity, item.stock) }
           : item
       )
     );
@@ -108,27 +89,46 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = () => {
     setCartItems([]);
-    setshop_id(null);
   };
 
   const getTotalPrice = () => {
-    return cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
   const getTotalItems = () => {
-    return cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    return cartItems.reduce((total, item) => total + item.quantity, 0);
   };
 
-  const value = {
-    cartItems,
-    shop_id,
-    addToCart,
-    removeFromCart,
-    updateQuantity,
-    clearCart,
-    getTotalPrice,
-    getTotalItems,
+  const getItemsByShop = () => {
+    const itemsByShop: { [shop_id: string]: { items: CartItem[], shop_name: string } } = {};
+    
+    cartItems.forEach(item => {
+      if (!itemsByShop[item.shop_id]) {
+        itemsByShop[item.shop_id] = { items: [], shop_name: item.shop_name };
+      }
+      itemsByShop[item.shop_id].items.push(item);
+    });
+    
+    return itemsByShop;
   };
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  const getShopIds = () => {
+    return [...new Set(cartItems.map(item => item.shop_id))];
+  };
+
+  return (
+    <CartContext.Provider value={{
+      cartItems,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      clearCart,
+      getTotalPrice,
+      getTotalItems,
+      getItemsByShop,
+      getShopIds
+    }}>
+      {children}
+    </CartContext.Provider>
+  );
 };

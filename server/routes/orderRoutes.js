@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   createOrder,
+  createMultiShopOrder,
   updateOrderToPaid,
   verifyOrderQR,
   getOrderById,
@@ -17,6 +18,7 @@ import { protect, shopAdmin } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 router.route('/').post(protect, createOrder);
+router.route('/multi-shop').post(protect, createMultiShopOrder);
 router.route('/myorders').get(protect, getMyOrders);
 router.route('/shop/:shop_id').get(protect, getshopOrders);
 router.route('/payment/:paymentId').get(protect, shopAdmin, getOrderByPaymentId);

@@ -108,17 +108,16 @@ const ShopPage: React.FC = () => {
       return;
     }
 
-    addToCart(
-      {
-        product: product._id,
-        name: product.name,
-        image: product.image,
-        price: product.price,
-        quantity: 1,
-        stock: product.stock
-      },
-      shop!._id
-    );
+    addToCart({
+      product: product._id,
+      name: product.name,
+      image: product.image,
+      price: product.price,
+      quantity: 1,
+      stock: product.stock,
+      shop_id: shop!._id,
+      shop_name: shop!.name
+    });
     toast.success('Added to cart');
   };
 
