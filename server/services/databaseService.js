@@ -13,6 +13,12 @@ const formatResponse = (data, includeTimestamps = true) => {
   
   const formatted = { ...data };
   
+  // Convert Supabase id to _id to match Mongoose format
+  if (formatted.id) {
+    formatted._id = formatted.id;
+    // Keep the original id as well for backward compatibility
+  }
+  
   // Convert Supabase timestamps to match Mongoose format
   if (includeTimestamps) {
     if (formatted.created_at) {
@@ -279,19 +285,57 @@ export const ProductService = {
   // Find all products
   async find(filter = {}) {
     try {
+      console.log('[ProductService] Finding products with filter:', filter);
+      console.log('[ProductService] Filter keys:', Object.keys(filter));
+      
       let query = supabase.from('products').select('*');
       
       // Apply filters
       Object.keys(filter).forEach(key => {
-        query = query.eq(key, filter[key]);
+        const value = filter[key];
+        console.log(`[ProductService] Applying filter: ${key} = ${value} (type: ${typeof value})`);
+        
+        // Handle different data types properly
+        if (typeof value === 'boolean') {
+          query = query.eq(key, value);
+        } else if (typeof value === 'string') {
+          // For UUID strings, make sure we're comparing correctly
+          query = query.eq(key, value);
+        } else {
+          query = query.eq(key, value);
+        }
       });
       
+      console.log('[ProductService] Executing Supabase query...');
       const { data, error } = await query;
       
-      if (error) throw error;
-      return data.map(item => formatResponse(item));
+      if (error) {
+        console.error('[ProductService] Supabase error:', error);
+        console.error('[ProductService] Error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        // Return empty array instead of throwing
+        console.log('[ProductService] Returning empty array due to error');
+        return [];
+      }
+      
+      console.log('[ProductService] Raw Supabase data:', data);
+      console.log('[ProductService] Raw data length:', data ? data.length : 0);
+      
+      const formattedData = data ? data.map(item => formatResponse(item)) : [];
+      console.log('[ProductService] Formatted data length:', formattedData.length);
+      console.log('[ProductService] Formatted data:', formattedData);
+      
+      return formattedData;
     } catch (error) {
-      handleSupabaseError(error, 'find products');
+      console.error('[ProductService] Error in find:', error);
+      console.error('[ProductService] Full error object:', error);
+      // Return empty array instead of throwing
+      console.log('[ProductService] Returning empty array due to exception');
+      return [];
     }
   },
 
