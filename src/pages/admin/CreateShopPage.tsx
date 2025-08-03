@@ -289,4 +289,4 @@ const CreateShopPage: React.FC = () => {
   );
 };
 
-export default CreateShopPage;
+export default CreateShopPage; 

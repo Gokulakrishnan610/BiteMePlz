@@ -1,4 +1,4 @@
-import Transaction from '../models/transactionModel.js';
+import { TransactionService } from '../services/databaseService.js';
 
 export const logTransaction = async ({
   shop,
@@ -12,7 +12,7 @@ export const logTransaction = async ({
   metadata = {}
 }) => {
   try {
-    const transaction = await Transaction.create({
+    const transaction = await TransactionService.createTransaction({
       shop,
       order,
       user,
@@ -52,14 +52,13 @@ export const getShopTransactions = async (shopId, options = {}) => {
     if (endDate) query.createdAt.$lte = new Date(endDate);
   }
 
-  const transactions = await Transaction.find(query)
-    .populate('user', 'name email rollNo')
-    .populate('order', 'orderId totalPrice')
-    .sort({ createdAt: -1 })
-    .limit(limit * 1)
-    .skip((page - 1) * limit);
+  const transactions = await TransactionService.getTransactions(query, {
+    page,
+    limit,
+    sort: { createdAt: -1 }
+  });
 
-  const total = await Transaction.countDocuments(query);
+  const total = await TransactionService.getTransactionCount(query);
 
   return {
     transactions,
@@ -87,44 +86,9 @@ export const getShopTransactionStats = async (shopId, period = '30d') => {
       startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   }
 
-  const stats = await Transaction.aggregate([
-    {
-      $match: {
-        shop: shopId,
-        createdAt: { $gte: startDate }
-      }
-    },
-    {
-      $group: {
-        _id: '$type',
-        count: { $sum: 1 },
-        totalAmount: { $sum: '$amount' },
-        avgAmount: { $avg: '$amount' }
-      }
-    }
-  ]);
+  const stats = await TransactionService.getTransactionStats(shopId, startDate);
 
-  const dailyStats = await Transaction.aggregate([
-    {
-      $match: {
-        shop: shopId,
-        createdAt: { $gte: startDate }
-      }
-    },
-    {
-      $group: {
-        _id: {
-          date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-          type: '$type'
-        },
-        count: { $sum: 1 },
-        amount: { $sum: '$amount' }
-      }
-    },
-    {
-      $sort: { '_id.date': 1 }
-    }
-  ]);
+  const dailyStats = await TransactionService.getDailyTransactionStats(shopId, startDate);
 
   return { stats, dailyStats };
 };

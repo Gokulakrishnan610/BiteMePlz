@@ -23,6 +23,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const { user, token } = useAuth();
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [lastError, setLastError] = useState<Date | null>(null);
 
   const refreshBalance = useCallback(async () => {
     if (!user || !token) {
@@ -31,35 +32,50 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return;
     }
 
+    // Don't retry if we had an error in the last 30 seconds
+    if (lastError && Date.now() - lastError.getTime() < 30000) {
+      return;
+    }
+
+    setLoading(true);
+
     try {
       const { data } = await axios.get('/api/users/profile', {
         headers: {
-          Authorization: `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
       setBalance(data.balance || 0);
+      setLastError(null); // Clear any previous errors
     } catch (error) {
       console.error('Failed to fetch balance:', error);
-      toast.error('Failed to update balance');
+      setLastError(new Date());
+      // Don't show toast for every error to avoid spam
+      if (!lastError || Date.now() - lastError.getTime() > 60000) {
+        toast.error('Failed to update balance');
+      }
     } finally {
       setLoading(false);
     }
-  }, [user, token]);
+  }, [user, token, lastError]);
 
   // Initial load
   useEffect(() => {
     refreshBalance();
   }, [refreshBalance]);
 
-  // Set up polling for balance updates
+  // Polling for balance every 30 seconds (reduced from 5 seconds)
   useEffect(() => {
     if (!user) return;
 
-    const interval = setInterval(refreshBalance, 5000); // Poll every 5 seconds
+    const interval = setInterval(() => {
+      refreshBalance();
+    }, 30000); // 30 seconds instead of 5 seconds
+
     return () => clearInterval(interval);
   }, [user, refreshBalance]);
 
-  // Listen for storage events from other tabs
+  // Listen for balance updates from other tabs
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'walletBalance') {
@@ -74,7 +90,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Update localStorage when balance changes
+  // Sync localStorage when balance changes
   useEffect(() => {
     localStorage.setItem('walletBalance', balance.toString());
   }, [balance]);

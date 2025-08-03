@@ -1,6 +1,5 @@
 import asyncHandler from 'express-async-handler';
-import { getShopLogs, getShopActivityStats } from '../utils/shopLogger.js';
-import ShopLog from '../models/shopLogModel.js';
+import { ShopLogService } from '../services/databaseService.js';
 
 // @desc    Get shop activity logs
 // @route   GET /api/shop-logs/:shopId
@@ -18,7 +17,7 @@ const getShopActivityLogs = asyncHandler(async (req, res) => {
     throw new Error('Not authorized');
   }
 
-  const result = await getShopLogs(shopId, {
+  const result = await ShopLogService.getShopLogs(shopId, {
     page: parseInt(page) || 1,
     limit: parseInt(limit) || 50,
     action,
@@ -46,7 +45,7 @@ const getShopActivityStatistics = asyncHandler(async (req, res) => {
     throw new Error('Not authorized');
   }
 
-  const stats = await getShopActivityStats(shopId, period);
+  const stats = await ShopLogService.getShopActivityStats(shopId, period);
   res.json(stats);
 });
 
@@ -66,14 +65,12 @@ const getAllShopLogs = asyncHandler(async (req, res) => {
     if (endDate) query.createdAt.$lte = new Date(endDate);
   }
 
-  const logs = await ShopLog.find(query)
-    .populate('performedBy', 'name email role')
-    .populate('shop', 'name location')
-    .sort({ createdAt: -1 })
-    .limit(limit * 1)
-    .skip((page - 1) * limit);
+  const logs = await ShopLogService.findAll(query, {
+    limit: limit * 1,
+    offset: (page - 1) * limit
+  });
 
-  const total = await ShopLog.countDocuments(query);
+  const total = await ShopLogService.countDocuments(query);
 
   res.json({
     logs,

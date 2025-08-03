@@ -10,9 +10,11 @@
     "preview": "vite preview",
     "server": "node server/index.js",
     "dev:server": "nodemon server/index.js",
-    "dev:full": "concurrently \"npm run dev\" \"npm run dev:server\""
+    "dev:full": "concurrently \"npm run dev\" \"npm run dev:server\"",
+    "reset-db": "node server/script/resetDatabase.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.53.0",
     "@types/recharts": "^1.8.29",
     "axios": "^1.6.2",
     "bcryptjs": "^2.4.3",
