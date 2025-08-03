@@ -1,10 +1,10 @@
 import asyncHandler from 'express-async-handler';
-import { ShopLogService } from '../services/databaseService.js';
+import { shopLogService } from '../services/databaseService.js';
 
 // @desc    Get shop activity logs
 // @route   GET /api/shop-logs/:shop_id
-// @access  Private/Admin or ShopAdmin
-const getShopActivityLogs = asyncHandler(async (req, res) => {
+// @access  Private/Admin or shopAdmin
+const getshopActivityLogs = asyncHandler(async (req, res) => {
   const { shop_id } = req.params;
   const { page, limit, action, startDate, endDate, performedBy } = req.query;
 
@@ -28,7 +28,7 @@ const getShopActivityLogs = asyncHandler(async (req, res) => {
       if (endDate) query.created_at.$lte = new Date(endDate);
     }
 
-    const logs = await ShopLogService.find(query);
+    const logs = await shopLogService.find(query);
     
     // Apply pagination manually
     const startIndex = (parseInt(page) || 1 - 1) * (parseInt(limit) || 50);
@@ -50,8 +50,8 @@ const getShopActivityLogs = asyncHandler(async (req, res) => {
 
 // @desc    Get shop activity statistics
 // @route   GET /api/shop-logs/:shop_id/stats
-// @access  Private/Admin or ShopAdmin
-const getShopActivityStatistics = asyncHandler(async (req, res) => {
+// @access  Private/Admin or shopAdmin
+const getshopActivityStatistics = asyncHandler(async (req, res) => {
   const { shop_id } = req.params;
   const { period } = req.query;
 
@@ -65,7 +65,7 @@ const getShopActivityStatistics = asyncHandler(async (req, res) => {
   }
 
   try {
-    const logs = await ShopLogService.find({ shop_id: shop_id });
+    const logs = await shopLogService.find({ shop_id: shop_id });
     
     // Calculate basic statistics
     const totalActions = logs.length;
@@ -102,7 +102,7 @@ const getShopActivityStatistics = asyncHandler(async (req, res) => {
 // @desc    Get all shop logs (admin only)
 // @route   GET /api/shop-logs/all
 // @access  Private/Admin
-const getAllShopLogs = asyncHandler(async (req, res) => {
+const getAllshopLogs = asyncHandler(async (req, res) => {
   const { page = 1, limit = 50, action, startDate, endDate, shop } = req.query;
 
   const query = {};
@@ -116,7 +116,7 @@ const getAllShopLogs = asyncHandler(async (req, res) => {
   }
 
   try {
-    const logs = await ShopLogService.find(query);
+    const logs = await shopLogService.find(query);
     
     // Apply pagination manually since Supabase doesn't have built-in pagination
     const startIndex = (parseInt(page) - 1) * parseInt(limit);
@@ -137,7 +137,7 @@ const getAllShopLogs = asyncHandler(async (req, res) => {
 });
 
 export {
-  getShopActivityLogs,
-  getShopActivityStatistics,
-  getAllShopLogs
+  getshopActivityLogs,
+  getshopActivityStatistics,
+  getAllshopLogs
 };

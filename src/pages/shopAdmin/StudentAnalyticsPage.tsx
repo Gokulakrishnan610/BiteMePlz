@@ -45,7 +45,7 @@ ChartJS.register(
   Legend
 );
 
-interface Shop {
+interface shop {
   _id: string;
   name: string;
 }
@@ -111,11 +111,11 @@ interface AdvancedInsights {
 }
 
 const StudentAnalyticsPage: React.FC = () => {
-  const [shops, setShops] = useState<Shop[]>([]);
+  const [shops, setshops] = useState<shop[]>([]);
   const [behaviorData, setBehaviorData] = useState<StudentBehaviorData | null>(null);
   const [advancedInsights, setAdvancedInsights] = useState<AdvancedInsights | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedShop, setSelectedShop] = useState<string>('');
+  const [selectedshop, setSelectedshop] = useState<string>('');
   const [dateRange, setDateRange] = useState({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0]
@@ -127,19 +127,19 @@ const StudentAnalyticsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'behavior' | 'insights' | 'patterns' | 'engagement'>('behavior');
 
   useEffect(() => {
-    fetchShops();
+    fetchshops();
   }, []);
 
   useEffect(() => {
     if (shops.length > 0) {
       fetchStudentAnalytics();
     }
-  }, [shops, selectedShop, dateRange, filters]);
+  }, [shops, selectedshop, dateRange, filters]);
 
-  const fetchShops = async () => {
+  const fetchshops = async () => {
     try {
       const { data } = await axios.get('/api/shops');
-      setShops(data);
+      setshops(data);
     } catch (error) {
       toast.error('Failed to fetch shops');
     }
@@ -150,22 +150,22 @@ const StudentAnalyticsPage: React.FC = () => {
       setLoading(true);
       
       const params = new URLSearchParams();
-      if (selectedShop) params.append('shop_id', selectedShop);
+      if (selectedshop) params.append('shop_id', selectedshop);
       if (dateRange.startDate) params.append('startDate', dateRange.startDate);
       if (dateRange.endDate) params.append('endDate', dateRange.endDate);
       if (filters.activity) params.append('activity', filters.activity);
       if (filters.userId) params.append('userId', filters.userId);
 
-      const endpoint = selectedShop 
-        ? `/api/student-analytics/shop/${selectedShop}?${params}`
+      const endpoint = selectedshop 
+        ? `/api/student-analytics/shop/${selectedshop}?${params}`
         : `/api/student-analytics/overview?${params}`;
 
       const { data } = await axios.get(endpoint);
       setBehaviorData(data);
 
       // Fetch advanced insights
-      if (selectedShop) {
-        const insightsRes = await axios.get(`/api/student-analytics/shop/${selectedShop}/insights`);
+      if (selectedshop) {
+        const insightsRes = await axios.get(`/api/student-analytics/shop/${selectedshop}/insights`);
         setAdvancedInsights(insightsRes.data);
       }
 
@@ -183,7 +183,7 @@ const StudentAnalyticsPage: React.FC = () => {
       // Header
       csvData.push(['STUDENT BEHAVIOR ANALYTICS REPORT']);
       csvData.push(['Generated On', new Date().toLocaleString()]);
-      csvData.push(['Shop', selectedShop ? shops.find(s => s._id === selectedShop)?.name || 'Unknown' : 'All Shops']);
+      csvData.push(['shop', selectedshop ? shops.find(s => s._id === selectedshop)?.name || 'Unknown' : 'All shops']);
       csvData.push(['Date Range', `${dateRange.startDate} to ${dateRange.endDate}`]);
       csvData.push(['']);
 
@@ -233,7 +233,7 @@ const StudentAnalyticsPage: React.FC = () => {
       // Engagement Metrics
       if (behaviorData?.engagementMetrics) {
         csvData.push(['ENGAGEMENT METRICS']);
-        csvData.push(['User ID', 'Total Activities', 'Sessions', 'Shops Visited', 'Avg Activities/Session']);
+        csvData.push(['User ID', 'Total Activities', 'Sessions', 'shops Visited', 'Avg Activities/Session']);
         behaviorData.engagementMetrics.slice(0, 50).forEach(metric => {
           csvData.push([
             metric._id,
@@ -250,7 +250,7 @@ const StudentAnalyticsPage: React.FC = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `student-analytics-${selectedShop ? 'shop-' + selectedShop : 'all-shops'}-${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `student-analytics-${selectedshop ? 'shop-' + selectedshop : 'all-shops'}-${new Date().toISOString().split('T')[0]}.csv`;
       a.click();
       window.URL.revokeObjectURL(url);
       toast.success('Student analytics exported successfully');
@@ -269,7 +269,7 @@ const StudentAnalyticsPage: React.FC = () => {
     labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
     datasets: [
       {
-        label: 'Shop Visits',
+        label: 'shop Visits',
         data: Array.from({ length: 24 }, (_, hour) => {
           const hourData = behaviorData?.activityPatterns.filter(
             p => p._id.hour === hour && p._id.activity === 'shop_visit'
@@ -352,14 +352,14 @@ const StudentAnalyticsPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
             <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
-              Shop
+              shop
             </label>
             <select
-              value={selectedShop}
-              onChange={(e) => setSelectedShop(e.target.value)}
+              value={selectedshop}
+              onChange={(e) => setSelectedshop(e.target.value)}
               className="input"
             >
-              <option value="">All Shops</option>
+              <option value="">All shops</option>
               {shops.map((shop) => (
                 <option key={shop._id} value={shop._id}>
                   {shop.name}
@@ -378,7 +378,7 @@ const StudentAnalyticsPage: React.FC = () => {
               className="input"
             >
               <option value="">All Activities</option>
-              <option value="shop_visit">Shop Visit</option>
+              <option value="shop_visit">shop Visit</option>
               <option value="product_view">Product View</option>
               <option value="cart_add">Add to Cart</option>
               <option value="checkout_start">Checkout Start</option>
@@ -701,7 +701,7 @@ const StudentAnalyticsPage: React.FC = () => {
                         <th>User ID</th>
                         <th>Total Activities</th>
                         <th>Sessions</th>
-                        <th>Shops Visited</th>
+                        <th>shops Visited</th>
                         <th>Avg Activities/Session</th>
                       </tr>
                     </thead>

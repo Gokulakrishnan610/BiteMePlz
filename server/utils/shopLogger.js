@@ -1,6 +1,6 @@
-import { ShopLogService } from '../services/databaseService.js';
+import { shopLogService } from '../services/databaseService.js';
 
-export const logShopActivity = async ({
+export const logshopActivity = async ({
   shop,
   action,
   performedBy,
@@ -29,8 +29,8 @@ export const logShopActivity = async ({
       }
     };
 
-    const log = await ShopLogService.create(logEntry);
-    console.log(`Shop activity logged: ${action} for shop ${shop} by user ${performedBy}`);
+    const log = await shopLogService.create(logEntry);
+    console.log(`shop activity logged: ${action} for shop ${shop} by user ${performedBy}`);
     return log;
   } catch (error) {
     console.error('Failed to log shop activity:', error);
@@ -38,7 +38,7 @@ export const logShopActivity = async ({
   }
 };
 
-export const getShopLogs = async (shop_id, options = {}) => {
+export const getshopLogs = async (shop_id, options = {}) => {
   const {
     page = 1,
     limit = 50,
@@ -53,7 +53,7 @@ export const getShopLogs = async (shop_id, options = {}) => {
   if (action) query.action = action;
   if (performedBy) query.performed_by = performedBy;
   try {
-    let logs = await ShopLogService.find(query);
+    let logs = await shopLogService.find(query);
     
     // Apply date filtering manually since Supabase doesn't support complex queries
     if (startDate || endDate) {
@@ -82,7 +82,7 @@ export const getShopLogs = async (shop_id, options = {}) => {
   }
 };
 
-export const getShopActivityStats = async (shop_id, period = '30d') => {
+export const getshopActivityStats = async (shop_id, period = '30d') => {
   const now = new Date();
   let startDate;
 
@@ -101,7 +101,7 @@ export const getShopActivityStats = async (shop_id, period = '30d') => {
   }
 
   try {
-    const logs = await ShopLogService.find({ 
+    const logs = await shopLogService.find({ 
       shop_id: shop_id
     }).then(logs => logs.filter(log => new Date(log.created_at) >= startDate));
 

@@ -9,9 +9,9 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT NOT NULL DEFAULT 'student' CHECK (role IN ('admin', 'shopAdmin', 'student')),
   shop_id INTEGER, -- Optional reference to shops(id)
   is_verified BOOLEAN DEFAULT FALSE,
-  otp JSONB,                 -- Stores { "code": String, "expiresAt": Timestamp }
-  password_reset_otp JSONB,  -- Stores { "code": String, "expiresAt": Timestamp }
-  password_reset_token JSONB,-- Stores { "token": String, "expiresAt": Timestamp }
+  otp JSONB,                 -- Stores { "code": String, "expires_at": Timestamp }
+  password_reset_otp JSONB,  -- Stores { "code": String, "expires_at": Timestamp }
+  password_reset_token JSONB,-- Stores { "token": String, "expires_at": Timestamp }
   balance NUMERIC DEFAULT 0,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()

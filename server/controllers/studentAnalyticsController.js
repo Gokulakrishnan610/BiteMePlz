@@ -3,8 +3,8 @@ import { StudentAnalyticsService } from '../services/databaseService.js';
 
 // @desc    Get student behavior analytics for a shop
 // @route   GET /api/student-analytics/shop/:shop_id
-// @access  Private/Admin or ShopAdmin
-const getShopStudentAnalytics = asyncHandler(async (req, res) => {
+// @access  Private/Admin or shopAdmin
+const getshopStudentAnalytics = asyncHandler(async (req, res) => {
   const { shop_id } = req.params;
   const { startDate, endDate, activity, userId } = req.query;
 
@@ -30,7 +30,7 @@ const getShopStudentAnalytics = asyncHandler(async (req, res) => {
 
 // @desc    Get advanced student insights
 // @route   GET /api/student-analytics/shop/:shop_id/insights
-// @access  Private/Admin or ShopAdmin
+// @access  Private/Admin or shopAdmin
 const getAdvancedStudentAnalytics = asyncHandler(async (req, res) => {
   const { shop_id } = req.params;
   const { period } = req.query;
@@ -61,14 +61,14 @@ const getOverallStudentAnalytics = asyncHandler(async (req, res) => {
   });
 
   // Get cross-shop insights
-  const crossShopInsights = await StudentAnalyticsService.aggregateCrossShopInsights({
+  const crossshopInsights = await StudentAnalyticsService.aggregateCrossshopInsights({
     startDate,
     endDate
   });
 
   res.json({
     ...analytics,
-    crossShopInsights: crossShopInsights[0] || {}
+    crossshopInsights: crossshopInsights[0] || {}
   });
 });
 
@@ -76,7 +76,7 @@ const getOverallStudentAnalytics = asyncHandler(async (req, res) => {
 // @route   POST /api/student-analytics/track
 // @access  Private
 const trackActivity = asyncHandler(async (req, res) => {
-  const { shop, activity, sessionId, productId, orderId, metadata } = req.body;
+  const { shop, activity, sessionId, productId, order_id, metadata } = req.body;
 
   const analyticsEntry = await StudentAnalyticsService.createAnalyticsEntry({
     userId: req.user._id,
@@ -84,7 +84,7 @@ const trackActivity = asyncHandler(async (req, res) => {
     activity,
     sessionId,
     productId,
-    orderId,
+    order_id,
     metadata,
     timestamp: new Date()
   });
@@ -93,7 +93,7 @@ const trackActivity = asyncHandler(async (req, res) => {
 });
 
 export {
-  getShopStudentAnalytics,
+  getshopStudentAnalytics,
   getAdvancedStudentAnalytics,
   getOverallStudentAnalytics,
   trackActivity

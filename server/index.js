@@ -28,13 +28,13 @@ import shopLogRoutes from './routes/shopLogRoutes.js';
 import studentAnalyticsRoutes from './routes/studentAnalyticsRoutes.js';
 import { errorHandler, notFound } from './middleware/errorMiddleware.js';
 import { OrderService } from './services/databaseService.js';
-import { ShopService } from './services/databaseService.js';
+import { shopService } from './services/databaseService.js';
 import { UserService } from './services/databaseService.js';
-import { handleExpiredQR, handleFinalValidityExpired } from './controllers/orderController.js';
-import { logShopActivity } from './utils/shopLogger.js';
+import { handleExpiredQR, handlefinal_validityExpired } from './controllers/orderController.js';
+import { logshopActivity } from './utils/shopLogger.js';
 
 // Import Supabase after environment variables are loaded
-import { connectSupabase } from './config/supabase.js';
+import { connectSupabase, supabase } from './config/supabase.js';
 
 const app = express();
 
@@ -42,6 +42,14 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Add timeout middleware for long-running requests
+app.use((req, res, next) => {
+  // Set timeout for all requests to 60 seconds
+  req.setTimeout(60000);
+  res.setTimeout(60000);
+  next();
+});
 
 // Routes
 app.use('/api/users', userRoutes);
@@ -68,6 +76,32 @@ if (process.env.NODE_ENV === 'production') {
   app.get('/', (req, res) => {
     res.send('API is running...');
   });
+  
+  // Health check endpoint
+  app.get('/health', async (req, res) => {
+    try {
+      // Test database connection
+      const { data, error } = await supabase.from('users').select('count').limit(1);
+      if (error) {
+        return res.status(500).json({ 
+          status: 'error', 
+          message: 'Database connection failed',
+          error: error.message 
+        });
+      }
+      res.json({ 
+        status: 'healthy', 
+        timestamp: new Date().toISOString(),
+        database: 'connected'
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        status: 'error', 
+        message: 'Health check failed',
+        error: error.message 
+      });
+    }
+  });
 }
 
 // Error Handlers
@@ -77,15 +111,15 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 // Function to check and reset wallets when final validity expires
-const checkFinalValidityAndResetWallets = async () => {
+const checkfinal_validityAndResetWallets = async () => {
   try {
     console.log('Checking final validity times for all shops...');
     
     // Get all active shops
-    const shops = await ShopService.find({ is_active: true });
+    const shops = await shopService.find({ is_active: true });
     const now = new Date();
     
-    let walletsResetForShops = [];
+    let walletsResetForshops = [];
     let shouldResetWallets = false;
     
     for (const shop of shops) {
@@ -96,7 +130,7 @@ const checkFinalValidityAndResetWallets = async () => {
         console.log(`Final validity expired for shop ${shop.name} at ${final_validity_time}`);
         
         // Log the automatic closure
-        await logShopActivity({
+        await logshopActivity({
           shop: shop.id,
           action: 'final_validity_expired',
           performedBy: shop.shop_admin,
@@ -106,7 +140,7 @@ const checkFinalValidityAndResetWallets = async () => {
             expiredAt: now,
             autoExpiry: true
           },
-          description: `Shop automatically closed due to final validity expiry at ${final_validity_time.toLocaleString()}`
+          description: `shop automatically closed due to final validity expiry at ${final_validity_time.toLocaleString()}`
         });
 
         // Get all unverified orders for this shop
@@ -120,14 +154,14 @@ const checkFinalValidityAndResetWallets = async () => {
         // Process each order
         for (const order of orders) {
           try {
-            await handleFinalValidityExpired(order);
+            await handlefinal_validityExpired(order);
             console.log(`Processed expired order ${order.id} for shop ${shop.name}`);
           } catch (error) {
             console.error(`Failed to process order ${order.id}:`, error);
           }
         }
         
-        walletsResetForShops.push(shop.name);
+        walletsResetForshops.push(shop.name);
         shouldResetWallets = true;
       }
     }
@@ -140,15 +174,15 @@ const checkFinalValidityAndResetWallets = async () => {
         await UserService.findByIdAndUpdate(user.id, { balance: 0 });
       }
       const result = { modifiedCount: users.length };
-      console.log(`Final validity expired for shops: ${walletsResetForShops.join(', ')}`);
+      console.log(`Final validity expired for shops: ${walletsResetForshops.join(', ')}`);
       console.log(`Reset ${result.modifiedCount} user wallets to zero`);
       
       // Log wallet reset activity
-      for (const shopName of walletsResetForShops) {
-        const shops = await ShopService.find({ name: shopName });
+      for (const shopName of walletsResetForshops) {
+        const shops = await shopService.find({ name: shopName });
         const shop = shops[0];
         if (shop) {
-                      await logShopActivity({
+                      await logshopActivity({
               shop: shop.id,
               action: 'auto_close',
               performedBy: shop.shopAdmin,
@@ -190,10 +224,10 @@ const startServer = async () => {
 
         for (const order of orders) {
           const qrExpiry = new Date(order.qr_valid_until);
-          const finalValidity = new Date(order.final_validity);
+          const final_validity = new Date(order.final_validity);
           
-          if (now >= finalValidity) {
-            await handleFinalValidityExpired(order);
+          if (now >= final_validity) {
+            await handlefinal_validityExpired(order);
           } else if (now >= qrExpiry) {
             await handleExpiredQR(order);
           }
@@ -205,10 +239,10 @@ const startServer = async () => {
     }, 2 * 60 * 1000); // Check every 2 minutes
 
     // Set up periodic check for final validity and wallet reset (every 1 minute)
-    setInterval(checkFinalValidityAndResetWallets, 1 * 60 * 1000); // Check every 1 minute
+    setInterval(checkfinal_validityAndResetWallets, 1 * 60 * 1000); // Check every 1 minute
     
     // Run initial check
-    checkFinalValidityAndResetWallets();
+    checkfinal_validityAndResetWallets();
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

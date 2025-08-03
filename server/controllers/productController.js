@@ -1,7 +1,7 @@
 import asyncHandler from 'express-async-handler';
 import { ProductService } from '../services/databaseService.js';
-import { ShopService } from '../services/databaseService.js';
-import { logShopActivity } from '../utils/shopLogger.js';
+import { shopService } from '../services/databaseService.js';
+import { logshopActivity } from '../utils/shopLogger.js';
 import { supabase } from '../config/supabase.js';
 
 // @desc    Test products table structure
@@ -72,7 +72,7 @@ const getProducts = asyncHandler(async (req, res) => {
   const shop_id = req.query.shop;
   
   console.log('[ProductController] Fetching products with shop ID:', shop_id);
-  console.log('[ProductController] Shop ID type:', typeof shop_id);
+  console.log('[ProductController] shop ID type:', typeof shop_id);
   
   try {
     // First, let's try a simple query without filters to see if the table works
@@ -101,10 +101,10 @@ const getProducts = asyncHandler(async (req, res) => {
     
     // Check if the shop exists first
     if (shop_id) {
-      const shop = await ShopService.findById(shop_id);
-      console.log('[ProductController] Shop lookup result:', shop ? 'Found' : 'Not found');
+      const shop = await shopService.findById(shop_id);
+      console.log('[ProductController] shop lookup result:', shop ? 'Found' : 'Not found');
       if (!shop) {
-        console.log('[ProductController] Shop not found, returning empty array');
+        console.log('[ProductController] shop not found, returning empty array');
         return res.json([]);
       }
     }
@@ -150,7 +150,7 @@ const getProductById = asyncHandler(async (req, res) => {
 
 // @desc    Create a product
 // @route   POST /api/products
-// @access  Private/ShopAdmin
+// @access  Private/shopAdmin
 const createProduct = asyncHandler(async (req, res) => {
   const { name, image, description, price, stock, category } = req.body;
   // Validate category
@@ -169,12 +169,12 @@ const createProduct = asyncHandler(async (req, res) => {
     shop_id = req.body.shop;
     if (!shop_id) {
       res.status(400);
-      throw new Error('Shop ID is required for admin');
+      throw new Error('shop ID is required for admin');
     }
-    const shopExists = await ShopService.findById(shop_id);
+    const shopExists = await shopService.findById(shop_id);
     if (!shopExists) {
       res.status(404);
-      throw new Error('Shop not found');
+      throw new Error('shop not found');
     }
   }
   const product = await ProductService.create({
@@ -188,7 +188,7 @@ const createProduct = asyncHandler(async (req, res) => {
   });
   if (product) {
     // Log product creation
-    await logShopActivity({
+    await logshopActivity({
       shop: shop_id,
       action: 'product_created',
       performedBy: req.user.id || req.user._id,
@@ -206,7 +206,7 @@ const createProduct = asyncHandler(async (req, res) => {
 
 // @desc    Update a product
 // @route   PUT /api/products/:id
-// @access  Private/ShopAdmin
+// @access  Private/shopAdmin
 const updateProduct = asyncHandler(async (req, res) => {
   const product = await ProductService.findById(req.params.id);
   if (!product) {
@@ -247,7 +247,7 @@ const updateProduct = asyncHandler(async (req, res) => {
   const updatedProduct = await ProductService.findByIdAndUpdate(req.params.id, updateData);
   
   // Log product update
-  await logShopActivity({
+  await logshopActivity({
     shop: product.shop,
     action: 'product_updated',
     performedBy: req.user.id || req.user._id,
@@ -262,7 +262,7 @@ const updateProduct = asyncHandler(async (req, res) => {
 
 // @desc    Delete a product
 // @route   DELETE /api/products/:id
-// @access  Private/ShopAdmin
+// @access  Private/shopAdmin
 const deleteProduct = asyncHandler(async (req, res) => {
   const product = await ProductService.findById(req.params.id);
   if (!product) {
@@ -280,7 +280,7 @@ const deleteProduct = asyncHandler(async (req, res) => {
   const previousState = { ...product };
   await ProductService.findByIdAndDelete(req.params.id);
   // Log product deletion
-  await logShopActivity({
+  await logshopActivity({
     shop: product.shop,
     action: 'product_deleted',
     performedBy: req.user.id || req.user._id,

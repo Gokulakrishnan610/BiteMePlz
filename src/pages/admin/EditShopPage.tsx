@@ -5,7 +5,7 @@ import { Store, Clock, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ImageUpload from '../../components/ImageUpload';
 
-interface Shop {
+interface shop {
   _id: string;
   name: string;
   description: string;
@@ -22,7 +22,7 @@ const EditShopPage: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [shop, setShop] = useState<Shop | null>(null);
+  const [shop, setshop] = useState<shop | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -35,10 +35,10 @@ const EditShopPage: React.FC = () => {
   });
 
   useEffect(() => {
-    const fetchShop = async () => {
+    const fetchshop = async () => {
       try {
         const { data } = await axios.get(`/api/shops/${id}`);
-        setShop(data);
+        setshop(data);
         
         // Format the time for the input
         const validityTime = data.final_validity_time 
@@ -67,7 +67,7 @@ const EditShopPage: React.FC = () => {
     };
 
     if (id) {
-      fetchShop();
+      fetchshop();
     }
   }, [id, navigate]);
 
@@ -90,12 +90,12 @@ const EditShopPage: React.FC = () => {
       // Create final validity time for today
       const now = new Date();
       const [hours, minutes] = formData.final_validity_time.split(':');
-      const finalValidityDate = new Date();
-      finalValidityDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      const final_validityDate = new Date();
+      final_validityDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
       
       // If the time is in the past, set it for tomorrow
-      if (finalValidityDate <= now) {
-        finalValidityDate.setDate(finalValidityDate.getDate() + 1);
+      if (final_validityDate <= now) {
+        final_validityDate.setDate(final_validityDate.getDate() + 1);
       }
 
       const payload = {
@@ -105,13 +105,13 @@ const EditShopPage: React.FC = () => {
         image: formData.image || undefined,
         is_active: formData.is_active,
         is_open: formData.is_open,
-        final_validity_time: finalValidityDate.toISOString(),
+        final_validity_time: final_validityDate.toISOString(),
         qrValidityMinutes: qrMinutes
       };
 
       await axios.put(`/api/shops/${id}`, payload);
       
-      toast.success('Shop updated successfully');
+      toast.success('shop updated successfully');
       navigate('/admin/shops');
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Failed to update shop';
@@ -151,9 +151,9 @@ const EditShopPage: React.FC = () => {
           className="flex items-center text-[var(--primary)] hover:underline mr-4"
         >
           <ArrowLeft size={20} className="mr-2" />
-          Back to Shops
+          Back to shops
         </button>
-        <h1 className="text-2xl font-bold">Edit Shop</h1>
+        <h1 className="text-2xl font-bold">Edit shop</h1>
       </div>
 
       <div className="card">
@@ -161,12 +161,12 @@ const EditShopPage: React.FC = () => {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold flex items-center">
               <Store size={24} className="mr-2 text-[var(--primary)]" />
-              Shop Details
+              shop Details
             </h2>
             
             <div>
               <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Shop Name *
+                shop Name *
               </label>
               <input
                 type="text"
@@ -211,7 +211,7 @@ const EditShopPage: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Shop Image
+                shop Image
               </label>
               <ImageUpload
                 onImageUpload={handleImageUpload}
@@ -237,7 +237,7 @@ const EditShopPage: React.FC = () => {
                   required
                 />
                 <p className="text-sm text-[var(--gray-500)] mt-1">
-                  Shop closes for orders at this time
+                  shop closes for orders at this time
                 </p>
               </div>
 
@@ -262,7 +262,7 @@ const EditShopPage: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Shop Status</h3>
+              <h3 className="text-lg font-semibold">shop Status</h3>
               
               <div className="flex items-center">
                 <input
@@ -273,7 +273,7 @@ const EditShopPage: React.FC = () => {
                   className="h-4 w-4 text-[var(--primary)] border-[var(--gray-300)] rounded"
                 />
                 <label className="ml-2 text-sm text-[var(--gray-700)]">
-                  Shop is active
+                  shop is active
                 </label>
               </div>
 
@@ -286,7 +286,7 @@ const EditShopPage: React.FC = () => {
                   className="h-4 w-4 text-[var(--primary)] border-[var(--gray-300)] rounded"
                 />
                 <label className="ml-2 text-sm text-[var(--gray-700)]">
-                  Shop is currently open
+                  shop is currently open
                 </label>
               </div>
             </div>
@@ -311,7 +311,7 @@ const EditShopPage: React.FC = () => {
                   Updating...
                 </span>
               ) : (
-                'Update Shop'
+                'Update shop'
               )}
             </button>
           </div>

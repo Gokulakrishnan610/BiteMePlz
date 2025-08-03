@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-interface Shop {
+interface shop {
   _id: string;
   name: string;
 }
@@ -27,7 +27,7 @@ interface FinancialData {
 }
 
 const FinancialReportsPage: React.FC = () => {
-  const [shops, setShops] = useState<Shop[]>([]);
+  const [shops, setshops] = useState<shop[]>([]);
   const [financialData, setFinancialData] = useState<FinancialData[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState({
@@ -42,7 +42,7 @@ const FinancialReportsPage: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchShops();
+    fetchshops();
   }, []);
 
   useEffect(() => {
@@ -51,10 +51,10 @@ const FinancialReportsPage: React.FC = () => {
     }
   }, [shops, dateRange]);
 
-  const fetchShops = async () => {
+  const fetchshops = async () => {
     try {
       const { data } = await axios.get('/api/shops');
-      setShops(data);
+      setshops(data);
     } catch (error) {
       toast.error('Failed to fetch shops');
     }
@@ -122,7 +122,7 @@ const FinancialReportsPage: React.FC = () => {
   const exportFinancialReport = () => {
     try {
       const csvContent = [
-        ['Shop Name', 'Total Revenue', 'Successful Payments', 'Refunds', 'Net Revenue', 'Average Order Value', 'Total Transactions'].join(','),
+        ['shop Name', 'Total Revenue', 'Successful Payments', 'Refunds', 'Net Revenue', 'Average Order Value', 'Total Transactions'].join(','),
         ...financialData.map((data) => [
           data.shopName,
           data.totalRevenue.toFixed(2),
@@ -259,7 +259,7 @@ const FinancialReportsPage: React.FC = () => {
             <table className="w-full">
               <thead>
                 <tr>
-                  <th>Shop Name</th>
+                  <th>shop Name</th>
                   <th>Total Revenue</th>
                   <th>Successful Payments</th>
                   <th>Refunds</th>

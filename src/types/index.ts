@@ -10,7 +10,7 @@ export interface User {
   isVerified?: boolean;
 }
 
-export interface Shop {
+export interface shop {
   _id: string;
   name: string;
   description: string;
@@ -50,9 +50,9 @@ export interface OrderItem {
 
 export interface Order {
   _id: string;
-  orderId: string;
+  order_id: string;
   user: User | string;
-  shop: Shop | string;
+  shop: shop | string;
   order_items: OrderItem[];
   totalPrice: number;
   isPaid: boolean;
@@ -61,8 +61,8 @@ export interface Order {
   qrCode?: string;
   qrValidUntil?: string;
   balanceAmount: number;
-  finalValidity: string;
-  paymentResult?: {
+  final_validity: string;
+  payment_result?: {
     razorpay_order_id?: string;
     razorpay_payment_id?: string;
     razorpay_signature?: string;
@@ -74,7 +74,7 @@ export interface Order {
 
 export interface Transaction {
   _id: string;
-  shop: Shop | string;
+  shop: shop | string;
   order: Order | string;
   user: User | string;
   type: 'payment' | 'refund' | 'verification' | 'expiry' | 'cancellation';

@@ -5,7 +5,7 @@ import { Store, Plus, Edit, Trash2, Eye, Clock, MapPin } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ConfirmDialog from '../../components/ConfirmDialog';
 
-interface Shop {
+interface shop {
   _id: string;
   name: string;
   description: string;
@@ -16,8 +16,8 @@ interface Shop {
   final_validity_time: string;
 }
 
-const ShopsPage: React.FC = () => {
-  const [shops, setShops] = useState<Shop[]>([]);
+const shopsPage: React.FC = () => {
+  const [shops, setshops] = useState<shop[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteDialog, setDeleteDialog] = useState<{
     is_open: boolean;
@@ -30,13 +30,13 @@ const ShopsPage: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchShops();
+    fetchshops();
   }, []);
 
-  const fetchShops = async () => {
+  const fetchshops = async () => {
     try {
       const { data } = await axios.get('/api/shops');
-      setShops(data);
+      setshops(data);
       setLoading(false);
     } catch (error) {
       toast.error('Failed to fetch shops');
@@ -44,7 +44,7 @@ const ShopsPage: React.FC = () => {
     }
   };
 
-  const handleDeleteClick = (shop: Shop) => {
+  const handleDeleteClick = (shop: shop) => {
     setDeleteDialog({
       is_open: true,
       shop_id: shop._id,
@@ -55,8 +55,8 @@ const ShopsPage: React.FC = () => {
   const handleDeleteConfirm = async () => {
     try {
       await axios.delete(`/api/shops/${deleteDialog.shop_id}`);
-      toast.success('Shop deleted successfully');
-      fetchShops();
+      toast.success('shop deleted successfully');
+      fetchshops();
     } catch (error) {
       toast.error('Failed to delete shop');
     } finally {
@@ -106,20 +106,20 @@ const ShopsPage: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold gradient-text">Shop Management</h1>
+          <h1 className="text-3xl font-bold gradient-text">shop Management</h1>
           <p className="text-[var(--secondary-text)] mt-2">Manage all campus shops and their settings</p>
         </div>
         <Link to="/admin/shops/create" className="btn-primary flex items-center">
           <Plus size={20} className="mr-2" />
-          Create Shop
+          Create shop
         </Link>
       </div>
 
-      {/* Shops Grid */}
+      {/* shops Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {shops.map((shop) => (
           <div key={shop._id} className="card hover:scale-105 transition-all duration-300 glow-hover overflow-hidden">
-            {/* Shop Header */}
+            {/* shop Header */}
             <div className="card-header">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
@@ -158,7 +158,7 @@ const ShopsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Shop Actions */}
+            {/* shop Actions */}
             <div className="card-footer">
               <div className="flex justify-between items-center">
                 <span className="text-[var(--muted-text)] text-sm">
@@ -175,14 +175,14 @@ const ShopsPage: React.FC = () => {
                   <Link
                     to={`/admin/shops/${shop._id}/edit`}
                     className="p-2 text-[var(--accent-purple)] hover:bg-[var(--hover-bg)] rounded-lg transition-colors"
-                    title="Edit Shop"
+                    title="Edit shop"
                   >
                     <Edit size={16} />
                   </Link>
                   <button
                     onClick={() => handleDeleteClick(shop)}
                     className="p-2 text-[var(--error)] hover:bg-[var(--hover-bg)] rounded-lg transition-colors"
-                    title="Delete Shop"
+                    title="Delete shop"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -199,14 +199,14 @@ const ShopsPage: React.FC = () => {
           <div className="card p-12 max-w-md mx-auto">
             <Store size={64} className="text-[var(--muted-text)] mx-auto mb-6" />
             <h3 className="text-2xl font-semibold text-[var(--secondary-text)] mb-4">
-              No Shops Found
+              No shops Found
             </h3>
             <p className="text-[var(--muted-text)] mb-6">
               Get started by creating your first shop.
             </p>
             <Link to="/admin/shops/create" className="btn-primary">
               <Plus size={20} className="inline mr-2" />
-              Create First Shop
+              Create First shop
             </Link>
           </div>
         </div>
@@ -214,9 +214,9 @@ const ShopsPage: React.FC = () => {
 
       <ConfirmDialog
         is_open={deleteDialog.is_open}
-        title="Delete Shop"
+        title="Delete shop"
         message={`Are you sure you want to delete "${deleteDialog.shopName}"? This action cannot be undone and will also delete all associated products and orders.`}
-        confirmText="Delete Shop"
+        confirmText="Delete shop"
         cancelText="Cancel"
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
@@ -226,4 +226,4 @@ const ShopsPage: React.FC = () => {
   );
 };
 
-export default ShopsPage;
+export default shopsPage;

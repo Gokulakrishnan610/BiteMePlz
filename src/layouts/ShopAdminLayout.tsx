@@ -69,7 +69,7 @@ const ShopAdminLayout: React.FC = () => {
               <Zap className="text-white" size={24} />
             </div>
             <div>
-              <h1 className="text-xl font-bold gradient-text">Shop Admin</h1>
+              <h1 className="text-xl font-bold gradient-text">shop Admin</h1>
               <p className="text-[var(--muted-text)] text-sm">Campus Kiosk</p>
             </div>
           </div>
@@ -153,7 +153,7 @@ const ShopAdminLayout: React.FC = () => {
           <div className="px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
             <div>
               <h2 className="text-xl font-semibold text-[var(--primary-text)]">
-                Shop Management
+                shop Management
               </h2>
               <p className="text-[var(--muted-text)] text-sm">Manage your shop and products</p>
             </div>

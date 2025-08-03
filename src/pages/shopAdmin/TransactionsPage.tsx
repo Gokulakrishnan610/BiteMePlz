@@ -58,7 +58,7 @@ interface Transaction {
     rollNo: string;
   };
   order: {
-    orderId: string;
+    order_id: string;
     totalPrice: number;
   };
   metadata: any;
@@ -330,7 +330,7 @@ const TransactionsPage: React.FC = () => {
       
       // Header with shop info and date range
       csvData.push(['REAL-TIME TRANSACTION REPORT']);
-      csvData.push(['Shop ID', user?.shop || '']);
+      csvData.push(['shop ID', user?.shop || '']);
       csvData.push(['Generated On', new Date().toLocaleString()]);
       csvData.push(['Date Range', `${filters.startDate || 'All'} to ${filters.endDate || 'All'}`]);
       csvData.push(['']);
@@ -358,7 +358,7 @@ const TransactionsPage: React.FC = () => {
           t.paymentMethod || '',
           t.user.name,
           t.user.rollNo,
-          t.order?.orderId || '',
+          t.order?.order_id || '',
           `"${t.description}"`
         ]);
       });
@@ -735,11 +735,11 @@ const TransactionsPage: React.FC = () => {
                           </td>
                           <td>
                             <div>
-                              <p className="font-medium">{transaction.user.name}</p>
-                              <p className="text-sm text-[var(--muted-text)]">{transaction.user.rollNo}</p>
+                              <p className="font-medium">{transaction.user?.name || 'Unknown User'}</p>
+                              <p className="text-sm text-[var(--muted-text)]">{transaction.user?.rollNo || 'N/A'}</p>
                             </div>
                           </td>
-                          <td>{transaction.order?.orderId || '-'}</td>
+                          <td>{transaction.order?.order_id || '-'}</td>
                           <td>
                             <button
                               onClick={() => handleTransactionClick(transaction)}
@@ -1002,7 +1002,7 @@ const TransactionsPage: React.FC = () => {
                 {selectedTransaction.order && (
                   <div>
                     <label className="block text-sm font-medium text-[var(--secondary-text)]">Order</label>
-                    <p className="mt-1 text-[var(--primary-text)]">{selectedTransaction.order.orderId} - ₹{selectedTransaction.order.totalPrice}</p>
+                    <p className="mt-1 text-[var(--primary-text)]">{selectedTransaction.order.order_id} - ₹{selectedTransaction.order.totalPrice}</p>
                   </div>
                 )}
 

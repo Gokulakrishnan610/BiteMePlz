@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-interface ShopLog {
+interface shopLog {
   _id: string;
   action: string;
   description: string;
@@ -34,16 +34,16 @@ interface ShopLog {
   ipAddress?: string;
 }
 
-interface Shop {
+interface shop {
   _id: string;
   name: string;
 }
 
-const ShopLogsPage: React.FC = () => {
-  const [logs, setLogs] = useState<ShopLog[]>([]);
-  const [shops, setShops] = useState<Shop[]>([]);
+const shopLogsPage: React.FC = () => {
+  const [logs, setLogs] = useState<shopLog[]>([]);
+  const [shops, setshops] = useState<shop[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedLog, setSelectedLog] = useState<ShopLog | null>(null);
+  const [selectedLog, setSelectedLog] = useState<shopLog | null>(null);
   const [filters, setFilters] = useState({
     shop: '',
     action: '',
@@ -60,13 +60,13 @@ const ShopLogsPage: React.FC = () => {
   });
 
   const actionLabels: Record<string, string> = {
-    shop_opened: 'Shop Opened',
-    shop_closed: 'Shop Closed',
+    shop_opened: 'shop Opened',
+    shop_closed: 'shop Closed',
     validity_updated: 'Validity Updated',
     qr_validity_updated: 'QR Validity Updated',
-    shop_created: 'Shop Created',
-    shop_activated: 'Shop Activated',
-    shop_deactivated: 'Shop Deactivated',
+    shop_created: 'shop Created',
+    shop_activated: 'shop Activated',
+    shop_deactivated: 'shop Deactivated',
     manual_close: 'Manual Close',
     auto_close: 'Auto Close',
     final_validity_expired: 'Final Validity Expired',
@@ -88,17 +88,17 @@ const ShopLogsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchShops();
+    fetchshops();
   }, []);
 
   useEffect(() => {
     fetchLogs();
   }, [filters]);
 
-  const fetchShops = async () => {
+  const fetchshops = async () => {
     try {
       const { data } = await axios.get('/api/shops');
-      setShops(data);
+      setshops(data);
     } catch (error) {
       toast.error('Failed to fetch shops');
     }
@@ -128,7 +128,7 @@ const ShopLogsPage: React.FC = () => {
     }
   };
 
-  const handleLogClick = (log: ShopLog) => {
+  const handleLogClick = (log: shopLog) => {
     setSelectedLog(log);
   };
 
@@ -145,15 +145,15 @@ const ShopLogsPage: React.FC = () => {
       const csvData = [];
       
       // Header
-      csvData.push(['SHOP ACTIVITY LOGS REPORT']);
+      csvData.push(['shop ACTIVITY LOGS REPORT']);
       csvData.push(['Generated On', new Date().toLocaleString()]);
       csvData.push(['Date Range', `${filters.startDate || 'All'} to ${filters.endDate || 'All'}`]);
       csvData.push(['']);
 
       // Logs
-      csvData.push(['Date', 'Shop', 'Action', 'Performed By', 'Description', 'IP Address']);
+      csvData.push(['Date', 'shop', 'Action', 'Performed By', 'Description', 'IP Address']);
       
-      data.logs.forEach((log: ShopLog) => {
+      data.logs.forEach((log: shopLog) => {
         csvData.push([
           new Date(log.createdAt).toLocaleString(),
           log.shop?.name || 'Unknown',
@@ -172,7 +172,7 @@ const ShopLogsPage: React.FC = () => {
       a.download = `shop-activity-logs-${new Date().toISOString().split('T')[0]}.csv`;
       a.click();
       window.URL.revokeObjectURL(url);
-      toast.success('Shop activity logs exported successfully');
+      toast.success('shop activity logs exported successfully');
     } catch (err) {
       toast.error('Failed to export logs');
     }
@@ -212,7 +212,7 @@ const ShopLogsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Shop Activity Logs</h1>
+        <h1 className="text-2xl font-bold">shop Activity Logs</h1>
         <div className="flex gap-2">
           <button
             onClick={fetchLogs}
@@ -236,14 +236,14 @@ const ShopLogsPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
           <div>
             <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
-              Shop
+              shop
             </label>
             <select
               value={filters.shop}
               onChange={(e) => setFilters({ ...filters, shop: e.target.value, page: 1 })}
               className="input"
             >
-              <option value="">All Shops</option>
+              <option value="">All shops</option>
               {shops.map((shop) => (
                 <option key={shop._id} value={shop._id}>
                   {shop.name}
@@ -329,7 +329,7 @@ const ShopLogsPage: React.FC = () => {
                 <thead>
                   <tr>
                     <th>Date & Time</th>
-                    <th>Shop</th>
+                    <th>shop</th>
                     <th>Action</th>
                     <th>Performed By</th>
                     <th>Description</th>
@@ -446,7 +446,7 @@ const ShopLogsPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-[var(--secondary-text)]">Shop</label>
+                    <label className="block text-sm font-medium text-[var(--secondary-text)]">shop</label>
                     <p className="mt-1 text-[var(--primary-text)]">{selectedLog.shop?.name || 'Unknown'}</p>
                   </div>
 
@@ -524,4 +524,4 @@ const ShopLogsPage: React.FC = () => {
   );
 };
 
-export default ShopLogsPage;
+export default shopLogsPage;

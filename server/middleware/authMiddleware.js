@@ -20,12 +20,15 @@ const protect = asyncHandler(async (req, res, next) => {
       // Decode token
       const decoded = jwt.verify(token, JWT_SECRET);
 
-      // Get user from Supabase by ID
-      const user = await UserService.findById(decoded.id);
+      // Get user from Supabase by ID - handle both id and _id fields
+      const userId = decoded.id || decoded._id;
+      const user = await UserService.findById(userId);
 
       if (!user) {
         console.error('User not found for token:', {
-          userId: decoded.id,
+          decodedId: decoded.id,
+          decoded_id: decoded._id,
+          userId: userId,
           token: token.substring(0, 20) + '...'
         });
         res.status(401);

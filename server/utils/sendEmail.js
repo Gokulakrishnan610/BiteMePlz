@@ -398,7 +398,7 @@ const sendEmail = async (email, subject, text) => {
               <div class="feature">
                 <div class="feature-icon">📱</div>
                 <div class="feature-title">Mobile Ready</div>
-                <div class="feature-desc">Shop anywhere, anytime</div>
+                <div class="feature-desc">shop anywhere, anytime</div>
               </div>
             </div>
             

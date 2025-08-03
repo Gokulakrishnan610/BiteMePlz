@@ -1,6 +1,6 @@
 import asyncHandler from 'express-async-handler';
 import { UserService } from '../services/databaseService.js';
-import { ShopService } from '../services/databaseService.js';
+import { shopService } from '../services/databaseService.js';
 import generateToken from '../utils/generateToken.js';
 import sendEmail from '../utils/sendEmail.js';
 import { logTransaction } from '../utils/transactionLogger.js';
@@ -38,7 +38,7 @@ const registerUser = asyncHandler(async (req, res) => {
     password: hashedPassword,
     otp: {
       code: otp,
-      expiresAt: otpExpiry
+      expires_at: otpExpiry
     }
   });
 
@@ -80,12 +80,12 @@ const verifyOTP = asyncHandler(async (req, res) => {
     throw new Error('User not found');
   }
 
-  if (!user.otp || !user.otp.code || !user.otp.expiresAt) {
+  if (!user.otp || !user.otp.code || !user.otp.expires_at) {
     res.status(400);
     throw new Error('OTP not found or expired');
   }
 
-  if (new Date() > user.otp.expiresAt) {
+  if (new Date() > user.otp.expires_at) {
     res.status(400);
     throw new Error('OTP has expired');
   }
@@ -135,7 +135,7 @@ const resendOTP = asyncHandler(async (req, res) => {
   await UserService.findByIdAndUpdate(user.id, {
     otp: {
       code: otp,
-      expiresAt: otpExpiry
+      expires_at: otpExpiry
     }
   });
 
@@ -184,7 +184,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
   await UserService.findByIdAndUpdate(user.id, {
     password_reset_otp: {
       code: otp,
-      expiresAt: otpExpiry
+      expires_at: otpExpiry
     }
   });
 
@@ -227,12 +227,12 @@ const verifyResetOTP = asyncHandler(async (req, res) => {
     throw new Error('User not found');
   }
 
-  if (!user.password_reset_otp || !user.password_reset_otp.code || !user.password_reset_otp.expiresAt) {
+  if (!user.password_reset_otp || !user.password_reset_otp.code || !user.password_reset_otp.expires_at) {
     res.status(400);
     throw new Error('Password reset OTP not found or expired');
   }
 
-  if (new Date() > user.password_reset_otp.expiresAt) {
+  if (new Date() > user.password_reset_otp.expires_at) {
     res.status(400);
     throw new Error('Password reset OTP has expired');
   }
@@ -250,7 +250,7 @@ const verifyResetOTP = asyncHandler(async (req, res) => {
   await UserService.findByIdAndUpdate(user.id, {
     password_reset_token: {
       token: resetToken,
-      expiresAt: resetTokenExpiry
+      expires_at: resetTokenExpiry
     },
     password_reset_otp: null // Clear the OTP
   });
@@ -285,12 +285,12 @@ const resetPassword = asyncHandler(async (req, res) => {
     throw new Error('User not found');
   }
 
-  if (!user.password_reset_token || !user.password_reset_token.token || !user.password_reset_token.expiresAt) {
+  if (!user.password_reset_token || !user.password_reset_token.token || !user.password_reset_token.expires_at) {
     res.status(400);
     throw new Error('Invalid or expired reset token');
   }
 
-  if (new Date() > user.password_reset_token.expiresAt) {
+  if (new Date() > user.password_reset_token.expires_at) {
     res.status(400);
     throw new Error('Reset token has expired');
   }
@@ -344,7 +344,7 @@ const resendResetOTP = asyncHandler(async (req, res) => {
   await UserService.findByIdAndUpdate(user.id, {
     password_reset_otp: {
       code: otp,
-      expiresAt: otpExpiry
+      expires_at: otpExpiry
     }
   });
 
@@ -436,7 +436,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
   if (user.shop) {
     try {
       // Try to load the shop safely, avoid throwing
-      shop = await ShopService.findById(user.shop);
+      shop = await shopService.findById(user.shop);
     } catch (err) {
       console.error('⚠ Error loading shop for user:', err.message);
       shop = null;
@@ -485,9 +485,9 @@ const deleteUser = asyncHandler(async (req, res) => {
 
     // If user is a shop admin, handle shop deletion
     if (user.role === 'shopAdmin' && user.shop) {
-      const shop = await ShopService.findById(user.shop);
+      const shop = await shopService.findById(user.shop);
       if (shop) {
-        await ShopService.findByIdAndDelete(shop.id);
+        await shopService.findByIdAndDelete(shop.id);
       }
     }
 
@@ -502,7 +502,7 @@ const deleteUser = asyncHandler(async (req, res) => {
 // @desc    Create a new shop admin
 // @route   POST /api/users/shop-admin
 // @access  Private/Admin
-  const createShopAdmin = asyncHandler(async (req, res) => {
+  const createshopAdmin = asyncHandler(async (req, res) => {
     const { 
       name, 
       email, 
@@ -543,10 +543,10 @@ const deleteUser = asyncHandler(async (req, res) => {
     }
 
     // Generate a unique roll number for shop admin
-    const rollNo = `SHOP${Date.now().toString().slice(-6)}`;
+    const rollNo = `shop${Date.now().toString().slice(-6)}`;
 
     let createdUser = null;
-    let createdShop = null;
+    let createdshop = null;
 
     try {
       // Create user first
@@ -557,11 +557,11 @@ const deleteUser = asyncHandler(async (req, res) => {
         roll_no: rollNo,
         password: hashedPassword,
         role: 'shopAdmin',
-        is_verified: true, // Shop admin accounts are pre-verified
+        is_verified: true, // shop admin accounts are pre-verified
       });
 
       // Create shop with user reference
-      createdShop = await ShopService.create({
+      createdshop = await shopService.create({
         name: shopName,
         description: shopDescription,
         location: shopLocation,
@@ -576,7 +576,7 @@ const deleteUser = asyncHandler(async (req, res) => {
 
       // Update user with shop reference
       await UserService.findByIdAndUpdate(createdUser.id, {
-        shop: createdShop.id
+        shop: createdshop.id
       });
 
       res.status(201).json({
@@ -585,7 +585,7 @@ const deleteUser = asyncHandler(async (req, res) => {
         email: createdUser.email,
         rollNo: createdUser.roll_no,
         role: createdUser.role,
-        shop: createdShop.id,
+        shop: createdshop.id,
         token: generateToken(createdUser.id),
       });
     } catch (error) {
@@ -593,8 +593,8 @@ const deleteUser = asyncHandler(async (req, res) => {
       if (createdUser) {
         await UserService.findByIdAndDelete(createdUser.id);
       }
-      if (createdShop) {
-        await ShopService.findByIdAndDelete(createdShop.id);
+      if (createdshop) {
+        await shopService.findByIdAndDelete(createdshop.id);
       }
       res.status(400);
       throw new Error(error.message || 'Failed to create shop admin');
@@ -604,7 +604,7 @@ const deleteUser = asyncHandler(async (req, res) => {
 // @desc    Get all shop admins
 // @route   GET /api/users/shop-admins
 // @access  Private/Admin
-const getShopAdmins = asyncHandler(async (req, res) => {
+const getshopAdmins = asyncHandler(async (req, res) => {
   const shopAdmins = await UserService.find({ role: 'shopAdmin' });
   res.json(shopAdmins);
 });
@@ -726,8 +726,8 @@ export {
   getUserProfile,
   getUsers,
   deleteUser,
-  createShopAdmin,
-  getShopAdmins,
+  createshopAdmin,
+  getshopAdmins,
   getUserBalance,
   updateUserBalance,
 };

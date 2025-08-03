@@ -32,7 +32,7 @@ interface Transaction {
     rollNo: string;
   };
   order: {
-    orderId: string;
+    order_id: string;
     totalPrice: number;
   };
   shop: {
@@ -42,14 +42,14 @@ interface Transaction {
   metadata: any;
 }
 
-interface Shop {
+interface shop {
   _id: string;
   name: string;
 }
 
 const TransactionsPage: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [shops, setShops] = useState<Shop[]>([]);
+  const [shops, setshops] = useState<shop[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [filters, setFilters] = useState({
@@ -70,17 +70,17 @@ const TransactionsPage: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchShops();
+    fetchshops();
   }, []);
 
   useEffect(() => {
     fetchTransactions();
   }, [filters]);
 
-  const fetchShops = async () => {
+  const fetchshops = async () => {
     try {
       const { data } = await axios.get('/api/shops');
-      setShops(data);
+      setshops(data);
     } catch (error) {
       toast.error('Failed to fetch shops');
     }
@@ -169,7 +169,7 @@ const TransactionsPage: React.FC = () => {
     try {
       // Convert to CSV
       const csvContent = [
-        ['Date', 'Shop', 'Type', 'Amount', 'Status', 'Payment Method', 'User', 'Order ID', 'Description'].join(','),
+        ['Date', 'shop', 'Type', 'Amount', 'Status', 'Payment Method', 'User', 'Order ID', 'Description'].join(','),
         ...transactions.map((t: Transaction) => [
           new Date(t.createdAt).toLocaleString(),
           t.shop?.name || 'Unknown',
@@ -178,7 +178,7 @@ const TransactionsPage: React.FC = () => {
           t.status,
           t.paymentMethod || '',
           t.user.name,
-          t.order?.orderId || '',
+          t.order?.order_id || '',
           `"${t.description}"`
         ].join(','))
       ].join('\n');
@@ -278,14 +278,14 @@ const TransactionsPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
           <div>
             <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
-              Shop
+              shop
             </label>
             <select
               value={filters.shop}
               onChange={(e) => setFilters({ ...filters, shop: e.target.value, page: 1 })}
               className="input"
             >
-              <option value="">All Shops</option>
+              <option value="">All shops</option>
               {shops.map((shop) => (
                 <option key={shop._id} value={shop._id}>
                   {shop.name}
@@ -373,7 +373,7 @@ const TransactionsPage: React.FC = () => {
               <thead>
                 <tr>
                   <th>Date</th>
-                  <th>Shop</th>
+                  <th>shop</th>
                   <th>Type</th>
                   <th>Amount</th>
                   <th>Status</th>
@@ -414,7 +414,7 @@ const TransactionsPage: React.FC = () => {
                         <p className="text-sm text-[var(--muted-text)]">{transaction.user.rollNo}</p>
                       </div>
                     </td>
-                    <td className="text-[var(--secondary-text)]">{transaction.order?.orderId || '-'}</td>
+                    <td className="text-[var(--secondary-text)]">{transaction.order?.order_id || '-'}</td>
                     <td>
                       <button
                         onClick={() => handleTransactionClick(transaction)}
@@ -461,7 +461,7 @@ const TransactionsPage: React.FC = () => {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-[var(--secondary-text)]">Shop</label>
+                    <label className="block text-sm font-medium text-[var(--secondary-text)]">shop</label>
                     <p className="mt-1 text-[var(--primary-text)]">{selectedTransaction.shop?.name || 'Unknown'}</p>
                   </div>
                   <div>
@@ -500,7 +500,7 @@ const TransactionsPage: React.FC = () => {
                 {selectedTransaction.order && (
                   <div>
                     <label className="block text-sm font-medium text-[var(--secondary-text)]">Order</label>
-                    <p className="mt-1 text-[var(--primary-text)]">{selectedTransaction.order.orderId} - ₹{selectedTransaction.order.totalPrice}</p>
+                    <p className="mt-1 text-[var(--primary-text)]">{selectedTransaction.order.order_id} - ₹{selectedTransaction.order.totalPrice}</p>
                   </div>
                 )}
 

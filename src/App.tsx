@@ -39,7 +39,7 @@ import ShopLogsPage from './pages/shopAdmin/ShopLogsPage';
 import StudentAnalyticsPage from './pages/shopAdmin/StudentAnalyticsPage';
 import MaintenancePage from './pages/admin/MaintenancePage';
 
-// Shop Admin Pages
+// shop Admin Pages
 import ShopAdminDashboardPage from './pages/shopAdmin/DashboardPage';
 import ShopAdminProductsPage from './pages/shopAdmin/ProductsPage';
 import ShopAdminCreateProductPage from './pages/shopAdmin/CreateProductPage';
@@ -169,7 +169,7 @@ function App() {
             <Route path="student-analytics" element={<StudentAnalyticsPage />} />
           </Route>
           
-          {/* Shop Admin Routes */}
+          {/* shop Admin Routes */}
           <Route 
             path="/shop-admin" 
             element={

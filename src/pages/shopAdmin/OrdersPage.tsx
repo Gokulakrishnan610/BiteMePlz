@@ -18,9 +18,9 @@ interface Order {
     email: string;
   };
   order_items: OrderItem[];
-  totalPrice: number;
-  isPaid: boolean;
-  isVerified: boolean;
+  total_price: number;
+  is_paid: boolean;
+  is_verified: boolean;
   createdAt: string;
 }
 
@@ -85,11 +85,11 @@ const OrdersPage: React.FC = () => {
         comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         break;
       case 'total':
-        comparison = a.totalPrice - b.totalPrice;
+        comparison = a.total_price - b.total_price;
         break;
       case 'status':
-        const statusA = `${a.isPaid ? '1' : '0'}${a.isVerified ? '1' : '0'}`;
-        const statusB = `${b.isPaid ? '1' : '0'}${b.isVerified ? '1' : '0'}`;
+        const statusA = `${a.is_paid ? '1' : '0'}${a.is_verified ? '1' : '0'}`;
+        const statusB = `${b.is_paid ? '1' : '0'}${b.is_verified ? '1' : '0'}`;
         comparison = statusA.localeCompare(statusB);
         break;
     }
@@ -196,22 +196,22 @@ const OrdersPage: React.FC = () => {
                       ))}
                     </div>
                   </td>
-                  <td className="font-medium">₹{order.totalPrice}</td>
+                  <td className="font-medium">₹{order.total_price}</td>
                   <td>
                     <div className="space-y-1">
                       <span
                         className={`badge ${
-                          order.isPaid ? 'badge-success' : 'badge-error'
+                          order.is_paid ? 'badge-success' : 'badge-error'
                         }`}
                       >
-                        {order.isPaid ? 'Paid' : 'Pending'}
+                        {order.is_paid ? 'Paid' : 'Pending'}
                       </span>
                       <span
                         className={`badge ${
-                          order.isVerified ? 'badge-success' : 'badge-warning'
+                          order.is_verified ? 'badge-success' : 'badge-warning'
                         }`}
                       >
-                        {order.isVerified ? 'Verified' : 'Not Verified'}
+                        {order.is_verified ? 'Verified' : 'Not Verified'}
                       </span>
                     </div>
                   </td>

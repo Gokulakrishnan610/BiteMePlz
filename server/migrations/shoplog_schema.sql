@@ -1,4 +1,4 @@
--- Migration Script for Shop Logs Table based on the Mongoose ShopLog Model
+-- Migration Script for shop Logs Table based on the Mongoose shopLog Model
 
 CREATE TABLE IF NOT EXISTS shoplogs (
   id SERIAL PRIMARY KEY,

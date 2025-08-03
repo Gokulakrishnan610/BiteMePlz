@@ -22,7 +22,7 @@ CREATE TABLE users (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Shops table (without foreign key constraints initially)
+-- shops table (without foreign key constraints initially)
 CREATE TABLE shops (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -83,13 +83,16 @@ CREATE TABLE transactions (
     shop_id UUID REFERENCES shops(id),
     order_id UUID REFERENCES orders(id),
     amount DECIMAL(10,2) NOT NULL,
-    type VARCHAR(50) NOT NULL CHECK (type IN ('credit', 'debit', 'payment', 'refund')),
+    type VARCHAR(50) NOT NULL CHECK (type IN ('credit', 'debit', 'payment', 'refund', 'verification', 'expiry', 'cancellation', 'forfeiture')),
+    status VARCHAR(50) DEFAULT 'success' CHECK (status IN ('success', 'failed', 'pending')),
+    payment_method VARCHAR(50) CHECK (payment_method IN ('balance', 'razorpay')),
     description TEXT,
+    metadata JSONB DEFAULT '{}'::JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Shop logs table
+-- shop logs table
 CREATE TABLE shop_logs (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     shop_id UUID NOT NULL REFERENCES shops(id),
@@ -162,7 +165,7 @@ CREATE POLICY "Users can view their own data" ON users FOR SELECT USING (auth.ui
 CREATE POLICY "Users can update their own data" ON users FOR UPDATE USING (auth.uid()::text = id::text);
 CREATE POLICY "Enable all access for now" ON users FOR ALL USING (true);
 
--- Shops policies (simplified to avoid recursion)
+-- shops policies (simplified to avoid recursion)
 CREATE POLICY "Anyone can view active shops" ON shops FOR SELECT USING (is_active = true);
 CREATE POLICY "Enable all access for now" ON shops FOR ALL USING (true);
 
@@ -178,7 +181,7 @@ CREATE POLICY "Enable all access for now" ON orders FOR ALL USING (true);
 CREATE POLICY "Users can view their own transactions" ON transactions FOR SELECT USING (user_id::text = auth.uid()::text);
 CREATE POLICY "Enable all access for now" ON transactions FOR ALL USING (true);
 
--- Shop logs policies (simplified to avoid recursion)
+-- shop logs policies (simplified to avoid recursion)
 CREATE POLICY "Enable all access for now" ON shop_logs FOR ALL USING (true);
 
 -- Student analytics policies (simplified to avoid recursion)

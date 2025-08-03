@@ -45,7 +45,7 @@ ChartJS.register(
   TimeScale
 );
 
-interface Shop {
+interface shop {
   _id: string;
   name: string;
 }
@@ -55,7 +55,7 @@ interface RealTimeAnalytics {
   totalTransactions: number;
   averageOrderValue: number;
   successRate: number;
-  topShops: Array<{
+  topshops: Array<{
     shopName: string;
     revenue: number;
     orders: number;
@@ -104,8 +104,8 @@ interface RealTimeAnalytics {
 }
 
 const AnalyticsPage: React.FC = () => {
-  const [shops, setShops] = useState<Shop[]>([]);
-  const [selectedShop, setSelectedShop] = useState<string>('');
+  const [shops, setshops] = useState<shop[]>([]);
+  const [selectedshop, setSelectedshop] = useState<string>('');
   const [period, setPeriod] = useState<string>('30d');
   const [dateRange, setDateRange] = useState({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -117,7 +117,7 @@ const AnalyticsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'trends' | 'performance' | 'customers'>('overview');
 
   useEffect(() => {
-    fetchShops();
+    fetchshops();
   }, []);
 
   useEffect(() => {
@@ -129,12 +129,12 @@ const AnalyticsPage: React.FC = () => {
       
       return () => clearInterval(interval);
     }
-  }, [selectedShop, period, dateRange, shops]);
+  }, [selectedshop, period, dateRange, shops]);
 
-  const fetchShops = async () => {
+  const fetchshops = async () => {
     try {
       const { data } = await axios.get('/api/shops');
-      setShops(data);
+      setshops(data);
     } catch (error) {
       toast.error('Failed to fetch shops');
     }
@@ -150,8 +150,8 @@ const AnalyticsPage: React.FC = () => {
       const allTransactions = await fetchAllTransactions();
       
       // Filter data based on selected shop and date range
-      const filteredOrders = filterOrdersByShopAndDate(allOrders);
-      const filteredTransactions = filterTransactionsByShopAndDate(allTransactions);
+      const filteredOrders = filterOrdersByshopAndDate(allOrders);
+      const filteredTransactions = filterTransactionsByshopAndDate(allTransactions);
       
       // Calculate real-time analytics
       const realTimeAnalytics = calculateRealTimeAnalytics(filteredOrders, filteredTransactions);
@@ -220,27 +220,27 @@ const AnalyticsPage: React.FC = () => {
     }
   };
 
-  const filterOrdersByShopAndDate = (orders: any[]) => {
+  const filterOrdersByshopAndDate = (orders: any[]) => {
     return orders.filter(order => {
       const orderDate = new Date(order.createdAt);
       const startDate = new Date(dateRange.startDate);
       const endDate = new Date(dateRange.endDate);
       
       const dateMatch = orderDate >= startDate && orderDate <= endDate;
-      const shopMatch = !selectedShop || order.shop_id === selectedShop;
+      const shopMatch = !selectedshop || order.shop_id === selectedshop;
       
       return dateMatch && shopMatch;
     });
   };
 
-  const filterTransactionsByShopAndDate = (transactions: any[]) => {
+  const filterTransactionsByshopAndDate = (transactions: any[]) => {
     return transactions.filter(transaction => {
       const transactionDate = new Date(transaction.createdAt);
       const startDate = new Date(dateRange.startDate);
       const endDate = new Date(dateRange.endDate);
       
       const dateMatch = transactionDate >= startDate && transactionDate <= endDate;
-      const shopMatch = !selectedShop || transaction.shop_id === selectedShop;
+      const shopMatch = !selectedshop || transaction.shop_id === selectedshop;
       
       return dateMatch && shopMatch;
     });
@@ -267,7 +267,7 @@ const AnalyticsPage: React.FC = () => {
       return acc;
     }, {});
 
-    const topShops = Object.entries(shopGroups)
+    const topshops = Object.entries(shopGroups)
       .map(([shopName, data]: [string, any]) => ({
         shopName,
         revenue: data.revenue,
@@ -411,7 +411,7 @@ const AnalyticsPage: React.FC = () => {
       totalTransactions,
       averageOrderValue,
       successRate,
-      topShops,
+      topshops,
       hourlyDistribution,
       weeklyTrends,
       paymentMethodStats,
@@ -435,7 +435,7 @@ const AnalyticsPage: React.FC = () => {
       csvData.push(['REAL-TIME ANALYTICS REPORT']);
       csvData.push(['Generated On', new Date().toLocaleString()]);
       csvData.push(['Period', `${dateRange.startDate} to ${dateRange.endDate}`]);
-      csvData.push(['Shop', selectedShop ? shops.find(s => s._id === selectedShop)?.name || 'Unknown' : 'All Shops']);
+      csvData.push(['shop', selectedshop ? shops.find(s => s._id === selectedshop)?.name || 'Unknown' : 'All shops']);
       csvData.push(['']);
 
       csvData.push(['OVERVIEW METRICS']);
@@ -447,9 +447,9 @@ const AnalyticsPage: React.FC = () => {
       csvData.push(['']);
 
       // Top shops
-      csvData.push(['TOP PERFORMING SHOPS']);
-      csvData.push(['Shop Name', 'Revenue', 'Orders', 'Avg Order Value']);
-      analytics.topShops.forEach(shop => {
+      csvData.push(['TOP PERFORMING shopS']);
+      csvData.push(['shop Name', 'Revenue', 'Orders', 'Avg Order Value']);
+      analytics.topshops.forEach(shop => {
         csvData.push([shop.shopName, `₹${shop.revenue.toFixed(2)}`, shop.orders, `₹${shop.avgOrderValue.toFixed(2)}`]);
       });
       csvData.push(['']);
@@ -466,7 +466,7 @@ const AnalyticsPage: React.FC = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `real-time-analytics-${selectedShop ? 'shop-' + selectedShop : 'all-shops'}-${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `real-time-analytics-${selectedshop ? 'shop-' + selectedshop : 'all-shops'}-${new Date().toISOString().split('T')[0]}.csv`;
       a.click();
       window.URL.revokeObjectURL(url);
       toast.success('Real-time analytics data exported successfully');
@@ -567,14 +567,14 @@ const AnalyticsPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-              Shop
+              shop
             </label>
             <select
-              value={selectedShop}
-              onChange={(e) => setSelectedShop(e.target.value)}
+              value={selectedshop}
+              onChange={(e) => setSelectedshop(e.target.value)}
               className="input"
             >
-              <option value="">All Shops</option>
+              <option value="">All shops</option>
               {shops.map((shop) => (
                 <option key={shop._id} value={shop._id}>
                   {shop.name}
@@ -742,21 +742,21 @@ const AnalyticsPage: React.FC = () => {
 
               </div>
 
-              {/* Top Shops */}
+              {/* Top shops */}
               <div className="card p-6">
-                <h3 className="text-xl font-semibold mb-4">Top Performing Shops (Real-time)</h3>
+                <h3 className="text-xl font-semibold mb-4">Top Performing shops (Real-time)</h3>
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr>
-                        <th>Shop Name</th>
+                        <th>shop Name</th>
                         <th>Revenue</th>
                         <th>Orders</th>
                         <th>Avg Order Value</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {analytics.topShops.map((shop, index) => (
+                      {analytics.topshops.map((shop, index) => (
                         <tr key={index}>
                           <td className="font-medium">{shop.shopName}</td>
                           <td className="text-green-600 font-medium">₹{shop.revenue.toFixed(2)}</td>

@@ -1,12 +1,12 @@
 import asyncHandler from 'express-async-handler';
 import { TransactionService } from '../services/databaseService.js';
-import { ShopService } from '../services/databaseService.js';
-import { getShopTransactions, getShopTransactionStats } from '../utils/transactionLogger.js';
+import { shopService } from '../services/databaseService.js';
+import { getshopTransactions, getshopTransactionStats } from '../utils/transactionLogger.js';
 
 // @desc    Get shop transactions
 // @route   GET /api/transactions/shop/:shop_id
-// @access  Private/Admin or ShopAdmin
-const getShopTransactionHistory = asyncHandler(async (req, res) => {
+// @access  Private/Admin or shopAdmin
+const getshopTransactionHistory = asyncHandler(async (req, res) => {
   const { shop_id } = req.params;
   const { page, limit, type, startDate, endDate, status } = req.query;
 
@@ -19,13 +19,13 @@ const getShopTransactionHistory = asyncHandler(async (req, res) => {
     throw new Error('Not authorized');
   }
 
-  const shop = await ShopService.findById(shop_id);
+  const shop = await shopService.findById(shop_id);
   if (!shop) {
     res.status(404);
-    throw new Error('Shop not found');
+    throw new Error('shop not found');
   }
 
-  const result = await getShopTransactions(shop_id, {
+  const result = await getshopTransactions(shop_id, {
     page: parseInt(page) || 1,
     limit: parseInt(limit) || 50,
     type,
@@ -39,8 +39,8 @@ const getShopTransactionHistory = asyncHandler(async (req, res) => {
 
 // @desc    Get shop transaction statistics
 // @route   GET /api/transactions/shop/:shop_id/stats
-// @access  Private/Admin or ShopAdmin
-const getShopTransactionStatistics = asyncHandler(async (req, res) => {
+// @access  Private/Admin or shopAdmin
+const getshopTransactionStatistics = asyncHandler(async (req, res) => {
   const { shop_id } = req.params;
   const { period } = req.query;
 
@@ -53,24 +53,24 @@ const getShopTransactionStatistics = asyncHandler(async (req, res) => {
     throw new Error('Not authorized');
   }
 
-  const shop = await ShopService.findById(shop_id);
+  const shop = await shopService.findById(shop_id);
   if (!shop) {
     res.status(404);
-    throw new Error('Shop not found');
+    throw new Error('shop not found');
   }
 
-  const stats = await getShopTransactionStats(shop_id, period);
+  const stats = await getshopTransactionStats(shop_id, period);
   res.json(stats);
 });
 
 // @desc    Get transaction details
 // @route   GET /api/transactions/:id
-// @access  Private/Admin or ShopAdmin
+// @access  Private/Admin or shopAdmin
 const getTransactionDetails = asyncHandler(async (req, res) => {
   const transaction = await TransactionService.findById(req.params.id)
     .populate('shop', 'name')
     .populate('user', 'name email rollNo')
-    .populate('order', 'orderId totalPrice order_items');
+    .populate('order', 'order_id totalPrice order_items');
 
   if (!transaction) {
     res.status(404);
@@ -90,7 +90,7 @@ const getTransactionDetails = asyncHandler(async (req, res) => {
 });
 
 export {
-  getShopTransactionHistory,
-  getShopTransactionStatistics,
+  getshopTransactionHistory,
+  getshopTransactionStatistics,
   getTransactionDetails
 };

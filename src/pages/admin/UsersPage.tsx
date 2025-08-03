@@ -128,7 +128,7 @@ const UsersPage: React.FC = () => {
           <div className="p-6 flex items-center">
             <Shield size={32} className="mr-4" />
             <div>
-              <p className="text-lg font-semibold">Shop Admins</p>
+              <p className="text-lg font-semibold">shop Admins</p>
               <p className="text-3xl font-bold">{userStats.shopAdmin}</p>
             </div>
           </div>
@@ -151,7 +151,7 @@ const UsersPage: React.FC = () => {
           {[
             { key: 'all', label: 'All Users', count: userStats.total },
             { key: 'admin', label: 'Admins', count: userStats.admin },
-            { key: 'shopAdmin', label: 'Shop Admins', count: userStats.shopAdmin },
+            { key: 'shopAdmin', label: 'shop Admins', count: userStats.shopAdmin },
             { key: 'student', label: 'Students', count: userStats.student },
           ].map(({ key, label, count }) => (
             <button

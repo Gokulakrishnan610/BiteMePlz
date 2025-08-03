@@ -7,7 +7,7 @@ export const trackStudentActivity = async ({
   activity,
   sessionId = null,
   productId = null,
-  orderId = null,
+  order_id = null,
   metadata = {}
 }) => {
   try {
@@ -22,7 +22,7 @@ export const trackStudentActivity = async ({
       sessionId,
       activity,
       productId,
-      orderId,
+      order_id,
       metadata,
       timestamp: new Date()
     };

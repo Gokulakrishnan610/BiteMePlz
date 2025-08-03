@@ -30,7 +30,7 @@ ChartJS.register(
 
 interface DashboardStats {
   totalUsers: number;
-  totalShops: number;
+  totalshops: number;
   totalOrders: number;
   totalRevenue: number;
   totalTransactions: number;
@@ -102,7 +102,7 @@ const DashboardPage: React.FC<AdminDashboardPageProps> = ({ setMaintenanceMode }
 
       // Calculate dashboard statistics
       const totalUsers = users.length;
-      const totalShops = shops.length;
+      const totalshops = shops.length;
       const totalOrders = allOrders.length;
       const totalRevenue = allOrders.reduce((sum: number, order: any) => sum + (order.totalPrice || 0), 0);
       const totalTransactions = allTransactions.length;
@@ -184,7 +184,7 @@ const DashboardPage: React.FC<AdminDashboardPageProps> = ({ setMaintenanceMode }
 
       setStats({
         totalUsers,
-        totalShops,
+        totalshops,
         totalOrders,
         totalRevenue,
         totalTransactions,
@@ -309,8 +309,8 @@ const DashboardPage: React.FC<AdminDashboardPageProps> = ({ setMaintenanceMode }
           <div className="bg-[var(--card)] p-6 rounded-lg shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[var(--secondary-text)] text-sm">Total Shops</p>
-                <p className="text-2xl font-bold text-[var(--primary-text)]">{stats.totalShops}</p>
+                <p className="text-[var(--secondary-text)] text-sm">Total shops</p>
+                <p className="text-2xl font-bold text-[var(--primary-text)]">{stats.totalshops}</p>
               </div>
               <Store className="w-8 h-8 text-[var(--primary)]" />
             </div>
@@ -322,7 +322,7 @@ const DashboardPage: React.FC<AdminDashboardPageProps> = ({ setMaintenanceMode }
                 <p className="text-[var(--secondary-text)] text-sm">Total Orders</p>
                 <p className="text-2xl font-bold text-[var(--primary-text)]">{stats.totalOrders}</p>
               </div>
-              <ShoppingBag className="w-8 h-8 text-[var(--primary)]" />
+                              <ShoppingBag className="w-8 h-8 text-[var(--primary)]" />
             </div>
           </div>
 
@@ -413,14 +413,14 @@ const DashboardPage: React.FC<AdminDashboardPageProps> = ({ setMaintenanceMode }
           </div>
         </div>
 
-        {/* Shop Performance */}
+        {/* shop Performance */}
         <div className="bg-[var(--card)] p-6 rounded-lg shadow-sm mb-8">
-          <h3 className="text-lg font-semibold mb-4">Shop Performance</h3>
+          <h3 className="text-lg font-semibold mb-4">shop Performance</h3>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[var(--border)]">
-                  <th className="text-left py-2">Shop</th>
+                  <th className="text-left py-2">shop</th>
                   <th className="text-right py-2">Orders</th>
                   <th className="text-right py-2">Revenue</th>
                   <th className="text-right py-2">Avg Order</th>
@@ -448,7 +448,7 @@ const DashboardPage: React.FC<AdminDashboardPageProps> = ({ setMaintenanceMode }
               <thead>
                 <tr className="border-b border-[var(--border)]">
                   <th className="text-left py-2">Order ID</th>
-                  <th className="text-left py-2">Shop</th>
+                  <th className="text-left py-2">shop</th>
                   <th className="text-left py-2">Customer</th>
                   <th className="text-right py-2">Amount</th>
                   <th className="text-left py-2">Date</th>

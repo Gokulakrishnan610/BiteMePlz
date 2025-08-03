@@ -16,16 +16,16 @@ interface OrderItem {
 interface Order {
   _id: string;
   createdAt: string;
-  totalPrice: number;
-  isPaid: boolean;
-  isVerified: boolean;
+  total_price: number;
+  is_paid: boolean;
+  is_verified: boolean;
   order_items: OrderItem[];
-  qrCode: string;
-  qrValidUntil: string;
-  balanceAmount: number;
-  finalValidity: string;
+  qr_code: string;
+  qr_valid_until: string;
+  balance_amount: number;
+  final_validity: string;
   status: 'pending' | 'completed' | 'expired';
-  paymentResult: {
+  payment_result: {
     razorpay_payment_id: string;
     status: string;
   };
@@ -33,7 +33,7 @@ interface Order {
 
 const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-function parseLocalDateTime(dateString: string) {
+function parseLocalDateTime(dateString: string | Date) {
   if (!dateString) return null;
   if (dateString instanceof Date) return dateString;
   // Remove milliseconds and timezone if present
@@ -59,9 +59,9 @@ const OrderDetailsPage: React.FC = () => {
   useEffect(() => {
     const checkOrderExpiry = async () => {
       if (
-        order?.isPaid &&
-        !order.isVerified &&
-        order.balanceAmount > 0 &&
+        order?.is_paid &&
+        !order.is_verified &&
+        order.balance_amount > 0 &&
         order.status !== 'expired'
       ) {
         try {
@@ -103,11 +103,11 @@ const OrderDetailsPage: React.FC = () => {
   }, [id]);
 
   useEffect(() => {
-    if (!order?.qrValidUntil) return;
+    if (!order?.qr_valid_until) return;
 
     const checkAndSetExpiry = () => {
       const now = new Date().getTime();
-      const validUntil = new Date(order.qrValidUntil).getTime();
+      const validUntil = new Date(order.qr_valid_until).getTime();
       const difference = validUntil - now;
 
       if (difference <= 0) {
@@ -128,7 +128,7 @@ const OrderDetailsPage: React.FC = () => {
   }, [order]);
 
   useEffect(() => {
-    if (order?.status === 'expired' && order.isPaid && !order.isVerified) {
+          if (order?.status === 'expired' && order.is_paid && !order.is_verified) {
       toast.success('Order expired. Amount refunded to wallet.');
       refreshBalance();
     }
@@ -162,7 +162,7 @@ const OrderDetailsPage: React.FC = () => {
     return d.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
   };
 
-  const canDelete = order?.isVerified || order?.status === 'expired';
+  const canDelete = order?.is_verified || order?.status === 'expired';
 
   if (loading) {
     return (
@@ -217,14 +217,14 @@ const OrderDetailsPage: React.FC = () => {
               </h1>
               <div className="flex flex-wrap gap-2 mb-4">
                 <span className={`badge ${
-                  order.isPaid ? 'badge-success' : 'badge-error'
+                  order.is_paid ? 'badge-success' : 'badge-error'
                 }`}>
-                  {order.isPaid ? 'Paid' : 'Pending'}
+                                      {order.is_paid ? 'Paid' : 'Pending'}
                 </span>
                 <span className={`badge ${
-                  order.isVerified ? 'badge-success' : 'badge-warning'
+                  order.is_verified ? 'badge-success' : 'badge-warning'
                 }`}>
-                  {order.isVerified ? 'Verified' : 'Not Verified'}
+                  {order.is_verified ? 'Verified' : 'Not Verified'}
                 </span>
                 <span className={`badge ${
                   order.status === 'completed' ? 'badge-success' : 
@@ -237,9 +237,9 @@ const OrderDetailsPage: React.FC = () => {
               <p className="text-[var(--gray-600)]">
                 Placed on {new Date(order.createdAt).toLocaleString()}
               </p>
-              {order.paymentResult?.razorpay_payment_id && (
+              {order.payment_result?.razorpay_payment_id && (
                 <p className="text-[var(--gray-600)]">
-                  Payment ID: {order.paymentResult.razorpay_payment_id}
+                  Payment ID: {order.payment_result.razorpay_payment_id}
                 </p>
               )}
             </div>
@@ -273,14 +273,14 @@ const OrderDetailsPage: React.FC = () => {
               <div className="mt-6 pt-6 border-t">
                 <div className="flex justify-between">
                   <span className="font-semibold">Total</span>
-                  <span className="font-semibold">₹{order.totalPrice}</span>
+                  <span className="font-semibold">₹{order.total_price}</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {order.isPaid && (
+        {order.is_paid && (
           <div className="lg:col-span-1">
             <div className="card mb-6">
               <div className="p-6">
@@ -292,7 +292,7 @@ const OrderDetailsPage: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-sm text-[var(--gray-600)]">Amount Paid</p>
-                    <p className="font-medium">₹{order.totalPrice}</p>
+                    <p className="font-medium">₹{order.total_price}</p>
                   </div>
                   <div>
                     <p className="text-sm text-[var(--gray-600)]">QR Code Valid Until</p>
@@ -307,7 +307,7 @@ const OrderDetailsPage: React.FC = () => {
                     <p className="text-sm text-[var(--gray-600)]">Balance Remaining</p>
                     <div className="flex items-center">
                       <Wallet size={16} className="mr-2" />
-                      <p className="font-medium">₹{order.balanceAmount}</p>
+                      <p className="font-medium">₹{order.balance_amount}</p>
                     </div>
                   </div>
                   <div>
@@ -326,14 +326,14 @@ const OrderDetailsPage: React.FC = () => {
                   <div>
                     <p className="text-sm text-[var(--gray-600)]">Final Validity</p>
                     <p className="font-medium">
-                      {formatISTTime(order?.finalValidity)}
+                      {formatISTTime(order?.final_validity)}
                     </p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {order.qrCode && !isQRExpired && !order.isVerified && (
+            {order.qr_code && !isQRExpired && !order.is_verified && (
               <div className="card">
                 <div className="p-6">
                   <div className="flex items-center mb-4">
@@ -341,7 +341,7 @@ const OrderDetailsPage: React.FC = () => {
                     <h2 className="text-xl font-semibold">Verification QR</h2>
                   </div>
                   <div className="bg-white p-4 rounded-lg flex justify-center">
-                    <QRCode value={order.qrCode} size={200} />
+                    <QRCode value={order.qr_code} size={200} />
                   </div>
                   <p className="text-sm text-[var(--gray-600)] mt-4 text-center">
                     Show this QR code to the shop staff to verify your purchase
@@ -350,11 +350,11 @@ const OrderDetailsPage: React.FC = () => {
               </div>
             )}
 
-            {isQRExpired && !order.isVerified && (
+            {isQRExpired && !order.is_verified && (
               <div className="card bg-[var(--error)] bg-opacity-10">
                 <div className="p-6">
                   <p className="text-black text-center font-medium">
-                    QR code has expired. You can still use your balance until {parseLocalDateTime(order.finalValidity).toLocaleString()}
+                    QR code has expired. You can still use your balance until {parseLocalDateTime(order.final_validity)?.toLocaleString() || 'Not Set'}
                   </p>
                 </div>
               </div>

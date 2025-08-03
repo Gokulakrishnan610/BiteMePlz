@@ -7,6 +7,23 @@ const handleSupabaseError = (error, operation) => {
   throw new Error(`Database ${operation} failed: ${error.message}`);
 };
 
+// Helper function to retry database operations
+const retryOperation = async (operation, maxRetries = 3, delay = 1000) => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, delay * attempt));
+      console.log(`Retrying database operation (attempt ${attempt + 1}/${maxRetries})`);
+    }
+  }
+};
+
 // Helper function to convert Supabase data to match Mongoose format
 const formatResponse = (data, includeTimestamps = true) => {
   if (!data) return null;
@@ -162,8 +179,8 @@ export const UserService = {
   }
 };
 
-// Shop Service
-export const ShopService = {
+// shop Service
+export const shopService = {
   // Create a new shop
   async create(shopData) {
     try {
@@ -407,12 +424,12 @@ export const OrderService = {
   },
 
   // Find order by order ID
-  async findByOrderId(orderId) {
+  async findByorder_id(order_id) {
     try {
       const { data, error } = await supabase
         .from('orders')
         .select('*')
-        .eq('order_id', orderId)
+        .eq('order_id', order_id)
         .single();
       
       if (error) throw error;
@@ -424,7 +441,7 @@ export const OrderService = {
 
   // Find all orders
   async find(filter = {}) {
-    try {
+    return retryOperation(async () => {
       let query = supabase.from('orders').select('*');
       
       // Apply filters
@@ -435,10 +452,8 @@ export const OrderService = {
       const { data, error } = await query;
       
       if (error) throw error;
-      return data.map(item => formatResponse(item));
-    } catch (error) {
-      handleSupabaseError(error, 'find orders');
-    }
+      return data ? data.map(item => formatResponse(item)) : [];
+    });
   },
 
   // Update order
@@ -474,19 +489,19 @@ export const OrderService = {
   },
 
   // Generate order ID (static method equivalent)
-  async generateOrderId(shopName) {
+  async generateorder_id(shopName) {
     const date = new Date();
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     
-    const baseOrderId = `${shopName.substring(0, 3).toUpperCase()}${day}${month}${year}`;
+    const baseorder_id = `${shopName.substring(0, 3).toUpperCase()}${day}${month}${year}`;
     
     // Find the last order with this base ID
     const { data: lastOrder } = await supabase
       .from('orders')
       .select('order_id')
-      .ilike('order_id', `${baseOrderId}%`)
+      .ilike('order_id', `${baseorder_id}%`)
       .order('order_id', { ascending: false })
       .limit(1)
       .single();
@@ -498,7 +513,7 @@ export const OrderService = {
     }
 
     const sequenceStr = String(sequence).padStart(3, '0');
-    return `${baseOrderId}${sequenceStr}`;
+    return `${baseorder_id}${sequenceStr}`;
   }
 };
 
@@ -575,7 +590,12 @@ export const TransactionService = {
   // Get transactions with pagination and filtering
   async getTransactions(filter = {}, options = {}) {
     try {
-      let query = supabase.from('transactions').select('*');
+      let query = supabase.from('transactions')
+        .select(`
+          *,
+          user:users(name, email, roll_no),
+          order:orders(id, total_price)
+        `);
       
       // Apply filters
       Object.keys(filter).forEach(key => {
@@ -607,7 +627,24 @@ export const TransactionService = {
       const { data, error } = await query;
       
       if (error) throw error;
-      return data.map(item => formatResponse(item));
+      return data.map(item => {
+        const formatted = formatResponse(item);
+        // Transform the joined data to match frontend expectations
+        if (formatted.user) {
+          formatted.user = {
+            name: formatted.user.name,
+            email: formatted.user.email,
+            rollNo: formatted.user.roll_no
+          };
+        }
+        if (formatted.order) {
+          formatted.order = {
+            order_id: formatted.order.id,
+            totalPrice: formatted.order.total_price
+          };
+        }
+        return formatted;
+      });
     } catch (error) {
       handleSupabaseError(error, 'get transactions');
     }
@@ -726,8 +763,8 @@ export const TransactionService = {
   }
 };
 
-// Shop Log Service
-export const ShopLogService = {
+// shop Log Service
+export const shopLogService = {
   // Create a new shop log
   async create(logData) {
     try {

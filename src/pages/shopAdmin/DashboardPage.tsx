@@ -59,7 +59,7 @@ interface Analytics {
   }>;
 }
 
-interface Shop {
+interface shop {
   id: string;
   _id?: string;
   name: string;
@@ -71,10 +71,10 @@ interface Shop {
 const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
-  const [shop, setShop] = useState<Shop | null>(null);
+  const [shop, setshop] = useState<shop | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [finalValidity, setFinalValidity] = useState('17:00');
+  const [final_validity, setfinal_validity] = useState('17:00');
   const [updating, setUpdating] = useState(false);
   const [qrValidityMinutes, setQrValidityMinutes] = useState('20');
   const [updatingQR, setUpdatingQR] = useState(false);
@@ -98,19 +98,19 @@ const DashboardPage: React.FC = () => {
         ]);
         
         console.log('Analytics response:', analyticsRes.data);
-        console.log('Shop response:', shopRes.data);
+        console.log('shop response:', shopRes.data);
         
         setAnalytics(analyticsRes.data);
-        setShop(shopRes.data);
+        setshop(shopRes.data);
         
         // Handle final validity time
         if (shopRes.data.final_validity_time) {
           const d = new Date(shopRes.data.final_validity_time);
           // Convert to IST by adding 5.5 hours
           d.setHours(d.getHours() + 5.5);
-          setFinalValidity(d.toISOString().substring(11, 16));
+          setfinal_validity(d.toISOString().substring(11, 16));
         } else {
-          setFinalValidity('17:00');
+          setfinal_validity('17:00');
         }
         
         // Handle QR validity minutes
@@ -131,12 +131,12 @@ const DashboardPage: React.FC = () => {
     fetchData();
   }, [user]);
 
-  const handleToggleShop = async () => {
+  const handleToggleshop = async () => {
     if (!user?.shop) return;
     try {
       setClosing(true);
       const { data } = await api.post(`/shops/${user.shop}/toggle`);
-      setShop(data.shop);
+      setshop(data.shop);
       toast.success(data.message);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to toggle shop status');
@@ -145,14 +145,14 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  const updateFinalValidity = async () => {
+  const updatefinal_validity = async () => {
     try {
       if (!user?.shop) return;
       setUpdating(true);
       
       // Get current date
       const now = new Date();
-      const [hh, mm] = finalValidity.split(':');
+      const [hh, mm] = final_validity.split(':');
       
       // Create a new date for the validity time
       const validityDate = new Date();
@@ -168,7 +168,7 @@ const DashboardPage: React.FC = () => {
       });
       
       // Update local state with the new time
-      setFinalValidity(data.final_validity_time
+      setfinal_validity(data.final_validity_time
         ? new Date(data.final_validity_time).toLocaleTimeString('en-US', {
             hour12: false,
             hour: '2-digit',
@@ -176,7 +176,7 @@ const DashboardPage: React.FC = () => {
           })
         : '17:00');
       
-      setShop(data);
+      setshop(data);
       toast.success('Final validity time updated successfully');
     } catch (error) {
       toast.error('Failed to update final validity time');
@@ -198,7 +198,7 @@ const DashboardPage: React.FC = () => {
       const { data } = await api.put(`/shops/${user.shop}`, {
         qr_validity_minutes: minutes
       });
-      setShop(data);
+      setshop(data);
       setQrValidityMinutes(data.qr_validity_minutes.toString());
       toast.success('QR validity time updated successfully');
     } catch (error: any) {
@@ -272,12 +272,12 @@ const DashboardPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <input
                   type="time"
-                  value={finalValidity}
-                  onChange={(e) => setFinalValidity(e.target.value)}
+                  value={final_validity}
+                  onChange={(e) => setfinal_validity(e.target.value)}
                   className="form-control text-sm py-1 px-2 min-w-[100px]"
                 />
                 <button
-                  onClick={updateFinalValidity}
+                  onClick={updatefinal_validity}
                   disabled={updating}
                   className="btn-primary py-1 px-3 text-sm whitespace-nowrap"
                 >
@@ -312,9 +312,9 @@ const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Shop Toggle */}
+          {/* shop Toggle */}
           <button
-            onClick={handleToggleShop}
+            onClick={handleToggleshop}
             disabled={closing}
             className={`card p-4 flex items-center gap-3 transition-all duration-200 hover:scale-105 ${
               shop?.is_open 
@@ -324,7 +324,7 @@ const DashboardPage: React.FC = () => {
           >
             <Power size={20} />
             <span className="font-medium">
-              {closing ? (shop?.is_open ? 'Closing...' : 'Opening...') : (shop?.is_open ? 'Close Shop' : 'Open Shop')}
+              {closing ? (shop?.is_open ? 'Closing...' : 'Opening...') : (shop?.is_open ? 'Close shop' : 'Open shop')}
             </span>
           </button>
         </div>

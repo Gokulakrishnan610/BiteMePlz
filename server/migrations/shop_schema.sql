@@ -1,4 +1,4 @@
--- Migration Script for Shops Table based on the Mongoose Shop Model
+-- Migration Script for shops Table based on the Mongoose shop Model
 
 CREATE TABLE IF NOT EXISTS shops (
   id SERIAL PRIMARY KEY,

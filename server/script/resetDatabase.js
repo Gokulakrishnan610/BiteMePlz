@@ -86,24 +86,24 @@ const resetDatabase = async () => {
 
     // 3. Check if shop admin user already exists
     console.log('🏪 Checking for existing shop admin user...');
-    const { data: existingShopAdmin } = await supabase
+    const { data: existingshopAdmin } = await supabase
       .from('users')
       .select('*')
       .eq('email', 'shopadmin@example.com')
       .single();
 
-    if (existingShopAdmin) {
-      console.log('✅ Shop admin user already exists, updating password...');
+    if (existingshopAdmin) {
+      console.log('✅ shop admin user already exists, updating password...');
       const shopAdminPassword = await bcrypt.hash('shopadmin123', 10);
       await supabase.from('users').update({ password: shopAdminPassword }).eq('email', 'shopadmin@example.com');
-      console.log('✅ Shop admin password updated');
+      console.log('✅ shop admin password updated');
     } else {
       console.log('🏪 Creating shop admin user...');
       const shopAdminPassword = await bcrypt.hash('shopadmin123', 10);
       const shopAdminUser = await supabase.from('users').insert([{
-        name: 'Shop Admin',
+        name: 'shop Admin',
         email: 'shopadmin@example.com',
-        roll_no: 'SHOPADMIN001',
+        roll_no: 'shopADMIN001',
         password: shopAdminPassword,
         role: 'shopAdmin',
         is_verified: true,
@@ -113,7 +113,7 @@ const resetDatabase = async () => {
       if (shopAdminUser.error) {
         console.error('❌ Error creating shop admin:', shopAdminUser.error);
       } else {
-        console.log('✅ Shop admin user created:', shopAdminUser.data.email);
+        console.log('✅ shop admin user created:', shopAdminUser.data.email);
       }
     }
 
@@ -125,20 +125,20 @@ const resetDatabase = async () => {
       .single();
 
     if (!shopAdminUser) {
-      console.error('❌ Shop admin user not found, cannot create shop');
+      console.error('❌ shop admin user not found, cannot create shop');
       return;
     }
 
     // 5. Check if shop already exists
     console.log('🏪 Checking for existing shop...');
-    const { data: existingShop } = await supabase
+    const { data: existingshop } = await supabase
       .from('shops')
       .select('*')
       .eq('shop_admin', shopAdminUser.id)
       .single();
 
-    if (existingShop) {
-      console.log('✅ Shop already exists for shop admin');
+    if (existingshop) {
+      console.log('✅ shop already exists for shop admin');
     } else {
       console.log('🏪 Creating shop...');
       const tomorrow = new Date();
@@ -146,7 +146,7 @@ const resetDatabase = async () => {
       tomorrow.setHours(23, 59, 0, 0);
 
       const shop = await supabase.from('shops').insert([{
-        name: 'Test Shop',
+        name: 'Test shop',
         description: 'A test shop for demonstration',
         location: 'Test Location',
         image: '/uploads/default-shop.jpg',
@@ -161,13 +161,13 @@ const resetDatabase = async () => {
       if (shop.error) {
         console.error('❌ Error creating shop:', shop.error);
       } else {
-        console.log('✅ Shop created:', shop.data.name);
+        console.log('✅ shop created:', shop.data.name);
       }
 
       // 6. Update shop admin with shop reference
       if (shop.data) {
         await supabase.from('users').update({ shop: shop.data.id }).eq('id', shopAdminUser.id);
-        console.log('✅ Shop admin updated with shop reference');
+        console.log('✅ shop admin updated with shop reference');
       }
     }
 
@@ -283,7 +283,7 @@ const resetDatabase = async () => {
     console.log('\n🎉 Database reset completed successfully!');
     console.log('\n📋 Login Credentials:');
     console.log('👑 Admin: admin@example.com / admin123');
-    console.log('🏪 Shop Admin: shopadmin@example.com / shopadmin123');
+    console.log('🏪 shop Admin: shopadmin@example.com / shopadmin123');
     console.log('👨‍🎓 Students:');
     console.log('   - john@student.com / student123');
     console.log('   - jane@student.com / student456');

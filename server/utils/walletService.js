@@ -134,7 +134,7 @@ class WalletService {
         'debit', 
         'Order payment', 
         {
-          orderId: orderData.orderId,
+          order_id: orderData.order_id,
           shop_id: orderData.shop_id,
           shopName: orderData.shopName,
           order_items: orderData.order_items
@@ -144,7 +144,7 @@ class WalletService {
       return {
         ...result,
         paymentMethod: 'balance',
-        orderId: orderData.orderId
+        order_id: orderData.order_id
       };
     } catch (error) {
       console.error('Error processing wallet payment:', error);
@@ -167,7 +167,7 @@ class WalletService {
         'credit', 
         'Order refund', 
         {
-          orderId: refundData.orderId,
+          order_id: refundData.order_id,
           shop_id: refundData.shop_id,
           refundReason: refundData.reason || 'Order cancelled/expired',
           originalAmount: refundData.originalAmount

@@ -107,7 +107,7 @@ const ProductPage: React.FC = () => {
         className="flex items-center text-[var(--primary)] hover:underline mb-6"
       >
         <ArrowLeft size={20} className="mr-2" />
-        Back to Shop
+        Back to shop
       </button>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

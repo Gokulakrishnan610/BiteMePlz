@@ -36,12 +36,12 @@ const CartPage: React.FC = () => {
   const navigate = useNavigate();
   const [paymentInitiated, setPaymentInitiated] = useState(false);
   const [timeLeft, setTimeLeft] = useState(180); // 3 minutes in seconds
-  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
+  const [currentorder_id, setCurrentorder_id] = useState<string | null>(null);
   const [timer, setTimer] = useState<NodeJS.Timeout | null>(null);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [remainingBalance, setRemainingBalance] = useState(0);
-  const [shopInfo, setShopInfo] = useState<any>(null);
+  const [shopInfo, setshopInfo] = useState<any>(null);
 
   useEffect(() => {
     // Fetch user's remaining balance and shop info
@@ -52,7 +52,7 @@ const CartPage: React.FC = () => {
           shop_id ? axios.get(`/api/shops/${shop_id}`) : Promise.resolve({ data: null })
         ]);
         setRemainingBalance(balanceRes.data.balance || 0);
-        setShopInfo(shopRes.data);
+        setshopInfo(shopRes.data);
       } catch (error) {
         console.error('Failed to fetch data:', error);
       }
@@ -70,21 +70,21 @@ const CartPage: React.FC = () => {
   }, [user, timer, shop_id]);
 
   // Check if shop is still accepting orders
-  const isShopAcceptingOrders = () => {
+  const isshopAcceptingOrders = () => {
     if (!shopInfo) return false;
     
     const now = new Date();
-    const finalValidity = new Date(shopInfo.final_validity_time);
+    const final_validity = new Date(shopInfo.final_validity_time);
     
-    return now < finalValidity && shopInfo.is_open && shopInfo.is_active;
+    return now < final_validity && shopInfo.is_open && shopInfo.is_active;
   };
 
   const getTimeUntilClosure = () => {
     if (!shopInfo) return null;
     
     const now = new Date();
-    const finalValidity = new Date(shopInfo.final_validity_time);
-    const timeDiff = finalValidity.getTime() - now.getTime();
+    const final_validity = new Date(shopInfo.final_validity_time);
+    const timeDiff = final_validity.getTime() - now.getTime();
     
     if (timeDiff <= 0) return null;
     
@@ -104,7 +104,7 @@ const CartPage: React.FC = () => {
         if (prev <= 1) {
           clearInterval(newTimer);
           setPaymentInitiated(false);
-          setCurrentOrderId(null);
+          setCurrentorder_id(null);
           toast.error('Payment time expired');
           navigate('/');
           return 0;
@@ -121,8 +121,8 @@ const CartPage: React.FC = () => {
       return;
     }
 
-    if (!isShopAcceptingOrders()) {
-      toast.error('Shop is no longer accepting orders');
+    if (!isshopAcceptingOrders()) {
+      toast.error('shop is no longer accepting orders');
       return;
     }
 
@@ -146,8 +146,8 @@ const CartPage: React.FC = () => {
   };
 
   const initiateRazorpayPayment = async () => {
-    if (!isShopAcceptingOrders()) {
-      toast.error('Shop is no longer accepting orders');
+    if (!isshopAcceptingOrders()) {
+      toast.error('shop is no longer accepting orders');
       return;
     }
 
@@ -161,7 +161,7 @@ const CartPage: React.FC = () => {
         paymentMethod: 'razorpay'
       });
 
-      setCurrentOrderId(orderResponse.data.order._id);
+      setCurrentorder_id(orderResponse.data.order._id);
       startPaymentTimer();
 
       const options = {
@@ -170,7 +170,7 @@ const CartPage: React.FC = () => {
         currency: 'INR',
         name: 'Campus Kiosk',
         description: 'Payment for your order',
-        order_id: orderResponse.data.razorpayOrderId,
+        order_id: orderResponse.data.razorpayorder_id,
         handler: async (response: any) => {
           try {
             if (timer) {
@@ -190,7 +190,7 @@ const CartPage: React.FC = () => {
             toast.error(error.response?.data?.message || 'Payment verification failed');
           } finally {
             setPaymentInitiated(false);
-            setCurrentOrderId(null);
+            setCurrentorder_id(null);
           }
         },
         modal: {
@@ -200,14 +200,14 @@ const CartPage: React.FC = () => {
             }
             setPaymentInitiated(false);
             
-            if (currentOrderId) {
+            if (currentorder_id) {
               try {
-                await axios.put(`/api/orders/${currentOrderId}/cancel`);
+                await axios.put(`/api/orders/${currentorder_id}/cancel`);
                 toast.error('Payment cancelled');
               } catch (error) {
                 console.error('Error cancelling order:', error);
               }
-              setCurrentOrderId(null);
+              setCurrentorder_id(null);
             }
           }
         },
@@ -225,7 +225,7 @@ const CartPage: React.FC = () => {
       if (!loaded) {
         toast.error('Failed to load Razorpay SDK. Please try again.');
         setPaymentInitiated(false);
-        setCurrentOrderId(null);
+        setCurrentorder_id(null);
         return;
       }
 
@@ -236,12 +236,12 @@ const CartPage: React.FC = () => {
       setTimeout(() => {
         if (razorpay && typeof razorpay.close === 'function') {
           razorpay.close();
-          if (currentOrderId) {
-            axios.put(`/api/orders/${currentOrderId}/cancel`)
+          if (currentorder_id) {
+            axios.put(`/api/orders/${currentorder_id}/cancel`)
               .then(() => {
                 toast.error('Payment time expired');
                 setPaymentInitiated(false);
-                setCurrentOrderId(null);
+                setCurrentorder_id(null);
               })
               .catch(error => {
                 console.error('Error cancelling order:', error);
@@ -252,14 +252,14 @@ const CartPage: React.FC = () => {
 
     } catch (error: any) {
       setPaymentInitiated(false);
-      setCurrentOrderId(null);
+      setCurrentorder_id(null);
       toast.error(error.response?.data?.message || error.message || 'Payment failed');
     }
   };
 
   const handleCheckout = () => {
-    if (!isShopAcceptingOrders()) {
-      toast.error('Shop is no longer accepting orders for today');
+    if (!isshopAcceptingOrders()) {
+      toast.error('shop is no longer accepting orders for today');
       return;
     }
     setShowDisclaimer(true);
@@ -277,7 +277,7 @@ const CartPage: React.FC = () => {
             Add some items to your cart to continue shopping.
           </p>
           <Link to="/" className="btn-primary">
-            Browse Shops
+            Browse shops
           </Link>
         </div>
       </div>
@@ -285,20 +285,20 @@ const CartPage: React.FC = () => {
   }
 
   const timeUntilClosure = getTimeUntilClosure();
-  const shopClosed = !isShopAcceptingOrders();
+  const shopClosed = !isshopAcceptingOrders();
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Shopping Cart</h1>
+      <h1 className="text-3xl font-bold mb-8">shopping Cart</h1>
 
-      {/* Shop Status Warning */}
+      {/* shop Status Warning */}
       {shopInfo && (
         <div className="mb-6">
           {shopClosed ? (
             <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 flex items-center backdrop-blur-sm">
               <AlertCircle className="text-red-400 mr-3" size={24} />
               <div>
-                <p className="text-red-400 font-medium">Shop is closed for orders</p>
+                <p className="text-red-400 font-medium">shop is closed for orders</p>
                 <p className="text-[var(--secondary-text)] text-sm">Orders are no longer being accepted for today.</p>
               </div>
             </div>
@@ -307,7 +307,7 @@ const CartPage: React.FC = () => {
               <Clock className="text-yellow-400 mr-3" size={24} />
               <div>
                 <p className="text-yellow-400 font-medium">
-                  Shop closes in {timeUntilClosure.hours}h {timeUntilClosure.minutes}m
+                  shop closes in {timeUntilClosure.hours}h {timeUntilClosure.minutes}m
                 </p>
                 <p className="text-[var(--secondary-text)] text-sm">Complete your order before the shop closes.</p>
               </div>
@@ -398,7 +398,7 @@ const CartPage: React.FC = () => {
               disabled={paymentInitiated || shopClosed}
               className={`w-full btn-primary ${shopClosed ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {paymentInitiated ? 'Processing...' : shopClosed ? 'Shop Closed' : 'Proceed to Checkout'}
+              {paymentInitiated ? 'Processing...' : shopClosed ? 'shop Closed' : 'Proceed to Checkout'}
             </button>
           </div>
         </div>
@@ -492,7 +492,7 @@ const CartPage: React.FC = () => {
                   <li>Payment must be completed within 3 minutes</li>
                   {timeUntilClosure && (
                     <li className="text-yellow-400 font-medium">
-                      Shop closes in {timeUntilClosure.hours}h {timeUntilClosure.minutes}m
+                      shop closes in {timeUntilClosure.hours}h {timeUntilClosure.minutes}m
                     </li>
                   )}
                 </ul>

@@ -40,7 +40,7 @@ ChartJS.register(
   Legend
 );
 
-interface Shop {
+interface shop {
   _id: string;
   name: string;
   description: string;
@@ -96,7 +96,7 @@ interface Transaction {
     rollNo: string;
   };
   order: {
-    orderId: string;
+    order_id: string;
     totalPrice: number;
   };
   metadata: any;
@@ -116,9 +116,9 @@ interface TransactionStats {
   }>;
 }
 
-const ShopDetailsPage: React.FC = () => {
+const shopDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [shop, setShop] = useState<Shop | null>(null);
+  const [shop, setshop] = useState<shop | null>(null);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [transactionStats, setTransactionStats] = useState<TransactionStats | null>(null);
@@ -136,7 +136,7 @@ const ShopDetailsPage: React.FC = () => {
 
   useEffect(() => {
     if (id) {
-      fetchShopData();
+      fetchshopData();
     }
   }, [id]);
 
@@ -146,7 +146,7 @@ const ShopDetailsPage: React.FC = () => {
     }
   }, [id, activeTab, transactionFilters]);
 
-  const fetchShopData = async () => {
+  const fetchshopData = async () => {
     try {
       const [shopRes, analyticsRes, transactionStatsRes] = await Promise.all([
         axios.get(`/api/shops/${id}`),
@@ -154,7 +154,7 @@ const ShopDetailsPage: React.FC = () => {
         axios.get(`/api/transactions/shop/${id}/stats`)
       ]);
       
-      setShop(shopRes.data);
+      setshop(shopRes.data);
       setAnalytics(analyticsRes.data);
       setTransactionStats(transactionStatsRes.data);
       setLoading(false);
@@ -207,7 +207,7 @@ const ShopDetailsPage: React.FC = () => {
           t.status,
           t.paymentMethod || '',
           t.user.name,
-          t.order?.orderId || '',
+          t.order?.order_id || '',
           `"${t.description}"`
         ].join(','))
       ].join('\n');
@@ -239,7 +239,7 @@ const ShopDetailsPage: React.FC = () => {
           <AlertCircle className="mx-auto text-[var(--error)] mb-4" size={48} />
           <p className="text-[var(--error)] mb-4">{error}</p>
           <Link to="/admin/shops" className="btn-primary">
-            Back to Shops
+            Back to shops
           </Link>
         </div>
       </div>
@@ -294,7 +294,7 @@ const ShopDetailsPage: React.FC = () => {
             className="flex items-center text-[var(--primary)] hover:underline mr-4"
           >
             <ArrowLeft size={20} className="mr-2" />
-            Back to Shops
+            Back to shops
           </Link>
           <div>
             <h1 className="text-2xl font-bold">{shop.name}</h1>
@@ -499,7 +499,7 @@ const ShopDetailsPage: React.FC = () => {
                           <p className="text-sm text-[var(--gray-500)]">{transaction.user.rollNo}</p>
                         </div>
                       </td>
-                      <td>{transaction.order?.orderId || '-'}</td>
+                      <td>{transaction.order?.order_id || '-'}</td>
                       <td>
                         <button
                           onClick={() => handleTransactionClick(transaction._id)}
@@ -608,7 +608,7 @@ const ShopDetailsPage: React.FC = () => {
                 {selectedTransaction.order && (
                   <div>
                     <label className="block text-sm font-medium text-[var(--gray-700)]">Order</label>
-                    <p className="mt-1">{selectedTransaction.order.orderId} - ₹{selectedTransaction.order.totalPrice}</p>
+                    <p className="mt-1">{selectedTransaction.order.order_id} - ₹{selectedTransaction.order.totalPrice}</p>
                   </div>
                 )}
 
@@ -634,4 +634,4 @@ const ShopDetailsPage: React.FC = () => {
   );
 };
 
-export default ShopDetailsPage;
+export default shopDetailsPage;

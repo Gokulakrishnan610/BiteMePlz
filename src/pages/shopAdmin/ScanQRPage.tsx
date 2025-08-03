@@ -16,7 +16,7 @@ interface VerifiedOrder {
     quantity: number;
     price: number;
   }>;
-  totalPrice: number;
+  total_price: number;
   createdAt: string;
 }
 
@@ -58,7 +58,7 @@ const ScanQRPage: React.FC = () => {
         }
         
         const parsedData = JSON.parse(qrData);
-        const { data } = await axios.put(`/api/orders/${parsedData.orderId}/verify`, { qrData });
+        const { data } = await axios.put(`/api/orders/${parsedData.order_id}/verify`, { qrData });
         setVerifiedOrder(data);
         toast.success('Order verified successfully');
       } else {
@@ -67,9 +67,9 @@ const ScanQRPage: React.FC = () => {
         }
         
         const { data: orderData } = await axios.get(`/api/orders/payment/${paymentId}`);
-        const { data } = await axios.put(`/api/orders/${orderData.orderId}/verify`, {
+        const { data } = await axios.put(`/api/orders/${orderData.order_id}/verify`, {
           qrData: JSON.stringify({
-            orderId: orderData.orderId,
+            order_id: orderData.order_id,
             paymentId: orderData.paymentId,
             signature: orderData.signature
           })
@@ -163,7 +163,7 @@ const ScanQRPage: React.FC = () => {
             `).join('')}
           </div>
           <div class="total">
-            <p>Total Amount: ₹${verifiedOrder.totalPrice}</p>
+            <p>Total Amount: ₹${verifiedOrder.total_price}</p>
           </div>
           <div class="footer">
             <p>Thank you for your purchase!</p>
@@ -363,7 +363,7 @@ const ScanQRPage: React.FC = () => {
                   </div>
                   <div className="border-t mt-2 pt-2 flex justify-between font-semibold">
                     <span>Total</span>
-                    <span>₹{verifiedOrder.totalPrice}</span>
+                    <span>₹{verifiedOrder.total_price}</span>
                   </div>
                 </div>
               </div>

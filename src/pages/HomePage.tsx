@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { Store, MapPin, Clock, Star, Zap, ShoppingBag, Users, TrendingUp } from 'lucide-react';
 
-interface Shop {
+interface shop {
   _id: string;
   name: string;
   description: string;
@@ -14,15 +14,15 @@ interface Shop {
 }
 
 const HomePage: React.FC = () => {
-  const [shops, setShops] = useState<Shop[]>([]);
+  const [shops, setshops] = useState<shop[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchShops = async () => {
+    const fetchshops = async () => {
       try {
         const { data } = await axios.get('/api/shops');
-        setShops(Array.isArray(data) ? data : []);
+        setshops(Array.isArray(data) ? data : []);
         setLoading(false);
       } catch (err) {
         setError('Failed to load shops');
@@ -30,15 +30,15 @@ const HomePage: React.FC = () => {
       }
     };
 
-    fetchShops();
+    fetchshops();
   }, []);
 
   const getTimeUntilClosure = (final_validity_time: string) => {
     if (!final_validity_time) return null;
     
     const now = new Date();
-    const finalValidity = new Date(final_validity_time);
-    const timeDiff = finalValidity.getTime() - now.getTime();
+    const final_validity = new Date(final_validity_time);
+    const timeDiff = final_validity.getTime() - now.getTime();
     
     if (timeDiff <= 0) return null;
     
@@ -101,7 +101,7 @@ const HomePage: React.FC = () => {
             <div className="flex flex-wrap justify-center gap-4 mb-12">
               <div className="flex items-center space-x-2 bg-[var(--card-bg)] px-6 py-3 rounded-full border border-[var(--border-color)]">
                 <ShoppingBag className="text-[var(--accent-purple)]" size={20} />
-                <span className="text-[var(--secondary-text)]">Easy Shopping</span>
+                <span className="text-[var(--secondary-text)]">Easy shopping</span>
               </div>
               <div className="flex items-center space-x-2 bg-[var(--card-bg)] px-6 py-3 rounded-full border border-[var(--border-color)]">
                 <Users className="text-[var(--accent-violet)]" size={20} />
@@ -116,7 +116,7 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Shops Section */}
+      {/* shops Section */}
       <section className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text">
@@ -132,7 +132,7 @@ const HomePage: React.FC = () => {
             <div className="card p-12 max-w-md mx-auto">
               <Store size={64} className="text-[var(--muted-text)] mx-auto mb-6" />
               <h3 className="text-2xl font-semibold text-[var(--secondary-text)] mb-4">
-                No Shops Available
+                No shops Available
               </h3>
               <p className="text-[var(--muted-text)]">
                 Please check back later for available shops.
@@ -255,9 +255,9 @@ const HomePage: React.FC = () => {
           
           <div className="card p-8 text-center hover:scale-105 transition-transform duration-300">
             <div className="w-16 h-16 bg-gradient-to-r from-[var(--accent-violet)] to-[var(--accent-purple)] rounded-full flex items-center justify-center mx-auto mb-6">
-              <ShoppingBag className="text-white" size={32} />
+                              <ShoppingBag className="text-white" size={32} />
             </div>
-            <h3 className="text-xl font-bold mb-4 text-[var(--primary-text)]">Easy Shopping</h3>
+            <h3 className="text-xl font-bold mb-4 text-[var(--primary-text)]">Easy shopping</h3>
             <p className="text-[var(--secondary-text)]">Browse, select, and purchase with just a few clicks</p>
           </div>
           

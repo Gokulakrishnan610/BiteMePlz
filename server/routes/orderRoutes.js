@@ -5,7 +5,7 @@ import {
   verifyOrderQR,
   getOrderById,
   getMyOrders,
-  getShopOrders,
+  getshopOrders,
   getOrderByPaymentId,
   continuePayment,
   cancelOrder,
@@ -18,9 +18,9 @@ const router = express.Router();
 
 router.route('/').post(protect, createOrder);
 router.route('/myorders').get(protect, getMyOrders);
-router.route('/shop/:shop_id').get(protect, getShopOrders);
+router.route('/shop/:shop_id').get(protect, getshopOrders);
 router.route('/payment/:paymentId').get(protect, shopAdmin, getOrderByPaymentId);
-router.route('/check-expiry/:orderId').get(protect, checkExpiryAndRefund);
+router.route('/check-expiry/:order_id').get(protect, checkExpiryAndRefund);
 router.route('/:id')
   .get(protect, getOrderById)
   .delete(protect, deleteOrder);

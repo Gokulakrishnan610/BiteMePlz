@@ -7,11 +7,11 @@ import Loader from '../../components/Loader';
 
 interface Order {
   _id: string;
-  orderId: string;
+  order_id: string;
   createdAt: string;
-  totalPrice: number;
-  isPaid: boolean;
-  isVerified: boolean;
+  total_price: number;
+  is_paid: boolean;
+  is_verified: boolean;
   status: 'pending' | 'completed' | 'expired';
   order_items: Array<{
     name: string;
@@ -42,10 +42,10 @@ const OrdersPage: React.FC = () => {
     }
   };
 
-  const handlePayment = async (orderId: string, amount: number) => {
+  const handlePayment = async (order_id: string, amount: number) => {
     try {
-      setProcessingOrder(orderId);
-      const { data } = await axios.post(`/api/orders/${orderId}/pay`);
+      setProcessingOrder(order_id);
+      const { data } = await axios.post(`/api/orders/${order_id}/pay`);
       
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID||"rzp_test_RVKFS8WX756Anx",
@@ -53,10 +53,10 @@ const OrdersPage: React.FC = () => {
         currency: 'INR',
         name: 'Campus Kiosk',
         description: 'Payment for your order',
-        order_id: data.razorpayOrderId,
+        order_id: data.razorpayorder_id,
         handler: async (response: any) => {
           try {
-            await axios.put(`/api/orders/${orderId}/pay`, {
+            await axios.put(`/api/orders/${order_id}/pay`, {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_signature: response.razorpay_signature,
@@ -83,10 +83,10 @@ const OrdersPage: React.FC = () => {
     }
   };
 
-  const handleCancel = async (orderId: string) => {
+  const handleCancel = async (order_id: string) => {
     try {
-      setProcessingOrder(orderId);
-      await axios.put(`/api/orders/${orderId}/cancel`);
+      setProcessingOrder(order_id);
+      await axios.put(`/api/orders/${order_id}/cancel`);
       await fetchOrders();
       toast.success('Order cancelled successfully');
     } catch (error: any) {
@@ -96,15 +96,15 @@ const OrdersPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (orderId: string) => {
+  const handleDelete = async (order_id: string) => {
     if (!window.confirm('Are you sure you want to delete this order?')) {
       return;
     }
 
     try {
-      await axios.delete(`/api/orders/${orderId}`);
+      await axios.delete(`/api/orders/${order_id}`);
       toast.success('Order deleted successfully');
-      setOrders(orders.filter(order => order._id !== orderId));
+      setOrders(orders.filter(order => order._id !== order_id));
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to delete order');
     }
@@ -143,7 +143,7 @@ const OrdersPage: React.FC = () => {
             You haven't placed any orders yet.
           </p>
           <Link to="/" className="btn-primary">
-            Start Shopping
+            Start shopping
           </Link>
         </div>
       </div>
@@ -164,14 +164,14 @@ const OrdersPage: React.FC = () => {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <p className="text-sm text-[var(--gray-500)]">
-                    Order #{order.orderId}
+                    Order #{order.order_id}
                   </p>
                   <p className="text-sm text-[var(--gray-500)]">
                     {new Date(order.createdAt).toLocaleDateString()}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold">₹{order.totalPrice}</p>
+                  <p className="font-semibold">₹{order.total_price}</p>
                   <div className="flex gap-2 mt-1">
                     <span className={`badge ${
                       order.status === 'completed' ? 'badge-success' : 
@@ -180,7 +180,7 @@ const OrdersPage: React.FC = () => {
                     }`}>
                       {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                     </span>
-                    {order.isVerified && (
+                    {order.is_verified && (
                       <span className="badge badge-success">Verified</span>
                     )}
                   </div>
@@ -209,7 +209,7 @@ const OrdersPage: React.FC = () => {
                 {order.status === 'pending' && (
                   <>
                     <button
-                      onClick={() => handlePayment(order._id, order.totalPrice)}
+                      onClick={() => handlePayment(order._id, order.total_price)}
                       disabled={processingOrder === order._id}
                       className="flex-1 btn-primary"
                     >
@@ -235,7 +235,7 @@ const OrdersPage: React.FC = () => {
                   </>
                 )}
 
-                {order.status === 'completed' && !order.isVerified && (
+                {order.status === 'completed' && !order.is_verified && (
                   <Link
                     to={`/order/${order._id}`}
                     className="flex-1 btn-primary block text-center"

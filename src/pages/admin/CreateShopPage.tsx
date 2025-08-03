@@ -51,12 +51,12 @@ const CreateShopPage: React.FC = () => {
       // Create final validity time for today
       const now = new Date();
       const [hours, minutes] = formData.final_validity_time.split(':');
-      const finalValidityDate = new Date();
-      finalValidityDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      const final_validityDate = new Date();
+      final_validityDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
       
       // If the time is in the past, set it for tomorrow
-      if (finalValidityDate <= now) {
-        finalValidityDate.setDate(finalValidityDate.getDate() + 1);
+      if (final_validityDate <= now) {
+        final_validityDate.setDate(final_validityDate.getDate() + 1);
       }
 
       const payload = {
@@ -67,7 +67,7 @@ const CreateShopPage: React.FC = () => {
         shopDescription: formData.shopDescription,
         shopLocation: formData.shopLocation,
         shopImage: formData.shopImage || undefined,
-        final_validity_time: finalValidityDate.toISOString(),
+        final_validity_time: final_validityDate.toISOString(),
         qrValidityMinutes: qrMinutes
       };
 
@@ -75,7 +75,7 @@ const CreateShopPage: React.FC = () => {
 
       const response = await axios.post('/api/users/shop-admin', payload);
       
-      toast.success('Shop created successfully');
+      toast.success('shop created successfully');
       navigate('/admin/shops');
     } catch (error: any) {
       console.log('Error details:', error.response?.data || error);
@@ -96,19 +96,19 @@ const CreateShopPage: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Create New Shop</h1>
+      <h1 className="text-2xl font-bold mb-6">Create New shop</h1>
 
       <div className="card">
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="space-y-4">
             <h2 className="text-xl font-semibold flex items-center">
               <Store size={24} className="mr-2 text-[var(--primary)]" />
-              Shop Details
+              shop Details
             </h2>
             
             <div>
               <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Shop Name *
+                shop Name *
               </label>
               <input
                 type="text"
@@ -153,7 +153,7 @@ const CreateShopPage: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
-                Shop Image
+                shop Image
               </label>
               <ImageUpload
                 onImageUpload={handleImageUpload}
@@ -179,7 +179,7 @@ const CreateShopPage: React.FC = () => {
                   required
                 />
                 <p className="text-sm text-[var(--gray-500)] mt-1">
-                  Shop closes for orders at this time
+                  shop closes for orders at this time
                 </p>
               </div>
 
@@ -207,7 +207,7 @@ const CreateShopPage: React.FC = () => {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold flex items-center">
               <Store size={24} className="mr-2 text-[var(--primary)]" />
-              Shop Admin Details
+              shop Admin Details
             </h2>
             
             <div>
@@ -279,7 +279,7 @@ const CreateShopPage: React.FC = () => {
                   Creating...
                 </span>
               ) : (
-                'Create Shop'
+                'Create shop'
               )}
             </button>
           </div>

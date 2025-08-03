@@ -70,7 +70,7 @@ const AdminLayout: React.FC = () => {
             </h3>
             <div className="space-y-2">
               <SidebarLink to="/admin" icon={BarChart3} active={is_active('/admin')} closeSidebar={closeSidebar} label="Dashboard" />
-              <SidebarLink to="/admin/shops" icon={Store} active={isPathActive('/admin/shops')} closeSidebar={closeSidebar} label="Shops" />
+              <SidebarLink to="/admin/shops" icon={Store} active={isPathActive('/admin/shops')} closeSidebar={closeSidebar} label="shops" />
               <SidebarLink to="/admin/users" icon={Users} active={is_active('/admin/users')} closeSidebar={closeSidebar} label="Users" />
             </div>
           </div>
@@ -93,7 +93,7 @@ const AdminLayout: React.FC = () => {
               System
             </h3>
             <div className="space-y-2">
-              <SidebarLink to="/admin/shop-logs" icon={FileText} active={is_active('/admin/shop-logs')} closeSidebar={closeSidebar} label="Shop Logs" />
+              <SidebarLink to="/admin/shop-logs" icon={FileText} active={is_active('/admin/shop-logs')} closeSidebar={closeSidebar} label="shop Logs" />
               {/* <SidebarLink to="/admin/student-analytics" icon={Activity} active={is_active('/admin/student-analytics')} closeSidebar={closeSidebar} label="Student Analytics" /> */}
             </div>
           </div>

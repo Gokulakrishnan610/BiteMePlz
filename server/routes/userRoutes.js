@@ -11,8 +11,8 @@ import {
   getUserProfile,
   getUsers,
   deleteUser,
-  createShopAdmin,
-  getShopAdmins,
+  createshopAdmin,
+  getshopAdmins,
   getUserBalance,
   updateUserBalance,
 } from '../controllers/userController.js';
@@ -66,8 +66,8 @@ router.post('/resend-reset-otp', resendResetOTP);
 
 // Protected routes
 router.route('/profile').get(protect, getUserProfile);
-router.route('/shop-admin').post(protect, admin, createShopAdmin);
-router.route('/shop-admins').get(protect, admin, getShopAdmins);
+router.route('/shop-admin').post(protect, admin, createshopAdmin);
+router.route('/shop-admins').get(protect, admin, getshopAdmins);
 router.route('/:id').delete(protect, admin, deleteUser);
 router.get('/', protect, admin, getUsers);
 router.get('/balance', protect, getUserBalance);

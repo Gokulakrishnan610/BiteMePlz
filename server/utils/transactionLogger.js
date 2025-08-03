@@ -12,6 +12,17 @@ export const logTransaction = async ({
   metadata = {}
 }) => {
   try {
+    // Validate required fields
+    if (!user) {
+      throw new Error('user_id is required for transaction logging');
+    }
+    if (!type) {
+      throw new Error('type is required for transaction logging');
+    }
+    if (!amount) {
+      throw new Error('amount is required for transaction logging');
+    }
+
     const transaction = await TransactionService.createTransaction({
       shop_id: shop,
       order_id: order,
@@ -32,7 +43,7 @@ export const logTransaction = async ({
   }
 };
 
-export const getShopTransactions = async (shop_id, options = {}) => {
+export const getshopTransactions = async (shop_id, options = {}) => {
   const {
     page = 1,
     limit = 50,
@@ -68,7 +79,7 @@ export const getShopTransactions = async (shop_id, options = {}) => {
   };
 };
 
-export const getShopTransactionStats = async (shop_id, period = '30d') => {
+export const getshopTransactionStats = async (shop_id, period = '30d') => {
   const now = new Date();
   let startDate;
 

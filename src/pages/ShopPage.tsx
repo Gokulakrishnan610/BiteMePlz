@@ -18,7 +18,7 @@ interface Product {
   is_available: boolean;
 }
 
-interface Shop {
+interface shop {
   _id: string;
   name: string;
   description: string;
@@ -33,7 +33,7 @@ const ShopPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [shop, setShop] = useState<Shop | null>(null);
+  const [shop, setshop] = useState<shop | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +42,7 @@ const ShopPage: React.FC = () => {
   const { addToCart } = useCart();
 
   useEffect(() => {
-    const fetchShopAndProducts = async () => {
+    const fetchshopAndProducts = async () => {
       try {
         const [shopResponse, productsResponse] = await Promise.all([
           axios.get(`/api/shops/${id}`),
@@ -52,7 +52,7 @@ const ShopPage: React.FC = () => {
             }
           })
         ]);
-        setShop(shopResponse.data);
+        setshop(shopResponse.data);
         // Get all products, not just available ones, but filter them properly
         const allProducts = productsResponse.data || [];
         setProducts(allProducts.filter((product: Product) => product.is_available));
@@ -64,11 +64,11 @@ const ShopPage: React.FC = () => {
     };
 
     if (id) {
-      fetchShopAndProducts();
+      fetchshopAndProducts();
     }
   }, [id]);
 
-  const isShopAcceptingOrders = () => {
+  const isshopAcceptingOrders = () => {
     if (!shop) return false;
     
     return shop.is_open;
@@ -79,8 +79,8 @@ const ShopPage: React.FC = () => {
     if (!shop) return null;
     
     const now = new Date();
-    const finalValidity = new Date(shop.final_validity_time);
-    const timeDiff = finalValidity.getTime() - now.getTime();
+    const final_validity = new Date(shop.final_validity_time);
+    const timeDiff = final_validity.getTime() - now.getTime();
 
     
     if (timeDiff <= 0) return null;
@@ -98,8 +98,8 @@ const ShopPage: React.FC = () => {
       return;
     }
 
-    if (!isShopAcceptingOrders()) {
-      toast.error('Shop is no longer accepting orders for today');
+    if (!isshopAcceptingOrders()) {
+      toast.error('shop is no longer accepting orders for today');
       return;
     }
 
@@ -178,16 +178,16 @@ const ShopPage: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-[var(--primary-bg)] via-[var(--secondary-bg)] to-[var(--primary-bg)] flex items-center justify-center">
         <div className="text-center card p-8 max-w-md">
           <AlertCircle className="mx-auto text-[var(--error)] mb-4" size={48} />
-          <p className="text-[var(--error)] mb-4 text-lg">{error || 'Shop not found'}</p>
+          <p className="text-[var(--error)] mb-4 text-lg">{error || 'shop not found'}</p>
           <Link to="/" className="btn-primary">
-            Back to Shops
+            Back to shops
           </Link>
         </div>
       </div>
     );
   }
 
-  const shopAcceptingOrders = isShopAcceptingOrders();
+  const shopAcceptingOrders = isshopAcceptingOrders();
   const timeUntilClosure = getTimeUntilClosure();
 
   return (
@@ -199,10 +199,10 @@ const ShopPage: React.FC = () => {
           className="inline-flex items-center text-[var(--secondary-text)] hover:text-[var(--accent-purple)] transition-colors duration-200 mb-8 group"
         >
           <ArrowLeft size={20} className="mr-2 group-hover:-translate-x-1 transition-transform" />
-          Back to Shops
+          Back to shops
         </Link>
 
-        {/* Shop Header */}
+        {/* shop Header */}
         <div className="card mb-8 overflow-hidden">
           <div className="relative">
             <div className="aspect-video md:aspect-[3/1] w-full overflow-hidden">
@@ -214,7 +214,7 @@ const ShopPage: React.FC = () => {
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
             </div>
             
-            {/* Shop Info Overlay */}
+            {/* shop Info Overlay */}
             <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
@@ -244,13 +244,13 @@ const ShopPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Shop Status Messages */}
+        {/* shop Status Messages */}
         {!shopAcceptingOrders ? (
           <div className="mb-8 card p-6">
             <div className="flex items-center">
               <AlertCircle className="text-red-400 mr-4 flex-shrink-0" size={32} />
               <div>
-                <p className="text-red-400 font-semibold text-lg mb-1">Shop is closed for orders</p>
+                <p className="text-red-400 font-semibold text-lg mb-1">shop is closed for orders</p>
                 <p className="text-[var(--secondary-text)]">Orders are no longer being accepted for today.</p>
               </div>
             </div>
@@ -261,7 +261,7 @@ const ShopPage: React.FC = () => {
               <Clock className="text-yellow-400 mr-4 flex-shrink-0" size={32} />
               <div>
                 <p className="text-yellow-400 font-semibold text-lg mb-1">
-                  Shop closes in {timeUntilClosure.hours}h {timeUntilClosure.minutes}m
+                  shop closes in {timeUntilClosure.hours}h {timeUntilClosure.minutes}m
                 </p>
                 <p className="text-[var(--secondary-text)]">Complete your order before the shop closes.</p>
               </div>
@@ -434,7 +434,7 @@ const ShopPage: React.FC = () => {
                       {product.stock === 0 
                         ? 'Out of Stock' 
                         : !shopAcceptingOrders 
-                        ? 'Shop Closed' 
+                        ? 'shop Closed' 
                         : 'Add to Cart'}
                     </span>
                   </button>
