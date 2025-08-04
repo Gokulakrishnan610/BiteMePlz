@@ -24,7 +24,9 @@ const UsersPage: React.FC = () => {
   const fetchUsers = async () => {
     try {
       const { data } = await api.get('/users');
-      setUsers(data);
+      // Handle paginated response
+      const usersData = data.results || data;
+      setUsers(usersData);
       setLoading(false);
     } catch (error) {
       toast.error('Failed to fetch users');

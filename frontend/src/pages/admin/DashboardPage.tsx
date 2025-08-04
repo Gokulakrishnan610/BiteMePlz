@@ -95,8 +95,9 @@ const DashboardPage: React.FC<AdminDashboardPageProps> = ({ setMaintenanceMode }
         fetchAllTransactions()
       ]);
 
-      const users = usersRes.data;
-      const shops = shopsRes.data;
+      // Handle paginated responses
+      const users = usersRes.data.results || usersRes.data;
+      const shops = shopsRes.data.results || shopsRes.data;
       const allOrders = ordersRes;
       const allTransactions = transactionsRes;
 
@@ -214,10 +215,15 @@ const DashboardPage: React.FC<AdminDashboardPageProps> = ({ setMaintenanceMode }
       const shops = await api.get('/shops');
       const allOrders = [];
       
-      for (const shop of shops.data) {
+      // Handle paginated response
+      const shopsData = shops.data.results || shops.data;
+      
+      for (const shop of shopsData) {
         try {
           const { data } = await api.get(`/orders/shop/${shop.id || shop._id}`);
-          allOrders.push(...data);
+          // Handle paginated response for orders too
+          const ordersData = data.results || data;
+          allOrders.push(...ordersData);
         } catch (error) {
           console.error(`Failed to fetch orders for shop ${shop.name}:`, error);
         }
@@ -235,10 +241,15 @@ const DashboardPage: React.FC<AdminDashboardPageProps> = ({ setMaintenanceMode }
       const shops = await api.get('/shops');
       const allTransactions = [];
       
-      for (const shop of shops.data) {
+      // Handle paginated response
+      const shopsData = shops.data.results || shops.data;
+      
+      for (const shop of shopsData) {
         try {
           const { data } = await api.get(`/transactions/shop/${shop.id || shop._id}`);
-          allTransactions.push(...data);
+          // Handle paginated response for transactions too
+          const transactionsData = data.results || data;
+          allTransactions.push(...transactionsData);
         } catch (error) {
           console.error(`Failed to fetch transactions for shop ${shop.name}:`, error);
         }

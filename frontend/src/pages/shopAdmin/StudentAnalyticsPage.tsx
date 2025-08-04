@@ -139,7 +139,9 @@ const StudentAnalyticsPage: React.FC = () => {
   const fetchshops = async () => {
     try {
       const { data } = await api.get('/shops');
-      setshops(data);
+      // Handle paginated response
+      const shopsData = data.results || data;
+      setshops(shopsData);
     } catch (error) {
       toast.error('Failed to fetch shops');
     }

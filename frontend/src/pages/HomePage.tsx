@@ -22,7 +22,9 @@ const HomePage: React.FC = () => {
     const fetchshops = async () => {
       try {
         const { data } = await api.get('/shops');
-        setshops(Array.isArray(data) ? data : []);
+        // Handle paginated response
+        const shopsData = data.results || data;
+        setshops(Array.isArray(shopsData) ? shopsData : []);
         setLoading(false);
       } catch (err) {
         setError('Failed to load shops');
