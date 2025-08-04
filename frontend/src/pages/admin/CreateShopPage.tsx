@@ -73,7 +73,7 @@ const CreateShopPage: React.FC = () => {
 
       
 
-      const response = await api.post('/users/shop-admin', payload);
+      const response = await api.post('/users/shop_admin/', payload);
       
       toast.success('shop created successfully');
       navigate('/admin/shops');

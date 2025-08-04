@@ -212,7 +212,7 @@ const DashboardPage: React.FC<AdminDashboardPageProps> = ({ setMaintenanceMode }
 
   const fetchAllOrders = async () => {
     try {
-      const shops = await api.get('/shops');
+      const shops = await api.get('/shops/');
       const allOrders = [];
       
       // Handle paginated response
@@ -220,7 +220,12 @@ const DashboardPage: React.FC<AdminDashboardPageProps> = ({ setMaintenanceMode }
       
       for (const shop of shopsData) {
         try {
-          const { data } = await api.get(`/orders/shop/${shop.id || shop._id}`);
+          const shopId = shop.id || shop._id;
+          if (!shopId) {
+            console.warn(`Shop ${shop.name} has no valid ID, skipping`);
+            continue;
+          }
+          const { data } = await api.get(`/orders/shop/?shop_id=${shopId}`);
           // Handle paginated response for orders too
           const ordersData = data.results || data;
           allOrders.push(...ordersData);
@@ -238,7 +243,7 @@ const DashboardPage: React.FC<AdminDashboardPageProps> = ({ setMaintenanceMode }
 
   const fetchAllTransactions = async () => {
     try {
-      const shops = await api.get('/shops');
+      const shops = await api.get('/shops/');
       const allTransactions = [];
       
       // Handle paginated response
@@ -246,7 +251,12 @@ const DashboardPage: React.FC<AdminDashboardPageProps> = ({ setMaintenanceMode }
       
       for (const shop of shopsData) {
         try {
-          const { data } = await api.get(`/transactions/shop/${shop.id || shop._id}`);
+          const shopId = shop.id || shop._id;
+          if (!shopId) {
+            console.warn(`Shop ${shop.name} has no valid ID, skipping`);
+            continue;
+          }
+          const { data } = await api.get(`/transactions/shop/?shop_id=${shopId}`);
           // Handle paginated response for transactions too
           const transactionsData = data.results || data;
           allTransactions.push(...transactionsData);

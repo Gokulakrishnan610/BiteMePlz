@@ -4,7 +4,7 @@ import { User, Trash2, Shield, Users, Crown, GraduationCap } from 'lucide-react'
 import toast from 'react-hot-toast';
 
 interface UserData {
-  _id: string;
+  id: string;
   name: string;
   email: string;
   role: string;
@@ -186,7 +186,7 @@ const UsersPage: React.FC = () => {
           </thead>
           <tbody>
             {filteredUsers.map((user) => (
-              <tr key={user._id}>
+              <tr key={user.id}>
                 <td>
                   <div className="flex items-center">
                     <div className="p-2 bg-gradient-to-r from-[var(--accent-purple)] to-[var(--accent-violet)] rounded-lg mr-3">
@@ -206,7 +206,7 @@ const UsersPage: React.FC = () => {
                 <td className="text-[var(--secondary-text)]">{new Date(user.createdAt).toLocaleDateString()}</td>
                 <td>
                   <button
-                    onClick={() => handleDelete(user._id)}
+                    onClick={() => handleDelete(user.id)}
                     className="p-2 text-[var(--error)] hover:bg-red-500/10 rounded-lg transition-colors"
                     disabled={user.role === 'admin'}
                     title={user.role === 'admin' ? 'Cannot delete admin user' : 'Delete user'}

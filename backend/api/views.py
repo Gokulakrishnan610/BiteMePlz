@@ -26,12 +26,47 @@ from .serializers import (
 class FileUploadViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
-    @action(detail=False, methods=['post'])
-    def single(self, request):
+    @action(detail=False, methods=['get'])
+    def test(self, request):
+        return Response({'message': 'Upload endpoint is working'}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def test_upload(self, request):
+        """Test upload endpoint without authentication"""
         if 'image' not in request.FILES:
             return Response({'error': 'No image file provided'}, status=status.HTTP_400_BAD_REQUEST)
         
         file = request.FILES['image']
+        print(f"Test upload - File received: {file.name}, size: {file.size}, type: {file.content_type}")
+        
+        try:
+            filename = f"{uuid.uuid4().hex}_{file.name}"
+            file_path = default_storage.save(f'uploads/{filename}', file)
+            print(f"Test upload - File saved to: {file_path}")
+            
+            return Response({
+                'filePath': f'/media/{file_path}',
+                'filename': filename
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            import traceback
+            print(f"Test upload error: {str(e)}")
+            print(traceback.format_exc())
+            return Response({'error': f'Upload failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'])
+    def single(self, request):
+        print(f"User authenticated: {request.user.is_authenticated}")
+        print(f"User: {request.user}")
+        print(f"Request method: {request.method}")
+        print(f"Request headers: {dict(request.headers)}")
+        print(f"Upload request received: {request.FILES}")
+        
+        if 'image' not in request.FILES:
+            return Response({'error': 'No image file provided'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        file = request.FILES['image']
+        print(f"File received: {file.name}, size: {file.size}, type: {file.content_type}")
         
         # Validate file type
         allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
@@ -47,14 +82,22 @@ class FileUploadViewSet(viewsets.ViewSet):
         try:
             # Generate unique filename
             filename = f"{uuid.uuid4().hex}_{file.name}"
-            file_path = default_storage.save(f'uploads/{filename}', ContentFile(file.read()))
+            print(f"Generated filename: {filename}")
+            
+            # Save file directly without reading it first
+            file_path = default_storage.save(f'uploads/{filename}', file)
+            print(f"File saved to: {file_path}")
             
             # Return the file path
+            print(f"Successfully saved file: {file_path}")
             return Response({
                 'filePath': f'/media/{file_path}',
                 'filename': filename
             }, status=status.HTTP_201_CREATED)
         except Exception as e:
+            import traceback
+            print(f"Upload error: {str(e)}")
+            print(traceback.format_exc())
             return Response({'error': f'Upload failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -102,6 +145,76 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=False, methods=['post'])
+    def shop_admin(self, request):
+        """Create a shop admin user and shop"""
+        try:
+            # Extract data from request
+            shop_name = request.data.get('shopName')
+            shop_description = request.data.get('shopDescription')
+            shop_location = request.data.get('shopLocation')
+            shop_image = request.data.get('shopImage', '')
+            admin_name = request.data.get('name')
+            admin_email = request.data.get('email')
+            admin_password = request.data.get('password')
+            final_validity_time = request.data.get('final_validity_time')
+            qr_validity_minutes = request.data.get('qrValidityMinutes', 20)
+
+            # Validate required fields
+            if not all([shop_name, shop_description, shop_location, admin_name, admin_email, admin_password]):
+                return Response({'error': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Create shop admin user
+            user_data = {
+                'name': admin_name,
+                'email': admin_email,
+                'password': admin_password,
+                'role': 'shopAdmin'
+            }
+            
+            user_serializer = UserRegistrationSerializer(data=user_data)
+            if not user_serializer.is_valid():
+                return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Create user
+            user = user_serializer.save()
+            
+            # Create shop
+            shop_data = {
+                'name': shop_name,
+                'description': shop_description,
+                'location': shop_location,
+                'image': shop_image,
+                'shop_admin': user.id,
+                'final_validity_time': final_validity_time,
+                'next_opening_time': final_validity_time,  # Set same as final validity for now
+                'qr_validity_minutes': qr_validity_minutes
+            }
+            
+            shop_serializer = ShopSerializer(data=shop_data)
+            if not shop_serializer.is_valid():
+                # Delete the user if shop creation fails
+                user.delete()
+                return Response(shop_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            shop = shop_serializer.save()
+            
+            # Update user with shop reference
+            user.shop = shop
+            user.save()
+            
+            return Response({
+                'message': 'Shop and admin created successfully',
+                'shop': ShopSerializer(shop).data,
+                'admin': UserSerializer(user).data
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            import traceback
+            print(f"Shop admin creation error: {str(e)}")
+            print(traceback.format_exc())
+            return Response({'error': f'Failed to create shop admin: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class ShopViewSet(viewsets.ModelViewSet):
     queryset = Shop.objects.all()
@@ -122,6 +235,40 @@ class ShopViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
+
+    def perform_create(self, serializer):
+        shop = serializer.save()
+        
+        # Log the shop creation
+        ShopLog.objects.create(
+            shop=shop,
+            action='shop_created',
+            performed_by=self.request.user,
+            details={
+                'shop_name': shop.name,
+                'shop_admin': shop.shop_admin.name,
+                'location': shop.location
+            }
+        )
+        
+        return shop
+
+    def perform_update(self, serializer):
+        old_shop = self.get_object()
+        shop = serializer.save()
+        
+        # Log the shop update
+        ShopLog.objects.create(
+            shop=shop,
+            action='settings_updated',
+            performed_by=self.request.user,
+            details={
+                'updated_fields': list(serializer.validated_data.keys()),
+                'shop_name': shop.name
+            }
+        )
+        
+        return shop
 
     @action(detail=True, methods=['post'])
     def toggle_open(self, request, pk=None):
@@ -169,6 +316,20 @@ class OrderViewSet(viewsets.ModelViewSet):
         if self.request.user.role in ['admin', 'shopAdmin']:
             return Order.objects.all()
         return Order.objects.filter(user=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def shop(self, request):
+        """Get orders for a specific shop"""
+        shop_id = request.query_params.get('shop_id') or request.query_params.get('id')
+        if not shop_id:
+            return Response({'error': 'Shop ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            orders = Order.objects.filter(shop_id=shop_id)
+            serializer = self.get_serializer(orders, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def perform_create(self, serializer):
         # Generate order ID
@@ -290,6 +451,20 @@ class TransactionViewSet(viewsets.ModelViewSet):
         if self.request.user.role in ['admin', 'shopAdmin']:
             return Transaction.objects.all()
         return Transaction.objects.filter(user=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def shop(self, request):
+        """Get transactions for a specific shop"""
+        shop_id = request.query_params.get('shop_id') or request.query_params.get('id')
+        if not shop_id:
+            return Response({'error': 'Shop ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            transactions = Transaction.objects.filter(shop_id=shop_id)
+            serializer = self.get_serializer(transactions, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ShopLogViewSet(viewsets.ModelViewSet):

@@ -4,7 +4,7 @@ import api from '../api';
 import { Store, MapPin, Clock, Star, Zap, ShoppingBag, Users, TrendingUp } from 'lucide-react';
 
 interface shop {
-  _id: string;
+  id: string;
   name: string;
   description: string;
   location: string;
@@ -101,15 +101,15 @@ const HomePage: React.FC = () => {
               Your ultimate digital marketplace for campus shopping. Quick, convenient, and secure transactions at your fingertips.
             </p>
             <div className="flex flex-wrap justify-center gap-4 mb-12">
-              <div className="flex items-center space-x-2 bg-[var(--card-bg)] px-6 py-3 rounded-full border border-[var(--border-color)]">
+              <div key="easy-shopping" className="flex items-center space-x-2 bg-[var(--card-bg)] px-6 py-3 rounded-full border border-[var(--border-color)]">
                 <ShoppingBag className="text-[var(--accent-purple)]" size={20} />
                 <span className="text-[var(--secondary-text)]">Easy shopping</span>
               </div>
-              <div className="flex items-center space-x-2 bg-[var(--card-bg)] px-6 py-3 rounded-full border border-[var(--border-color)]">
+              <div key="campus-community" className="flex items-center space-x-2 bg-[var(--card-bg)] px-6 py-3 rounded-full border border-[var(--border-color)]">
                 <Users className="text-[var(--accent-violet)]" size={20} />
                 <span className="text-[var(--secondary-text)]">Campus Community</span>
               </div>
-              <div className="flex items-center space-x-2 bg-[var(--card-bg)] px-6 py-3 rounded-full border border-[var(--border-color)]">
+              <div key="real-time-updates" className="flex items-center space-x-2 bg-[var(--card-bg)] px-6 py-3 rounded-full border border-[var(--border-color)]">
                 <TrendingUp className="text-[var(--accent-purple)]" size={20} />
                 <span className="text-[var(--secondary-text)]">Real-time Updates</span>
               </div>
@@ -147,10 +147,16 @@ const HomePage: React.FC = () => {
               const timeUntilClosure = getTimeUntilClosure(shop.final_validity_time);
               const is_open = shop.is_open && timeUntilClosure;
               
+              // Skip shops without valid IDs
+              if (!shop.id) {
+                console.warn(`Shop ${shop.name} has no valid ID, skipping`);
+                return null;
+              }
+              
               return (
                 <Link
-                  key={shop._id}
-                  to={`/shop/${shop._id}`}
+                  key={shop.id}
+                  to={`/shop/${shop.id}`}
                   className="group card hover:scale-105 transition-all duration-300 glow-hover overflow-hidden"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
@@ -247,7 +253,7 @@ const HomePage: React.FC = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="card p-8 text-center hover:scale-105 transition-transform duration-300">
+          <div key="lightning-fast" className="card p-8 text-center hover:scale-105 transition-transform duration-300">
             <div className="w-16 h-16 bg-gradient-to-r from-[var(--accent-purple)] to-[var(--accent-violet)] rounded-full flex items-center justify-center mx-auto mb-6">
               <Zap className="text-white" size={32} />
             </div>
@@ -255,7 +261,7 @@ const HomePage: React.FC = () => {
             <p className="text-[var(--secondary-text)]">Quick and seamless shopping experience with instant order processing</p>
           </div>
           
-          <div className="card p-8 text-center hover:scale-105 transition-transform duration-300">
+          <div key="easy-shopping-features" className="card p-8 text-center hover:scale-105 transition-transform duration-300">
             <div className="w-16 h-16 bg-gradient-to-r from-[var(--accent-violet)] to-[var(--accent-purple)] rounded-full flex items-center justify-center mx-auto mb-6">
                               <ShoppingBag className="text-white" size={32} />
             </div>
@@ -263,7 +269,7 @@ const HomePage: React.FC = () => {
             <p className="text-[var(--secondary-text)]">Browse, select, and purchase with just a few clicks</p>
           </div>
           
-          <div className="card p-8 text-center hover:scale-105 transition-transform duration-300">
+          <div key="campus-community-features" className="card p-8 text-center hover:scale-105 transition-transform duration-300">
             <div className="w-16 h-16 bg-gradient-to-r from-[var(--accent-purple)] to-[var(--accent-violet)] rounded-full flex items-center justify-center mx-auto mb-6">
               <Users className="text-white" size={32} />
             </div>

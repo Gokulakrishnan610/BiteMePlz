@@ -67,12 +67,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       const formData = new FormData();
       formData.append('image', file);
 
-      
+      console.log('Uploading file:', file.name, file.size, file.type);
+      console.log('Auth token:', localStorage.getItem('token'));
 
-      const { data } = await api.post('/upload/single', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      // Use the authenticated endpoint
+      const { data } = await api.post('/upload/single/', formData, {
         timeout: 30000, // 30 second timeout
       });
 

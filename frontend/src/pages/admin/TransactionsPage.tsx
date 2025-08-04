@@ -43,7 +43,7 @@ interface Transaction {
 }
 
 interface shop {
-  _id: string;
+  id: string; // Changed from _id
   name: string;
 }
 
@@ -99,7 +99,7 @@ const TransactionsPage: React.FC = () => {
           if (value && key !== 'shop') params.append(key, value.toString());
         });
 
-        const { data } = await api.get(`/api/transactions/shop/${filters.shop}?${params}`);
+        const { data } = await api.get(`/transactions/shop/?shop_id=${filters.shop}&${params}`); // Fixed API call
         setTransactions(data.transactions || []);
         
         // Calculate stats
@@ -120,16 +120,20 @@ const TransactionsPage: React.FC = () => {
         
         for (const shop of shops) {
           try {
+            if (!shop.id) { // Changed from _id
+              console.warn(`Shop ${shop.name} has no valid ID, skipping`);
+              continue;
+            }
             const params = new URLSearchParams();
             Object.entries(filters).forEach(([key, value]) => {
               if (value && key !== 'shop') params.append(key, value.toString());
             });
 
-            const { data } = await api.get(`/api/transactions/shop/${shop._id}?${params}`);
+            const { data } = await api.get(`/transactions/shop/?shop_id=${shop.id}&${params}`); // Changed to shop.id
             if (data.transactions) {
               allTransactions.push(...data.transactions.map((t: any) => ({
                 ...t,
-                shop: { _id: shop._id, name: shop.name }
+                shop: { _id: shop.id, name: shop.name } // Changed to shop.id
               })));
             }
           } catch (error) {
@@ -287,9 +291,9 @@ const TransactionsPage: React.FC = () => {
               onChange={(e) => setFilters({ ...filters, shop: e.target.value, page: 1 })}
               className="input"
             >
-              <option value="">All shops</option>
+              <option key="all-shops" value="">All shops</option>
               {shops.map((shop) => (
-                <option key={shop._id} value={shop._id}>
+                <option key={shop.id} value={shop.id}> {/* Changed to shop.id */}
                   {shop.name}
                 </option>
               ))}
@@ -305,12 +309,12 @@ const TransactionsPage: React.FC = () => {
               onChange={(e) => setFilters({ ...filters, type: e.target.value, page: 1 })}
               className="input"
             >
-              <option value="">All Types</option>
-              <option value="payment">Payment</option>
-              <option value="refund">Refund</option>
-              <option value="verification">Verification</option>
-              <option value="expiry">Expiry</option>
-              <option value="cancellation">Cancellation</option>
+              <option key="all-types" value="">All Types</option>
+              <option key="payment" value="payment">Payment</option>
+              <option key="refund" value="refund">Refund</option>
+              <option key="verification" value="verification">Verification</option>
+              <option key="expiry" value="expiry">Expiry</option>
+              <option key="cancellation" value="cancellation">Cancellation</option>
             </select>
           </div>
 
@@ -323,10 +327,10 @@ const TransactionsPage: React.FC = () => {
               onChange={(e) => setFilters({ ...filters, status: e.target.value, page: 1 })}
               className="input"
             >
-              <option value="">All Status</option>
-              <option value="success">Success</option>
-              <option value="failed">Failed</option>
-              <option value="pending">Pending</option>
+              <option key="all-status" value="">All Status</option>
+              <option key="success" value="success">Success</option>
+              <option key="failed" value="failed">Failed</option>
+              <option key="pending" value="pending">Pending</option>
             </select>
           </div>
 

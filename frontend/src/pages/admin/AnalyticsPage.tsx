@@ -46,7 +46,7 @@ ChartJS.register(
 );
 
 interface shop {
-  _id: string;
+  id: string;
   name: string;
 }
 
@@ -178,10 +178,14 @@ const AnalyticsPage: React.FC = () => {
       
       for (const shop of shops) {
         try {
-          const { data } = await api.get(`/api/orders/shop/${shop._id}`);
+          if (!shop.id) {
+            console.warn(`Shop ${shop.name} has no valid ID, skipping`);
+            continue;
+          }
+          const { data } = await api.get(`/orders/shop/?shop_id=${shop.id}`);
           allOrders.push(...data.map((order: any) => ({
             ...order,
-            shop_id: shop._id,
+            shop_id: shop.id,
             shopName: shop.name
           })));
         } catch (error) {
@@ -202,11 +206,21 @@ const AnalyticsPage: React.FC = () => {
       
       for (const shop of shops) {
         try {
-          const { data } = await api.get(`/api/transactions/shop/${shop._id}`);
+          if (!shop.id) {
+            console.warn(`Shop ${shop.name} has no valid ID, skipping`);
+            continue;
+          }
+          const { data } = await api.get(`/transactions/shop/?shop_id=${shop.id}`);
           if (data.transactions) {
             allTransactions.push(...data.transactions.map((t: any) => ({
               ...t,
-              shop_id: shop._id,
+              shop_id: shop.id,
+              shopName: shop.name
+            })));
+          } else {
+            allTransactions.push(...data.map((t: any) => ({
+              ...t,
+              shop_id: shop.id,
               shopName: shop.name
             })));
           }
@@ -437,7 +451,7 @@ const AnalyticsPage: React.FC = () => {
       csvData.push(['REAL-TIME ANALYTICS REPORT']);
       csvData.push(['Generated On', new Date().toLocaleString()]);
       csvData.push(['Period', `${dateRange.startDate} to ${dateRange.endDate}`]);
-      csvData.push(['shop', selectedshop ? shops.find(s => s._id === selectedshop)?.name || 'Unknown' : 'All shops']);
+      csvData.push(['shop', selectedshop ? shops.find(s => s.id === selectedshop)?.name || 'Unknown' : 'All shops']);
       csvData.push(['']);
 
       csvData.push(['OVERVIEW METRICS']);
@@ -576,9 +590,9 @@ const AnalyticsPage: React.FC = () => {
               onChange={(e) => setSelectedshop(e.target.value)}
               className="input"
             >
-              <option value="">All shops</option>
+              <option key="all-shops" value="">All shops</option>
               {shops.map((shop) => (
-                <option key={shop._id} value={shop._id}>
+                <option key={shop.id} value={shop.id}>
                   {shop.name}
                 </option>
               ))}
@@ -594,9 +608,9 @@ const AnalyticsPage: React.FC = () => {
               onChange={(e) => setPeriod(e.target.value)}
               className="input"
             >
-              <option value="7d">Last 7 days</option>
-              <option value="30d">Last 30 days</option>
-              <option value="90d">Last 90 days</option>
+              <option key="7d" value="7d">Last 7 days</option>
+              <option key="30d" value="30d">Last 30 days</option>
+              <option key="90d" value="90d">Last 90 days</option>
             </select>
           </div>
 

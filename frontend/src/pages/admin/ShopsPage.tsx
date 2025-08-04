@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import ConfirmDialog from '../../components/ConfirmDialog';
 
 interface shop {
-  _id: string;
+  id: string;
   name: string;
   description: string;
   location: string;
@@ -49,7 +49,7 @@ const shopsPage: React.FC = () => {
   const handleDeleteClick = (shop: shop) => {
     setDeleteDialog({
       is_open: true,
-      shop_id: shop._id,
+      shop_id: shop.id,
       shopName: shop.name
     });
   };
@@ -120,7 +120,7 @@ const shopsPage: React.FC = () => {
       {/* shops Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {shops.map((shop) => (
-          <div key={shop._id} className="card hover:scale-105 transition-all duration-300 glow-hover overflow-hidden">
+          <div key={shop.id} className="card hover:scale-105 transition-all duration-300 glow-hover overflow-hidden">
             {/* shop Header */}
             <div className="card-header">
               <div className="flex items-start justify-between mb-4">
@@ -168,14 +168,14 @@ const shopsPage: React.FC = () => {
                 </span>
                 <div className="flex space-x-2">
                   <Link
-                    to={`/admin/shops/${shop._id}`}
+                    to={`/admin/shops/${shop.id}`}
                     className="p-2 text-[var(--info)] hover:bg-[var(--hover-bg)] rounded-lg transition-colors"
                     title="View Details"
                   >
                     <Eye size={16} />
                   </Link>
                   <Link
-                    to={`/admin/shops/${shop._id}/edit`}
+                    to={`/admin/shops/${shop.id}/edit`}
                     className="p-2 text-[var(--accent-purple)] hover:bg-[var(--hover-bg)] rounded-lg transition-colors"
                     title="Edit shop"
                   >

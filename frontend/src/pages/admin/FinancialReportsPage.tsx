@@ -12,7 +12,7 @@ import {
 import toast from 'react-hot-toast';
 
 interface shop {
-  _id: string;
+  id: string;
   name: string;
 }
 
@@ -72,13 +72,18 @@ const FinancialReportsPage: React.FC = () => {
 
       for (const shop of shops) {
         try {
+          if (!shop.id) {
+            console.warn(`Shop ${shop.name} has no valid ID, skipping`);
+            continue;
+          }
           const params = new URLSearchParams({
             startDate: dateRange.startDate,
-            endDate: dateRange.endDate
+            endDate: dateRange.endDate,
+            shop_id: shop.id
           });
 
-          const { data } = await api.get(`/api/transactions/shop/${shop._id}?${params}`);
-          const transactions = data.transactions || [];
+          const { data } = await api.get(`/transactions/shop/?${params}`);
+          const transactions = data.transactions || data || [];
 
           // Calculate financial metrics
           const payments = transactions.filter((t: any) => t.type === 'payment' && t.status === 'success');

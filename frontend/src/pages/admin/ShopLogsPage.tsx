@@ -16,11 +16,11 @@ import {
 import toast from 'react-hot-toast';
 
 interface shopLog {
-  _id: string;
+  id: string;
   action: string;
-  description: string;
-  createdAt: string;
-  performedBy: {
+  details: any;
+  created_at: string;
+  performed_by: {
     name: string;
     email: string;
     role: string;
@@ -28,10 +28,6 @@ interface shopLog {
   shop: {
     name: string;
   };
-  previousState: any;
-  newState: any;
-  metadata: any;
-  ipAddress?: string;
 }
 
 interface shop {
@@ -115,8 +111,8 @@ const shopLogsPage: React.FC = () => {
         if (value) params.append(key, value.toString());
       });
 
-      const { data } = await api.get(`/api/shop-logs/all?${params}`);
-      setLogs(data.logs || []);
+      const { data } = await api.get(`/shop-logs/?${params}`);
+      setLogs(data.results || data || []);
       setPagination({
         currentPage: data.currentPage || 1,
         totalPages: data.totalPages || 1,
@@ -142,7 +138,7 @@ const shopLogsPage: React.FC = () => {
       });
       params.append('limit', '1000'); // Export more records
 
-      const { data } = await api.get(`/api/shop-logs/all?${params}`);
+      const { data } = await api.get(`/shop-logs/?${params}`);
       
       const csvData = [];
       
@@ -155,14 +151,14 @@ const shopLogsPage: React.FC = () => {
       // Logs
       csvData.push(['Date', 'shop', 'Action', 'Performed By', 'Description', 'IP Address']);
       
-      data.logs.forEach((log: shopLog) => {
+      (data.results || data || []).forEach((log: shopLog) => {
         csvData.push([
-          new Date(log.createdAt).toLocaleString(),
+          new Date(log.created_at).toLocaleString(),
           log.shop?.name || 'Unknown',
           actionLabels[log.action] || log.action,
-          log.performedBy?.name || 'Unknown',
-          `"${log.description}"`,
-          log.ipAddress || 'N/A'
+          log.performed_by?.name || 'Unknown',
+          `"${JSON.stringify(log.details)}"`,
+          'N/A'
         ]);
       });
 
@@ -340,16 +336,16 @@ const shopLogsPage: React.FC = () => {
                 </thead>
                 <tbody>
                   {logs.map((log) => (
-                    <tr key={log._id}>
+                    <tr key={log.id}>
                       <td>
                         <div className="flex items-center">
                           <Calendar size={16} className="mr-2 text-[var(--muted-text)]" />
                           <div>
                             <div className="font-medium">
-                              {new Date(log.createdAt).toLocaleDateString()}
+                              {new Date(log.created_at).toLocaleDateString()}
                             </div>
                             <div className="text-sm text-[var(--muted-text)]">
-                              {new Date(log.createdAt).toLocaleTimeString()}
+                              {new Date(log.created_at).toLocaleTimeString()}
                             </div>
                           </div>
                         </div>
@@ -365,14 +361,14 @@ const shopLogsPage: React.FC = () => {
                         <div className="flex items-center">
                           <User size={16} className="mr-2 text-[var(--muted-text)]" />
                           <div>
-                            <div className="font-medium">{log.performedBy?.name || 'Unknown'}</div>
+                            <div className="font-medium">{log.performed_by?.name || 'Unknown'}</div>
                             <div className="text-sm text-[var(--muted-text)] capitalize">
-                              {log.performedBy?.role || 'Unknown'}
+                              {log.performed_by?.role || 'Unknown'}
                             </div>
                           </div>
                         </div>
                       </td>
-                      <td className="max-w-xs truncate">{log.description}</td>
+                      <td className="max-w-xs truncate">{JSON.stringify(log.details)}</td>
                       <td>
                         <button
                           onClick={() => handleLogClick(log)}
@@ -465,57 +461,25 @@ const shopLogsPage: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-[var(--secondary-text)]">Performed By</label>
                     <div className="mt-1">
-                      <p className="text-[var(--primary-text)]">{selectedLog.performedBy?.name || 'Unknown'}</p>
-                      <p className="text-sm text-[var(--muted-text)]">{selectedLog.performedBy?.email || 'Unknown'}</p>
-                      <p className="text-sm text-[var(--muted-text)] capitalize">{selectedLog.performedBy?.role || 'Unknown'}</p>
+                      <p className="text-[var(--primary-text)]">{selectedLog.performed_by?.name || 'Unknown'}</p>
+                      <p className="text-sm text-[var(--muted-text)]">{selectedLog.performed_by?.email || 'Unknown'}</p>
+                      <p className="text-sm text-[var(--muted-text)] capitalize">{selectedLog.performed_by?.role || 'Unknown'}</p>
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-[var(--secondary-text)]">Date & Time</label>
-                    <p className="mt-1 text-[var(--primary-text)]">{new Date(selectedLog.createdAt).toLocaleString()}</p>
+                    <p className="mt-1 text-[var(--primary-text)]">{new Date(selectedLog.created_at).toLocaleString()}</p>
                   </div>
-
-                  {selectedLog.ipAddress && (
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--secondary-text)]">IP Address</label>
-                      <p className="mt-1 text-[var(--primary-text)] font-mono">{selectedLog.ipAddress}</p>
-                    </div>
-                  )}
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-[var(--secondary-text)]">Description</label>
-                    <p className="mt-1 text-[var(--primary-text)]">{selectedLog.description}</p>
+                    <label className="block text-sm font-medium text-[var(--secondary-text)]">Details</label>
+                    <pre className="mt-1 text-sm bg-[var(--hover-bg)] p-3 rounded overflow-x-auto text-[var(--primary-text)]">
+                      {JSON.stringify(selectedLog.details, null, 2)}
+                    </pre>
                   </div>
-
-                  {selectedLog.previousState && Object.keys(selectedLog.previousState).length > 0 && (
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--secondary-text)]">Previous State</label>
-                      <pre className="mt-1 text-sm bg-[var(--hover-bg)] p-3 rounded overflow-x-auto text-[var(--primary-text)]">
-                        {JSON.stringify(selectedLog.previousState, null, 2)}
-                      </pre>
-                    </div>
-                  )}
-
-                  {selectedLog.newState && Object.keys(selectedLog.newState).length > 0 && (
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--secondary-text)]">New State</label>
-                      <pre className="mt-1 text-sm bg-[var(--hover-bg)] p-3 rounded overflow-x-auto text-[var(--primary-text)]">
-                        {JSON.stringify(selectedLog.newState, null, 2)}
-                      </pre>
-                    </div>
-                  )}
-
-                  {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--secondary-text)]">Additional Information</label>
-                      <pre className="mt-1 text-sm bg-[var(--hover-bg)] p-3 rounded overflow-x-auto text-[var(--primary-text)]">
-                        {JSON.stringify(selectedLog.metadata, null, 2)}
-                      </pre>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
