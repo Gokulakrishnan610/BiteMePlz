@@ -160,44 +160,73 @@ class UserViewSet(viewsets.ModelViewSet):
             final_validity_time = request.data.get('final_validity_time')
             qr_validity_minutes = request.data.get('qrValidityMinutes', 20)
 
+            # Debug: Print received data
+            print(f"Received data: {request.data}")
+            print(f"shop_name: {shop_name}")
+            print(f"admin_name: {admin_name}")
+            print(f"admin_email: {admin_email}")
+
             # Validate required fields
             if not all([shop_name, shop_description, shop_location, admin_name, admin_email, admin_password]):
-                return Response({'error': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
+                missing_fields = []
+                if not shop_name: missing_fields.append('shopName')
+                if not shop_description: missing_fields.append('shopDescription')
+                if not shop_location: missing_fields.append('shopLocation')
+                if not admin_name: missing_fields.append('name')
+                if not admin_email: missing_fields.append('email')
+                if not admin_password: missing_fields.append('password')
+                error_msg = f'Missing required fields: {", ".join(missing_fields)}'
+                print(f"Validation error: {error_msg}")
+                return Response({'error': error_msg}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Create shop admin user
+            # Create shop admin user - handle password without confirm_password
             user_data = {
                 'name': admin_name,
                 'email': admin_email,
                 'password': admin_password,
-                'role': 'shopAdmin'
+                'confirm_password': admin_password,  # Add confirm_password for serializer validation
+                'role': 'shopAdmin',
+                'roll_no': f'SHOP_ADMIN_{admin_email.split("@")[0]}'  # Generate roll_no for shop admin
             }
             
+            print(f"User data for serializer: {user_data}")
             user_serializer = UserRegistrationSerializer(data=user_data)
             if not user_serializer.is_valid():
+                print(f"User serializer errors: {user_serializer.errors}")
+                # Check if it's an email uniqueness error
+                if 'email' in user_serializer.errors and 'unique' in str(user_serializer.errors['email']):
+                    return Response({'error': 'A user with this email already exists. Please use a different email address.'}, status=status.HTTP_400_BAD_REQUEST)
                 return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             
             # Create user
             user = user_serializer.save()
+            print(f"User created successfully: {user.id}")
             
             # Create shop
             shop_data = {
                 'name': shop_name,
                 'description': shop_description,
                 'location': shop_location,
-                'image': shop_image,
-                'shop_admin': user.id,
+                'shop_admin_id': user.id,  # Use shop_admin_id instead of shop_admin
                 'final_validity_time': final_validity_time,
                 'next_opening_time': final_validity_time,  # Set same as final validity for now
                 'qr_validity_minutes': qr_validity_minutes
             }
             
+            # Only add image if it's not empty
+            if shop_image and shop_image.strip():
+                shop_data['image'] = shop_image
+            
+            print(f"Shop data for serializer: {shop_data}")
             shop_serializer = ShopSerializer(data=shop_data)
             if not shop_serializer.is_valid():
+                print(f"Shop serializer errors: {shop_serializer.errors}")
                 # Delete the user if shop creation fails
                 user.delete()
                 return Response(shop_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             
             shop = shop_serializer.save()
+            print(f"Shop created successfully: {shop.id}")
             
             # Update user with shop reference
             user.shop = shop

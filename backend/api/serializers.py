@@ -52,6 +52,7 @@ class UserLoginSerializer(serializers.Serializer):
 class ShopSerializer(serializers.ModelSerializer):
     shop_admin = UserSerializer(read_only=True)
     shop_admin_id = serializers.UUIDField(write_only=True)
+    image = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Shop
