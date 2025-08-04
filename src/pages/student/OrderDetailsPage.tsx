@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -25,8 +26,9 @@ interface Order {
   balance_amount: number;
   final_validity: string;
   status: 'pending' | 'completed' | 'expired';
-  payment_result: {
-    razorpay_payment_id: string;
+  payment_result?: {
+    razorpay_payment_id?: string;
+    method?: string;
     status: string;
   };
 }
@@ -240,6 +242,11 @@ const OrderDetailsPage: React.FC = () => {
               {order.payment_result?.razorpay_payment_id && (
                 <p className="text-[var(--gray-600)]">
                   Payment ID: {order.payment_result.razorpay_payment_id}
+                </p>
+              )}
+              {order.payment_result?.method === 'balance' && (
+                <p className="text-[var(--gray-600)]">
+                  Payment Method: Wallet Balance
                 </p>
               )}
             </div>
