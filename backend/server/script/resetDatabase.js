@@ -146,9 +146,9 @@ const resetDatabase = async () => {
       tomorrow.setHours(23, 59, 0, 0);
 
       const shop = await supabase.from('shops').insert([{
-        name: 'Test shop',
-        description: 'A test shop for demonstration',
-        location: 'Test Location',
+        name: 'Campus Kiosk',
+        description: 'Main campus kiosk for students',
+        location: 'Main Campus',
         image: '/uploads/default-shop.jpg',
         shop_admin: shopAdminUser.id,
         is_active: true,
@@ -171,13 +171,13 @@ const resetDatabase = async () => {
       }
     }
 
-    // 7. Create test student users (only if they don't exist)
+    // 7. Create sample student users (only if they don't exist)
     console.log('👨‍🎓 Checking for existing student users...');
     const studentPasswords = ['student123', 'student456', 'student789'];
     const students = [
-      { name: 'John Student', email: 'john@student.com', roll_no: 'STU001' },
-      { name: 'Jane Student', email: 'jane@student.com', roll_no: 'STU002' },
-      { name: 'Bob Student', email: 'bob@student.com', roll_no: 'STU003' }
+      { name: 'Sample Student 1', email: 'student1@campus.com', roll_no: 'STU001' },
+      { name: 'Sample Student 2', email: 'student2@campus.com', roll_no: 'STU002' },
+      { name: 'Sample Student 3', email: 'student3@campus.com', roll_no: 'STU003' }
     ];
 
     for (let i = 0; i < students.length; i++) {
@@ -217,7 +217,7 @@ const resetDatabase = async () => {
       }
     }
 
-    // 8. Create test products (only if shop exists)
+    // 8. Create sample products (only if shop exists)
     const { data: shop } = await supabase
       .from('shops')
       .select('*')
@@ -225,7 +225,7 @@ const resetDatabase = async () => {
       .single();
 
     if (shop) {
-      console.log('📦 Creating test products...');
+      console.log('📦 Creating sample products...');
       const products = [
         {
           name: 'Coffee',
@@ -285,9 +285,9 @@ const resetDatabase = async () => {
     console.log('👑 Admin: admin@example.com / admin123');
     console.log('🏪 shop Admin: shopadmin@example.com / shopadmin123');
     console.log('👨‍🎓 Students:');
-    console.log('   - john@student.com / student123');
-    console.log('   - jane@student.com / student456');
-    console.log('   - bob@student.com / student789');
+    console.log('   - student1@campus.com / student123');
+    console.log('   - student2@campus.com / student456');
+    console.log('   - student3@campus.com / student789');
 
   } catch (error) {
     console.error('❌ Database reset failed:', error);

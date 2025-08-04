@@ -4,66 +4,7 @@ import { shopService } from '../services/databaseService.js';
 import { logshopActivity } from '../utils/shopLogger.js';
 import { supabase } from '../config/supabase.js';
 
-// @desc    Test products table structure
-// @route   GET /api/products/debug
-// @access  Public
-const debugProductsTable = asyncHandler(async (req, res) => {
-  console.log('[ProductController] Debug endpoint - checking products table');
-  
-  try {
-    // Try to get a single product to test the table
-    const { data, error } = await supabase.from('products').select('*').limit(1);
-    
-    if (error) {
-      console.error('[ProductController] Table access error:', error);
-      return res.json({
-        error: 'Cannot access products table',
-        details: error
-      });
-    }
-    
-    console.log('[ProductController] Table access successful');
-    console.log('[ProductController] Sample data:', data);
-    
-    // Get table structure by looking at the first row
-    const sampleRow = data && data.length > 0 ? data[0] : null;
-    const columns = sampleRow ? Object.keys(sampleRow) : [];
-    
-    res.json({
-      tableExists: true,
-      sampleRow,
-      columns,
-      totalRows: data ? data.length : 0
-    });
-  } catch (error) {
-    console.error('[ProductController] Debug error:', error);
-    res.status(500).json({
-      error: 'Debug failed',
-      details: error.message
-    });
-  }
-});
 
-// @desc    Get all products (test endpoint)
-// @route   GET /api/products/test
-// @access  Public
-const getAllProducts = asyncHandler(async (req, res) => {
-  console.log('[ProductController] Test endpoint - getting all products');
-  
-  try {
-    const products = await ProductService.find({});
-    console.log('[ProductController] All products found:', products.length);
-    console.log('[ProductController] All products data:', products);
-    res.json({
-      count: products.length,
-      products: products
-    });
-  } catch (error) {
-    console.error('[ProductController] Error in test endpoint:', error);
-    res.status(500);
-    throw new Error('Failed to fetch all products');
-  }
-});
 
 // @desc    Get all products
 // @route   GET /api/products
@@ -71,65 +12,33 @@ const getAllProducts = asyncHandler(async (req, res) => {
 const getProducts = asyncHandler(async (req, res) => {
   const shop_id = req.query.shop;
   
-  console.log('[ProductController] Fetching products with shop ID:', shop_id);
-  console.log('[ProductController] shop ID type:', typeof shop_id);
-  
   try {
-    // First, let's try a simple query without filters to see if the table works
-    console.log('[ProductController] Testing basic table access...');
-    const { data: testData, error: testError } = await supabase.from('products').select('*').limit(1);
-    
-    if (testError) {
-      console.error('[ProductController] Basic table access failed:', testError);
-      return res.status(500).json({
-        error: 'Database connection issue',
-        details: testError
-      });
-    }
-    
-    console.log('[ProductController] Basic table access successful');
     
     // Now try the actual query
     let query = {};
     if (shop_id) {
       query = { shop: shop_id, is_available: true };
-      console.log('[ProductController] Using shop-specific query:', query);
     } else {
       query = { is_available: true };
-      console.log('[ProductController] Using general query (no shop filter):', query);
     }
     
     // Check if the shop exists first
     if (shop_id) {
       const shop = await shopService.findById(shop_id);
-      console.log('[ProductController] shop lookup result:', shop ? 'Found' : 'Not found');
       if (!shop) {
-        console.log('[ProductController] shop not found, returning empty array');
         return res.json([]);
       }
     }
     
     // Try the ProductService.find with better error handling
-    console.log('[ProductController] Calling ProductService.find with query:', query);
     const products = await ProductService.find(query);
-    console.log('[ProductController] Found products:', products.length);
-    console.log('[ProductController] Products data:', products);
     res.json(products);
     
   } catch (error) {
     console.error('[ProductController] Error fetching products:', error);
-    console.error('[ProductController] Error details:', {
-      message: error.message,
-      code: error.code,
-      details: error.details,
-      stack: error.stack
-    });
-    
-    // Return a more specific error message
     res.status(500).json({
       error: 'Failed to fetch products',
-      details: error.message,
-      shop_id: shop_id
+      details: error.message
     });
   }
 });
@@ -293,4 +202,4 @@ const deleteProduct = asyncHandler(async (req, res) => {
   res.json({ message: 'Product removed' });
 });
 
-export { debugProductsTable, getAllProducts, getProducts, getProductById, createProduct, updateProduct, deleteProduct };
+export { getProducts, getProductById, createProduct, updateProduct, deleteProduct };
