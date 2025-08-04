@@ -160,6 +160,8 @@ const CartPage: React.FC = () => {
         paymentMethod: 'balance'
       };
       
+      console.log('Sending balance payment request to:', endpoint);
+      console.log('Balance payment request data:', requestData);
       const orderResponse = await axios.post(endpoint, requestData);
 
       clearCart();
@@ -172,6 +174,8 @@ const CartPage: React.FC = () => {
         navigate(`/order/${orderResponse.data.order._id}`);
       }
     } catch (error: any) {
+      console.error('Balance payment error:', error);
+      console.error('Balance payment error response:', error.response?.data);
       toast.error(error.response?.data?.message || error.message || 'Payment failed');
       setPaymentInitiated(false);
     } finally {
@@ -199,6 +203,8 @@ const CartPage: React.FC = () => {
         paymentMethod: 'razorpay'
       };
       
+      console.log('Sending Razorpay request to:', endpoint);
+      console.log('Razorpay request data:', requestData);
       const orderResponse = await axios.post(endpoint, requestData);
 
       setCurrentorder_id(orderResponse.data.order._id);
@@ -291,6 +297,8 @@ const CartPage: React.FC = () => {
       }, 3 * 60 * 1000);
 
     } catch (error: any) {
+      console.error('Payment error:', error);
+      console.error('Error response:', error.response?.data);
       setPaymentInitiated(false);
       setCurrentorder_id(null);
       toast.error(error.response?.data?.message || error.message || 'Payment failed');

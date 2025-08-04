@@ -400,6 +400,8 @@ const authUser = asyncHandler(async (req, res) => {
       rollNo: user.roll_no,
       role: user.role,
       shop: user.shop,
+      is_sub_admin: user.is_sub_admin,
+      parent_admin: user.parent_admin,
       token: generateToken(user.id),
     });
   } else {
@@ -459,6 +461,8 @@ const getUserProfile = asyncHandler(async (req, res) => {
       // add other safe fields as needed
     } : null,
     balance: user.balance,
+    is_sub_admin: user.is_sub_admin,
+    parent_admin: user.parent_admin,
   });
 });
 
@@ -601,6 +605,148 @@ const deleteUser = asyncHandler(async (req, res) => {
     }
   });
 
+// @desc    Create a sub-shop admin for existing shop
+// @route   POST /api/users/sub-shop-admin
+// @access  Private/ShopAdmin
+const createSubShopAdmin = asyncHandler(async (req, res) => {
+  const { name, email, password } = req.body;
+
+  // Validate required fields
+  if (!name || !email || !password) {
+    res.status(400);
+    throw new Error('Please fill in all required fields');
+  }
+
+  // Check if current user is a shop admin and not a sub-admin
+  if (req.user.role !== 'shopAdmin' || req.user.is_sub_admin) {
+    res.status(403);
+    throw new Error('Only original shop admins can create sub-shop admins');
+  }
+
+  // Get the shop admin's shop
+  const shopAdmin = await UserService.findById(req.user.id || req.user._id);
+  if (!shopAdmin || !shopAdmin.shop) {
+    res.status(400);
+    throw new Error('Shop admin not found or not associated with a shop');
+  }
+
+  // Verify the shop exists
+  const shop = await shopService.findById(shopAdmin.shop);
+  if (!shop) {
+    res.status(400);
+    throw new Error('Shop not found');
+  }
+
+  // Check if user already exists
+  const userExists = await UserService.findByEmail(email);
+  if (userExists) {
+    res.status(400);
+    throw new Error('User already exists');
+  }
+
+  // Generate a unique roll number for sub-shop admin
+  const rollNo = `subshop${Date.now().toString().slice(-6)}`;
+
+  try {
+    // Create sub-shop admin user
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const subShopAdmin = await UserService.create({
+      name,
+      email,
+      roll_no: rollNo,
+      password: hashedPassword,
+      role: 'shopAdmin',
+      is_verified: true,
+      shop: shopAdmin.shop, // Associate with the same shop
+      is_sub_admin: true, // Mark as sub-admin
+      parent_admin: shopAdmin.id // Reference to parent admin
+    });
+
+    res.status(201).json({
+      _id: subShopAdmin.id,
+      name: subShopAdmin.name,
+      email: subShopAdmin.email,
+      rollNo: subShopAdmin.roll_no,
+      role: subShopAdmin.role,
+      shop: subShopAdmin.shop,
+      is_sub_admin: true,
+      parent_admin: subShopAdmin.parent_admin,
+      message: 'Sub-shop admin created successfully'
+    });
+  } catch (error) {
+    res.status(400);
+    throw new Error(error.message || 'Failed to create sub-shop admin');
+  }
+});
+
+// @desc    Get all sub-shop admins for a shop
+// @route   GET /api/users/sub-shop-admins
+// @access  Private/ShopAdmin
+const getSubShopAdmins = asyncHandler(async (req, res) => {
+  // Check if current user is a shop admin and not a sub-admin
+  if (req.user.role !== 'shopAdmin' || req.user.is_sub_admin) {
+    res.status(403);
+    throw new Error('Only original shop admins can view sub-shop admins');
+  }
+
+  const shopAdmin = await UserService.findById(req.user.id || req.user._id);
+  if (!shopAdmin || !shopAdmin.shop) {
+    res.status(400);
+    throw new Error('Shop admin not found or not associated with a shop');
+  }
+
+  // Get all sub-shop admins for this shop
+  const subShopAdmins = await UserService.find({
+    shop: shopAdmin.shop,
+    is_sub_admin: true
+  });
+
+  res.json(subShopAdmins);
+});
+
+// @desc    Delete a sub-shop admin
+// @route   DELETE /api/users/sub-shop-admin/:id
+// @access  Private/ShopAdmin
+const deleteSubShopAdmin = asyncHandler(async (req, res) => {
+  const subAdminId = req.params.id;
+
+  // Check if current user is a shop admin and not a sub-admin
+  if (req.user.role !== 'shopAdmin' || req.user.is_sub_admin) {
+    res.status(403);
+    throw new Error('Only original shop admins can delete sub-shop admins');
+  }
+
+  const shopAdmin = await UserService.findById(req.user.id || req.user._id);
+  if (!shopAdmin || !shopAdmin.shop) {
+    res.status(400);
+    throw new Error('Shop admin not found or not associated with a shop');
+  }
+
+  // Find the sub-shop admin
+  const subShopAdmin = await UserService.findById(subAdminId);
+  if (!subShopAdmin) {
+    res.status(404);
+    throw new Error('Sub-shop admin not found');
+  }
+
+  // Verify the sub-shop admin belongs to the same shop
+  if (subShopAdmin.shop.toString() !== shopAdmin.shop.toString()) {
+    res.status(403);
+    throw new Error('Not authorized to delete this sub-shop admin');
+  }
+
+  // Verify it's actually a sub-admin
+  if (!subShopAdmin.is_sub_admin) {
+    res.status(400);
+    throw new Error('User is not a sub-shop admin');
+  }
+
+  // Delete the sub-shop admin
+  await UserService.findByIdAndDelete(subAdminId);
+
+  res.json({ message: 'Sub-shop admin deleted successfully' });
+});
+
 // @desc    Get all shop admins
 // @route   GET /api/users/shop-admins
 // @access  Private/Admin
@@ -728,6 +874,9 @@ export {
   deleteUser,
   createshopAdmin,
   getshopAdmins,
+  createSubShopAdmin,
+  getSubShopAdmins,
+  deleteSubShopAdmin,
   getUserBalance,
   updateUserBalance,
 };

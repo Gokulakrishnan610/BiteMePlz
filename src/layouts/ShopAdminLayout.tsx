@@ -10,14 +10,17 @@ import {
   Menu, 
   X,
   Receipt,
-  Zap
+  Zap,
+  Users
 } from 'lucide-react';
 
 const ShopAdminLayout: React.FC = () => {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+
 
   const handleLogout = () => {
     logout();
@@ -69,7 +72,9 @@ const ShopAdminLayout: React.FC = () => {
               <Zap className="text-white" size={24} />
             </div>
             <div>
-              <h1 className="text-xl font-bold gradient-text">shop Admin</h1>
+              <h1 className="text-xl font-bold gradient-text">
+                {user?.is_sub_admin ? 'Sub-Admin' : 'Shop Admin'}
+              </h1>
               <p className="text-[var(--muted-text)] text-sm">Campus Kiosk</p>
             </div>
           </div>
@@ -78,16 +83,19 @@ const ShopAdminLayout: React.FC = () => {
         {/* Navigation */}
         <nav className="mt-6 px-3">
           <div className="space-y-2">
-            <Link
-              to="/shop-admin"
-              className={`sidebar-item rounded-xl ${
-                is_active('/shop-admin') ? 'active' : ''
-              }`}
-              onClick={closeSidebar}
-            >
-              <BarChart3 size={20} className="mr-3" />
-              <span>Dashboard</span>
-            </Link>
+            {/* Only show Dashboard link for original shop admins (not sub-admins) */}
+            {user && !user.is_sub_admin && (
+              <Link
+                to="/shop-admin"
+                className={`sidebar-item rounded-xl ${
+                  is_active('/shop-admin') ? 'active' : ''
+                }`}
+                onClick={closeSidebar}
+              >
+                <BarChart3 size={20} className="mr-3" />
+                <span>Dashboard</span>
+              </Link>
+            )}
             
             <Link
               to="/shop-admin/products"
@@ -132,6 +140,20 @@ const ShopAdminLayout: React.FC = () => {
               <QrCode size={20} className="mr-3" />
               <span>Scan QR</span>
             </Link>
+            
+            {/* Only show Sub-Admins link for original shop admins (not sub-admins) */}
+            {user && !user.is_sub_admin && (
+              <Link
+                to="/shop-admin/sub-admins"
+                className={`sidebar-item rounded-xl ${
+                  is_active('/shop-admin/sub-admins') ? 'active' : ''
+                }`}
+                onClick={closeSidebar}
+              >
+                <Users size={20} className="mr-3" />
+                <span>Sub-Admins</span>
+              </Link>
+            )}
           </div>
         </nav>
         
@@ -153,9 +175,11 @@ const ShopAdminLayout: React.FC = () => {
           <div className="px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
             <div>
               <h2 className="text-xl font-semibold text-[var(--primary-text)]">
-                shop Management
+                {user?.is_sub_admin ? 'Sub-Admin Panel' : 'Shop Management'}
               </h2>
-              <p className="text-[var(--muted-text)] text-sm">Manage your shop and products</p>
+              <p className="text-[var(--muted-text)] text-sm">
+                {user?.is_sub_admin ? 'Scan QR codes and manage orders' : 'Manage your shop and products'}
+              </p>
             </div>
             <Link 
               to="/" 

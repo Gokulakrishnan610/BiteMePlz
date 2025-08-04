@@ -9,6 +9,8 @@ interface User {
   role: 'student' | 'shopAdmin' | 'admin';
   shop?: string;
   balance?: number;
+  is_sub_admin?: boolean;
+  parent_admin?: string;
 }
 
 interface AuthContextType {
@@ -81,7 +83,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         email: data.email,
         role: data.role,
         shop: data.shop,
-        balance: data.balance
+        balance: data.balance,
+        is_sub_admin: data.is_sub_admin,
+        parent_admin: data.parent_admin
       };
 
       setUser(userData);
@@ -117,7 +121,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         email: data.email,
         role: data.role,
         shop: data.shop,
-        balance: data.balance
+        balance: data.balance,
+        is_sub_admin: data.is_sub_admin,
+        parent_admin: data.parent_admin
       };
 
       setUser(userData);

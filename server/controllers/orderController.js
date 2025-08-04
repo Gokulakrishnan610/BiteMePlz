@@ -20,8 +20,10 @@ const getEndOfDay = (final_validity_time) => {
 };
 
 const getQRValidityTime = (minutes) => {
+  // Default to 20 minutes if minutes is undefined or null
+  const validMinutes = minutes || 20;
   const date = new Date();
-  date.setMinutes(date.getMinutes() + minutes);
+  date.setMinutes(date.getMinutes() + validMinutes);
   return date;
 };
 
@@ -215,12 +217,22 @@ const checkExpiryAndRefund = asyncHandler(async (req, res) => {
 // @route   POST /api/orders/multi-shop
 // @access  Private
 const createMultiShopOrder = asyncHandler(async (req, res) => {
-  const { order_items, totalPrice, paymentMethod } = req.body;
+  console.log('=== MULTI-SHOP ORDER FUNCTION CALLED ===');
+  try {
+    console.log('Multi-shop order request:', { 
+      order_items: req.body.order_items?.length, 
+      totalPrice: req.body.totalPrice, 
+      paymentMethod: req.body.paymentMethod 
+    });
+    console.log('Full request body:', JSON.stringify(req.body, null, 2));
+    console.log('User info:', { id: req.user?.id, _id: req.user?._id });
+    
+    const { order_items, totalPrice, paymentMethod } = req.body;
 
-  if (!order_items?.length) {
-    res.status(400);
-    throw new Error('No order items');
-  }
+    if (!order_items?.length) {
+      res.status(400);
+      throw new Error('No order items');
+    }
 
   // Group items by shop
   const itemsByShop = {};
@@ -233,14 +245,19 @@ const createMultiShopOrder = asyncHandler(async (req, res) => {
 
   // Validate all shops and products
   const shopIds = Object.keys(itemsByShop);
+  console.log('Shop IDs found:', shopIds);
   const shops = {};
   
   for (const shop_id of shopIds) {
+    console.log(`Validating shop: ${shop_id}`);
     const shop = await shopService.findById(shop_id);
     if (!shop) {
+      console.error(`Shop not found: ${shop_id}`);
       res.status(404);
       throw new Error(`Shop ${shop_id} not found`);
     }
+    console.log(`Shop found: ${shop.name}, is_open: ${shop.is_open}, final_validity_time: ${shop.final_validity_time}`);
+    
     if (!shop.is_open) {
       res.status(400);
       throw new Error(`Shop ${shop.name} is currently closed`);
@@ -258,12 +275,17 @@ const createMultiShopOrder = asyncHandler(async (req, res) => {
   }
 
   // Validate all products and stock
+  console.log('Validating products...');
   for (const item of order_items) {
+    console.log(`Validating product: ${item.product}, quantity: ${item.quantity}`);
     const product = await ProductService.findById(item.product);
     if (!product) {
+      console.error(`Product not found: ${item.product}`);
       res.status(404);
       throw new Error(`Product ${item.product} not found`);
     }
+    console.log(`Product found: ${product.name}, is_available: ${product.is_available}, stock: ${product.stock}`);
+    
     if (!product.is_available) {
       res.status(400);
       throw new Error(`${product.name} is not available`);
@@ -311,20 +333,19 @@ const createMultiShopOrder = asyncHandler(async (req, res) => {
     const shop = shops[shop_id];
     const shopTotal = shopItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
-    const order = await OrderService.create({
-      order_id: `${mainOrderId}-${shop_id}`,
-      user_id: req.user._id,
-      shop_id: shop_id,
-      order_items: shopItems,
-      total_price: shopTotal,
-      payment_result: razorpayOrder ? {
-        razorpay_order_id: razorpayOrder.id,
-      } : undefined,
-      expires_at: expiryTime,
-      final_validity: getEndOfDay(shop.final_validity_time),
-      parent_order_id: mainOrderId,
-      is_multi_shop: true
-    });
+         const order = await OrderService.create({
+       order_id: `${mainOrderId}-${shop_id}`,
+       user_id: req.user._id,
+       shop_id: shop_id,
+       order_items: shopItems,
+       total_price: shopTotal,
+       payment_result: razorpayOrder ? {
+         razorpay_order_id: razorpayOrder.id,
+       } : undefined,
+       expires_at: expiryTime,
+       final_validity: getEndOfDay(shop.final_validity_time),
+       parent_order_id: mainOrderId
+     });
     
     orders.push(order);
   }
@@ -344,13 +365,13 @@ const createMultiShopOrder = asyncHandler(async (req, res) => {
       // Update all orders with payment details and QR codes
       for (const order of orders) {
         const shop = shops[order.shop_id];
-        const qrCodeData = JSON.stringify({
-          order_id: order.order_id,
-          shop_id: order.shop_id,
-          parent_order_id: mainOrderId,
-          paymentMethod: 'balance',
-          timestamp: Date.now()
-        });
+                 const qrCodeData = JSON.stringify({
+           order_id: order.order_id,
+           shop_id: order.shop_id,
+           parent_order_id: mainOrderId,
+           paymentMethod: 'balance',
+           timestamp: Date.now()
+         });
 
         const updatedOrder = await OrderService.findByIdAndUpdate(order.id, {
           is_paid: true,
@@ -402,13 +423,13 @@ const createMultiShopOrder = asyncHandler(async (req, res) => {
           totalPrice: order.total_price,
           isPaid: true,
           paidAt: new Date().toISOString(),
-          qrCode: JSON.stringify({
-            order_id: order.order_id,
-            shop_id: order.shop_id,
-            parent_order_id: mainOrderId,
-            paymentMethod: 'balance',
-            timestamp: Date.now()
-          }),
+                     qrCode: JSON.stringify({
+             order_id: order.order_id,
+             shop_id: order.shop_id,
+             parent_order_id: mainOrderId,
+             paymentMethod: 'balance',
+             timestamp: Date.now()
+           }),
           qrValidUntil: getQRValidityTime(shops[order.shop_id].qr_validity_minutes),
           final_validity: order.final_validity,
           status: 'completed'
@@ -422,8 +443,13 @@ const createMultiShopOrder = asyncHandler(async (req, res) => {
       });
     } catch (error) {
       console.error('Error processing multi-shop balance payment:', error);
+      console.error('Balance payment error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
       res.status(500);
-      throw new Error('Failed to process multi-shop balance payment');
+      throw new Error(`Failed to process multi-shop balance payment: ${error.message || error.toString()}`);
     }
   } else {
     res.status(201).json({
@@ -432,6 +458,30 @@ const createMultiShopOrder = asyncHandler(async (req, res) => {
       orders: orders,
       razorpay_order_id: razorpayOrder.id
     });
+  }
+  } catch (error) {
+    console.error('Error in createMultiShopOrder:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      response: error.response?.data
+    });
+    
+    // More detailed error logging
+    if (error instanceof Error) {
+      console.error('Error is an Error instance');
+      console.error('Error message:', error.message);
+      console.error('Error name:', error.name);
+    } else {
+      console.error('Error is not an Error instance, type:', typeof error);
+      console.error('Error value:', error);
+    }
+    
+    res.status(500);
+    const errorMessage = error?.message || error?.toString() || String(error) || 'Unknown error';
+    throw new Error(`Failed to create multi-shop order: ${errorMessage}`);
   }
 });
 
@@ -552,11 +602,12 @@ const createOrder = asyncHandler(async (req, res) => {
        const updatedOrder = await OrderService.findByIdAndUpdate(order.id, {
          is_paid: true,
          paid_at: new Date().toISOString(),
-         qr_code: JSON.stringify({
-           order_id: order.order_id,
-           paymentMethod: 'balance',
-           timestamp: Date.now()
-         }),
+                   qr_code: JSON.stringify({
+            order_id: order.order_id,
+            shop_id: shop_id,
+            paymentMethod: 'balance',
+            timestamp: Date.now()
+          }),
                    qr_valid_until: getQRValidityTime(shop.qr_validity_minutes),
           balance_amount: totalPrice,
           status: 'completed'
@@ -891,7 +942,8 @@ const updateOrderToPaid = asyncHandler(async (req, res) => {
   }
 
   const qrCodeData = JSON.stringify({
-    order_id: order.id,
+    order_id: order.order_id,
+    shop_id: order.shop_id,
     paymentId: razorpay_payment_id,
     signature: razorpay_signature,
   });
@@ -1002,8 +1054,21 @@ const cancelOrder = asyncHandler(async (req, res) => {
   res.json({ message: 'Order cancelled successfully' });
 });
 
+// Helper function to check if all shops in a multi-shop order are verified
+const checkAllShopsVerified = async (parentOrderId) => {
+  const allRelatedOrders = await OrderService.find({
+    parent_order_id: parentOrderId
+  });
+  
+  return {
+    allVerified: allRelatedOrders.every(relatedOrder => relatedOrder.is_verified),
+    totalShops: allRelatedOrders.length,
+    verifiedShops: allRelatedOrders.filter(relatedOrder => relatedOrder.is_verified).length
+  };
+};
+
 const verifyOrderQR = asyncHandler(async (req, res) => {
-  const { qrData } = req.body;
+  const { qrData, shop_id } = req.body;
   
   if (!qrData) {
     res.status(400);
@@ -1012,13 +1077,22 @@ const verifyOrderQR = asyncHandler(async (req, res) => {
 
   const qrPayload = JSON.parse(qrData);
   
+  // Validate shop_id from QR payload matches the request
+  if (qrPayload.shop_id && shop_id && qrPayload.shop_id !== shop_id) {
+    res.status(400);
+    throw new Error('Shop ID mismatch in QR payload');
+  }
+  
+  // Use shop_id from QR payload or request body
+  const targetShopId = qrPayload.shop_id || shop_id;
+  
   // Handle both single shop and multi-shop orders
   let order;
   if (qrPayload.parent_order_id) {
     // Multi-shop order - find by order_id and shop_id
     order = await OrderService.findOne({
       order_id: qrPayload.order_id,
-      shop_id: qrPayload.shop_id
+      shop_id: targetShopId
     });
   } else {
     // Single shop order - find by order_id
@@ -1030,12 +1104,19 @@ const verifyOrderQR = asyncHandler(async (req, res) => {
     throw new Error('Order not found');
   }
   
+  // Validate that the order belongs to the shop being verified
+  if (targetShopId && order.shop_id.toString() !== targetShopId.toString()) {
+    res.status(400);
+    throw new Error('Order does not belong to the specified shop');
+  }
+  
+  // Validate shop admin authorization
   if (
     req.user.role !== 'admin' && 
     (req.user.role !== 'shopAdmin' || order.shop_id.toString() !== req.user.shop.toString())
   ) {
     res.status(401);
-    throw new Error('Not authorized');
+    throw new Error('Not authorized to verify orders for this shop');
   }
   
   if (new Date() > order.qr_valid_until) {
@@ -1058,14 +1139,42 @@ const verifyOrderQR = asyncHandler(async (req, res) => {
     throw new Error('Order already verified');
   }
 
-     // Don't add balance back to user when verifying - balance should be zero after final validity
-   const updatedOrder = await OrderService.findByIdAndUpdate(order.id, {
-     is_verified: true,
-     verified_at: new Date().toISOString(),
-     balance_amount: 0
-   });
+  // Mark this specific shop order as verified
+  const updatedOrder = await OrderService.findByIdAndUpdate(order.id, {
+    is_verified: true,
+    verified_at: new Date().toISOString(),
+    balance_amount: 0
+  });
 
-  // Log verification
+  // Check if this is part of a multi-shop order and if all shops are now verified
+  if (order.parent_order_id) {
+    const { allVerified, totalShops, verifiedShops } = await checkAllShopsVerified(order.parent_order_id);
+    
+    if (allVerified) {
+      console.log(`All shops verified for multi-shop order: ${order.parent_order_id}`);
+      
+      // Log completion of multi-shop order
+      await logTransaction({
+        shop: order.shop_id,
+        order: order.id,
+        user: order.user_id,
+        type: 'verification',
+        amount: order.total_price,
+        paymentMethod: order.payment_result?.razorpay_payment_id ? 'razorpay' : 'balance',
+        description: `Multi-shop order completed - All shops verified`,
+        metadata: {
+          order_id: order.order_id,
+          parent_order_id: order.parent_order_id,
+          verifiedBy: req.user._id,
+          verifiedAt: order.verified_at,
+          allShopsVerified: true,
+          totalShops: totalShops
+        }
+      });
+    }
+  }
+
+  // Log verification for this specific shop
   await logTransaction({
     shop: order.shop_id,
     order: order.id,
@@ -1073,15 +1182,35 @@ const verifyOrderQR = asyncHandler(async (req, res) => {
     type: 'verification',
     amount: order.total_price,
     paymentMethod: order.payment_result?.razorpay_payment_id ? 'razorpay' : 'balance',
-    description: 'Order verified by shop staff',
+    description: `Order verified by shop staff - ${order.parent_order_id ? 'Multi-shop order' : 'Single shop order'}`,
     metadata: {
       order_id: order.order_id,
+      parent_order_id: order.parent_order_id,
       verifiedBy: req.user._id,
-              verifiedAt: order.verified_at
+      verifiedAt: order.verified_at,
+      shopName: order.shop_id // You might want to fetch shop name here
     }
   });
 
-  res.json(updatedOrder);
+  // Get verification status for multi-shop orders
+  let verificationStatus = null;
+  if (order.parent_order_id) {
+    const { allVerified, totalShops, verifiedShops } = await checkAllShopsVerified(order.parent_order_id);
+    verificationStatus = {
+      allVerified,
+      totalShops,
+      verifiedShops,
+      remainingShops: totalShops - verifiedShops
+    };
+  }
+
+  res.json({
+    ...updatedOrder,
+    message: order.parent_order_id ? 
+      `Shop order verified successfully. ${verificationStatus.remainingShops} of ${verificationStatus.totalShops} shops remaining.` : 
+      'Order verified successfully',
+    verificationStatus
+  });
 });
 
 const deleteOrder = asyncHandler(async (req, res) => {

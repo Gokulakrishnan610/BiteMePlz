@@ -13,6 +13,9 @@ import {
   deleteUser,
   createshopAdmin,
   getshopAdmins,
+  createSubShopAdmin,
+  getSubShopAdmins,
+  deleteSubShopAdmin,
   getUserBalance,
   updateUserBalance,
 } from '../controllers/userController.js';
@@ -72,5 +75,10 @@ router.route('/:id').delete(protect, admin, deleteUser);
 router.get('/', protect, admin, getUsers);
 router.get('/balance', protect, getUserBalance);
 router.put('/balance', protect, updateUserBalance);
+
+// Sub-shop admin routes (only accessible by shop admins)
+router.route('/sub-shop-admin').post(protect, createSubShopAdmin);
+router.route('/sub-shop-admins').get(protect, getSubShopAdmins);
+router.route('/sub-shop-admin/:id').delete(protect, deleteSubShopAdmin);
 
 export default router;

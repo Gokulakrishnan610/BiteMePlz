@@ -47,6 +47,7 @@ import ShopAdminEditProductPage from './pages/shopAdmin/EditProductPage';
 import ShopAdminOrdersPage from './pages/shopAdmin/OrdersPage';
 import ShopAdminTransactionsPage from './pages/shopAdmin/TransactionsPage';
 import ShopAdminScanQRPage from './pages/shopAdmin/ScanQRPage';
+import SubShopAdminsPage from './pages/shopAdmin/SubShopAdminsPage';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -185,6 +186,7 @@ function App() {
             <Route path="orders" element={<ShopAdminOrdersPage />} />
             <Route path="transactions" element={<ShopAdminTransactionsPage />} />
             <Route path="scan" element={<ShopAdminScanQRPage />} />
+            <Route path="sub-admins" element={<SubShopAdminsPage />} />
           </Route>
           
           {/* 404 Page */}

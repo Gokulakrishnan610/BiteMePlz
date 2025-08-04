@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS orders (
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'expired')),
   expires_at TIMESTAMP NOT NULL,
   
+  parent_order_id TEXT, -- For multi-shop orders
+  
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP DEFAULT now()
 );

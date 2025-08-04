@@ -8,6 +8,8 @@ export interface User {
   shop?: string;
   balance?: number;
   isVerified?: boolean;
+  is_sub_admin?: boolean;
+  parent_admin?: string;
 }
 
 export interface shop {

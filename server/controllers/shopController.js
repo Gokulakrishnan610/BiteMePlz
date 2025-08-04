@@ -216,14 +216,16 @@ const getshopAnalytics = asyncHandler(async (req, res) => {
       throw new Error('shop not found');
     }
 
-    // Check if user is admin or the shop admin of this shop
+    // Check if user is admin or the original shop admin of this shop (not sub-admins)
     const userId = req.user.id || req.user._id;
+    console.log('User ID:', userId, 'User role:', req.user.role, 'Shop admin:', shop.shop_admin, 'Is sub-admin:', req.user.is_sub_admin);
+    
     if (
       req.user.role !== 'admin' && 
-      (req.user.role !== 'shopAdmin' || shop.shop_admin.toString() !== userId.toString())
+      (req.user.role !== 'shopAdmin' || shop.shop_admin !== userId || req.user.is_sub_admin)
     ) {
       res.status(401);
-      throw new Error('Not authorized');
+      throw new Error('Not authorized - only original shop admin can access analytics');
     }
 
     // Check cache first
