@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../api';
 import { User, Trash2, Shield, Users, Crown, GraduationCap } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -23,7 +23,7 @@ const UsersPage: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const { data } = await axios.get('/api/users');
+      const { data } = await api.get('/users');
       setUsers(data);
       setLoading(false);
     } catch (error) {
@@ -36,7 +36,7 @@ const UsersPage: React.FC = () => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
 
     try {
-      await axios.delete(`/api/users/${id}`);
+      await api.delete(`/api/users/${id}`);
       toast.success('User deleted successfully');
       fetchUsers();
     } catch (error) {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api';
 import { Package } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -34,7 +34,7 @@ const CreateProductPage: React.FC = () => {
     setLoading(true);
 
     try {
-      console.log('Creating product with data:', formData);
+      
       
       const createData = {
         name: formData.name.trim(),
@@ -45,10 +45,10 @@ const CreateProductPage: React.FC = () => {
         image: formData.image
       };
       
-      console.log('Create payload:', createData);
       
-      const response = await axios.post('/api/products', createData);
-      console.log('Product created successfully:', response.data);
+      
+      const response = await api.post('/products', createData);
+      
       
       toast.success('Product created successfully');
       navigate('/shop-admin/products');
@@ -62,11 +62,11 @@ const CreateProductPage: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    console.log('Form field changed:', { name, value });
+    
     
     setFormData(prev => {
       const newData = { ...prev, [name]: value };
-      console.log('Updated form data:', newData);
+      
       return newData;
     });
   };

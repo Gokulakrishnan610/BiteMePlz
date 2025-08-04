@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../api';
 import { 
   TrendingUp, 
   DollarSign, 
@@ -133,7 +133,7 @@ const AnalyticsPage: React.FC = () => {
 
   const fetchshops = async () => {
     try {
-      const { data } = await axios.get('/api/shops');
+      const { data } = await api.get('/shops');
       setshops(data);
     } catch (error) {
       toast.error('Failed to fetch shops');
@@ -176,7 +176,7 @@ const AnalyticsPage: React.FC = () => {
       
       for (const shop of shops) {
         try {
-          const { data } = await axios.get(`/api/orders/shop/${shop._id}`);
+          const { data } = await api.get(`/api/orders/shop/${shop._id}`);
           allOrders.push(...data.map((order: any) => ({
             ...order,
             shop_id: shop._id,
@@ -200,7 +200,7 @@ const AnalyticsPage: React.FC = () => {
       
       for (const shop of shops) {
         try {
-          const { data } = await axios.get(`/api/transactions/shop/${shop._id}`);
+          const { data } = await api.get(`/api/transactions/shop/${shop._id}`);
           if (data.transactions) {
             allTransactions.push(...data.transactions.map((t: any) => ({
               ...t,

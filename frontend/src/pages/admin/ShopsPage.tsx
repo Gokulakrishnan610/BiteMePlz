@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api';
 import { Store, Plus, Edit, Trash2, Eye, Clock, MapPin } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ConfirmDialog from '../../components/ConfirmDialog';
@@ -35,7 +35,7 @@ const shopsPage: React.FC = () => {
 
   const fetchshops = async () => {
     try {
-      const { data } = await axios.get('/api/shops');
+      const { data } = await api.get('/shops');
       setshops(data);
       setLoading(false);
     } catch (error) {
@@ -54,7 +54,7 @@ const shopsPage: React.FC = () => {
 
   const handleDeleteConfirm = async () => {
     try {
-      await axios.delete(`/api/shops/${deleteDialog.shop_id}`);
+      await api.delete(`/api/shops/${deleteDialog.shop_id}`);
       toast.success('shop deleted successfully');
       fetchshops();
     } catch (error) {

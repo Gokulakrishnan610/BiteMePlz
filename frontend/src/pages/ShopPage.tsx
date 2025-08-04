@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api';
 import { Package, AlertCircle, Store, Clock, ArrowLeft, ShoppingCart, MapPin, Zap, Search, X } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -45,8 +45,8 @@ const ShopPage: React.FC = () => {
     const fetchshopAndProducts = async () => {
       try {
         const [shopResponse, productsResponse] = await Promise.all([
-          axios.get(`/api/shops/${id}`),
-          axios.get(`/api/products`, {
+          api.get(`/api/shops/${id}`),
+          api.get(`/api/products`, {
             params: {
               shop: id
             }

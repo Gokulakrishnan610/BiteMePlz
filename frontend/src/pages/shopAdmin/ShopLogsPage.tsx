@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../api';
 import { 
   Activity, 
   Filter, 
@@ -97,7 +97,7 @@ const shopLogsPage: React.FC = () => {
 
   const fetchshops = async () => {
     try {
-      const { data } = await axios.get('/api/shops');
+      const { data } = await api.get('/shops');
       setshops(data);
     } catch (error) {
       toast.error('Failed to fetch shops');
@@ -113,7 +113,7 @@ const shopLogsPage: React.FC = () => {
         if (value) params.append(key, value.toString());
       });
 
-      const { data } = await axios.get(`/api/shop-logs/all?${params}`);
+      const { data } = await api.get(`/api/shop-logs/all?${params}`);
       setLogs(data.logs || []);
       setPagination({
         currentPage: data.currentPage || 1,
@@ -140,7 +140,7 @@ const shopLogsPage: React.FC = () => {
       });
       params.append('limit', '1000'); // Export more records
 
-      const { data } = await axios.get(`/api/shop-logs/all?${params}`);
+      const { data } = await api.get(`/api/shop-logs/all?${params}`);
       
       const csvData = [];
       

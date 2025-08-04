@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api';
 import { Package, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Loader from '../../components/Loader';
@@ -44,19 +44,13 @@ const EditProductPage: React.FC = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const { data } = await axios.get(`/api/products/${id}`);
-        console.log('Fetched product data:', data);
+        const { data } = await api.get(`/api/products/${id}`);
+
         
         // Normalize the category to ensure it matches our enum values
         const normalizedCategory = data.category ? data.category.toLowerCase().trim() : 'others';
         const validCategories = ['food', 'beverages', 'snacks', 'stationery', 'electronics', 'others'];
         const finalCategory = validCategories.includes(normalizedCategory) ? normalizedCategory : 'others';
-        
-        console.log('Category normalization:', {
-          original: data.category,
-          normalized: normalizedCategory,
-          final: finalCategory
-        });
         
         setFormData({
           name: data.name || '',
@@ -68,15 +62,7 @@ const EditProductPage: React.FC = () => {
           is_available: data.is_available !== undefined ? data.is_available : true
         });
         
-        console.log('Form data set to:', {
-          name: data.name || '',
-          description: data.description || '',
-          category: finalCategory,
-          price: data.price || 0,
-          stock: data.stock || 0,
-          image: data.image || '',
-          is_available: data.is_available !== undefined ? data.is_available : true
-        });
+
         
         setLoading(false);
       } catch (err) {
@@ -96,7 +82,7 @@ const EditProductPage: React.FC = () => {
     setSaving(true);
 
     try {
-      console.log('Submitting form data:', formData);
+
       
       const updateData = {
         name: formData.name.trim(),
@@ -108,10 +94,10 @@ const EditProductPage: React.FC = () => {
         is_available: formData.is_available
       };
       
-      console.log('Update payload:', updateData);
+
       
-      const response = await axios.put(`/api/products/${id}`, updateData);
-      console.log('Product updated successfully:', response.data);
+      const response = await api.put(`/api/products/${id}`, updateData);
+
       
       toast.success('Product updated successfully');
       navigate('/shop-admin/products');
@@ -128,25 +114,25 @@ const EditProductPage: React.FC = () => {
   ) => {
     const { name, value, type } = e.target;
     
-    console.log('Form field changed:', { name, value, type });
+
     
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData(prev => {
         const newData = { ...prev, [name]: checked };
-        console.log('Updated form data (checkbox):', newData);
+
         return newData;
       });
     } else if (type === 'number') {
       setFormData(prev => {
         const newData = { ...prev, [name]: Number(value) };
-        console.log('Updated form data (number):', newData);
+
         return newData;
       });
     } else {
       setFormData(prev => {
         const newData = { ...prev, [name]: value };
-        console.log('Updated form data (text/select):', newData);
+
         return newData;
       });
     }

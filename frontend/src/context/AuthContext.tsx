@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import axios from 'axios';
 import api from '../api';
 
 interface User {
@@ -53,8 +52,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(parsedUser);
           setToken(storedToken);
           
-          // Set token in axios defaults for backward compatibility
-          axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+          // Set token in api defaults for backward compatibility
+          api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -71,7 +70,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const { data } = await api.post('/users/login', { email, password });
+      const { data } = await api.post('/users/login/', { email, password });
 
       if (!data._id || !data.name || !data.email || !data.role || !data.token) {
         throw new Error('Invalid response from server');
@@ -91,8 +90,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(userData);
       setToken(data.token);
       
-      // Set token in axios defaults for backward compatibility
-      axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+      // Set token in api defaults for backward compatibility
+      api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
       
       localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('token', data.token);

@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
-import axios from 'axios';
+import api from '../../api';
 import toast from 'react-hot-toast';
 
 declare global {
@@ -66,8 +66,8 @@ const CartPage: React.FC = () => {
     // Fetch user's remaining balance
     const fetchData = async () => {
       try {
-        const balanceRes = await axios.get('/api/users/profile');
-        console.log('Balance response:', balanceRes.data);
+        const balanceRes = await api.get('/users/profile');
+
         setRemainingBalance(balanceRes.data.balance || 0);
       } catch (error) {
         console.error('Failed to fetch balance:', error);
@@ -100,18 +100,18 @@ const CartPage: React.FC = () => {
   };
 
   const handleQuantityChange = (productId: string, shop_id: string, newQuantity: number) => {
-    console.log('Quantity change clicked:', { productId, shop_id, newQuantity });
+    
     
     // Prevent negative quantities
     if (newQuantity <= 0) {
-      console.log('Removing item from cart');
+      
       removeFromCart(productId, shop_id);
       toast.success('Item removed from cart');
       return;
     }
     
     // Update quantity
-    console.log('Updating quantity to:', newQuantity);
+    
     updateQuantity(productId, shop_id, newQuantity);
   };
 
@@ -133,7 +133,7 @@ const CartPage: React.FC = () => {
   };
 
   const handleBalancePayment = async () => {
-    console.log('Balance payment attempt:', { remainingBalance, totalPrice: getTotalPrice() });
+    
     
     if (remainingBalance < getTotalPrice()) {
       const shortfall = getTotalPrice() - remainingBalance;
@@ -160,9 +160,8 @@ const CartPage: React.FC = () => {
         paymentMethod: 'balance'
       };
       
-      console.log('Sending balance payment request to:', endpoint);
-      console.log('Balance payment request data:', requestData);
-      const orderResponse = await axios.post(endpoint, requestData);
+      
+      const orderResponse = await api.post(endpoint, requestData);
 
       clearCart();
       toast.success('Payment successful! Your order has been placed.');
@@ -203,9 +202,8 @@ const CartPage: React.FC = () => {
         paymentMethod: 'razorpay'
       };
       
-      console.log('Sending Razorpay request to:', endpoint);
-      console.log('Razorpay request data:', requestData);
-      const orderResponse = await axios.post(endpoint, requestData);
+      
+      const orderResponse = await api.post(endpoint, requestData);
 
       setCurrentorder_id(orderResponse.data.order._id);
       startPaymentTimer();
@@ -223,7 +221,7 @@ const CartPage: React.FC = () => {
               clearInterval(timer);
             }
             
-            await axios.put(`/api/orders/${orderResponse.data.order._id}/pay`, {
+            await api.put(`/api/orders/${orderResponse.data.order._id}/pay`, {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_signature: response.razorpay_signature,
@@ -248,7 +246,7 @@ const CartPage: React.FC = () => {
             
             if (currentorder_id) {
               try {
-                await axios.put(`/api/orders/${currentorder_id}/cancel`);
+                await api.put(`/api/orders/${currentorder_id}/cancel`);
                 toast.error('Payment cancelled');
               } catch (error) {
                 console.error('Error cancelling order:', error);
@@ -283,7 +281,7 @@ const CartPage: React.FC = () => {
         if (razorpay && typeof razorpay.close === 'function') {
           razorpay.close();
           if (currentorder_id) {
-            axios.put(`/api/orders/${currentorder_id}/cancel`)
+            api.put(`/api/orders/${currentorder_id}/cancel`)
               .then(() => {
                 toast.error('Payment time expired');
                 setPaymentInitiated(false);
@@ -317,14 +315,14 @@ const CartPage: React.FC = () => {
   };
 
   const handleDeleteItem = (product: string, shop_id: string, name: string) => {
-    console.log('Delete button clicked:', { product, shop_id, name });
+    
     setItemToDelete({ product, shop_id, name });
     setShowDeleteConfirm(true);
   };
 
   const confirmDelete = () => {
     if (itemToDelete) {
-      console.log('Confirming delete for:', itemToDelete);
+      
       removeFromCart(itemToDelete.product, itemToDelete.shop_id);
       toast.success(`${itemToDelete.name} removed from cart`);
       setShowDeleteConfirm(false);
@@ -334,7 +332,7 @@ const CartPage: React.FC = () => {
 
   // Direct delete without confirmation (for testing)
   const handleDirectDelete = (product: string, shop_id: string, name: string) => {
-    console.log('Direct delete clicked:', { product, shop_id, name });
+    
     try {
       removeFromCart(product, shop_id);
       toast.success(`${name} removed from cart`);
@@ -488,10 +486,8 @@ const CartPage: React.FC = () => {
                          <div className="flex items-center bg-[var(--secondary-bg)] rounded-xl border-2 border-[var(--border-color)] shadow-lg">
                            <button
                                                            onClick={() => {
-                                console.log('Minus clicked for:', item.product, item.shop_id, 'Current quantity:', item.quantity);
-                                console.log('Button disabled state:', { quantity: item.quantity, paymentInitiated });
+                                
                                 const newQuantity = item.quantity - 1;
-                                console.log('New quantity will be:', newQuantity);
                                 handleQuantityChange(item.product, item.shop_id, newQuantity);
                               }}
                              className="p-2 sm:p-4 hover:bg-[var(--hover-bg)] transition-all duration-200 rounded-l-xl hover:scale-105 active:scale-95 cursor-pointer"
@@ -505,10 +501,7 @@ const CartPage: React.FC = () => {
                            </span>
                            <button
                                                            onClick={() => {
-                                console.log('Plus clicked for:', item.product, item.shop_id, 'Current quantity:', item.quantity);
-                                console.log('Button disabled state:', { stock: item.stock, paymentInitiated });
                                 const newQuantity = item.quantity + 1;
-                                console.log('New quantity will be:', newQuantity);
                                 handleQuantityChange(item.product, item.shop_id, newQuantity);
                               }}
                              className="p-2 sm:p-4 hover:bg-[var(--hover-bg)] transition-all duration-200 rounded-r-xl hover:scale-105 active:scale-95 cursor-pointer"
@@ -526,8 +519,6 @@ const CartPage: React.FC = () => {
                          {/* Delete Button */}
                          <button
                                                        onClick={() => {
-                              console.log('Delete clicked for:', item.product, item.shop_id, item.name);
-                              console.log('Delete button disabled state:', { paymentInitiated });
                               handleDirectDelete(item.product, item.shop_id, item.name);
                             }}
                            className="flex items-center justify-center w-10 h-10 sm:w-14 sm:h-14 bg-red-500/10 hover:bg-red-500/20 text-[var(--error)] hover:text-red-400 transition-all duration-300 rounded-xl cursor-pointer border-2 border-red-500/30 hover:border-red-500/50 hover:scale-105 shadow-lg active:scale-95"

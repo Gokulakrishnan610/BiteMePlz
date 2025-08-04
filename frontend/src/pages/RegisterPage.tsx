@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus, Eye, EyeOff, Zap, Mail, Lock, User, CreditCard } from 'lucide-react';
-import axios from 'axios';
+import api from '../api';
 import toast from 'react-hot-toast';
 
 const RegisterPage: React.FC = () => {
@@ -92,26 +92,33 @@ const RegisterPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const { data } = await axios.post('/api/users/register', {
+      const { data } = await api.post('/users/register/', {
         name: formData.name.trim(),
         email: formData.email.trim().toLowerCase(),
-        rollNo: formData.rollNo.trim(),
-        password: formData.password
+        roll_no: formData.rollNo.trim(),
+        password: formData.password,
+        confirm_password: formData.confirmPassword,
+        role: 'student'
       });
 
       setUserId(data.userId);
       setStep('verify');
-      toast.success('OTP sent to your email');
+      toast.success('OTP sent to your email. Please check your inbox.');
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Registration failed';
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Registration failed';
       toast.error(errorMessage);
       
       // Handle specific errors
-      if (error.response?.status === 400 && errorMessage.includes('already exists')) {
-        if (errorMessage.includes('email')) {
-          setErrors({ email: 'An account with this email already exists' });
-        } else if (errorMessage.includes('roll')) {
-          setErrors({ rollNo: 'An account with this roll number already exists' });
+      if (error.response?.status === 400) {
+        const errors = error.response?.data;
+        if (errors?.email) {
+          setErrors({ email: errors.email[0] });
+        } else if (errors?.roll_no) {
+          setErrors({ rollNo: errors.roll_no[0] });
+        } else if (errors?.password) {
+          setErrors({ password: errors.password[0] });
+        } else if (errors?.confirm_password) {
+          setErrors({ confirmPassword: errors.confirm_password[0] });
         }
       }
     } finally {
@@ -130,15 +137,25 @@ const RegisterPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const { data } = await axios.post('/api/users/verify-otp', {
+      const { data } = await api.post('/users/verify-otp/', {
         userId,
         otp: formData.otp.trim()
       });
 
+      // Store user data and token
+      localStorage.setItem('user', JSON.stringify({
+        _id: data._id,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        balance: data.balance
+      }));
+      localStorage.setItem('token', data.token);
+      
       toast.success('Registration successful! Please log in.');
       navigate('/login');
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'OTP verification failed';
+      const errorMessage = error.response?.data?.error || 'OTP verification failed';
       toast.error(errorMessage);
       
       if (error.response?.status === 400) {
@@ -160,16 +177,17 @@ const RegisterPage: React.FC = () => {
     }
 
     try {
-      await axios.post('/api/users/resend-otp', { userId });
-      toast.success('New OTP sent to your email');
+      await api.post('/users/resend-otp/', { userId });
+      toast.success('New OTP sent to your email. Please check your inbox.');
       setErrors({ otp: '' }); // Clear any OTP errors
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Failed to resend OTP';
+      const errorMessage = error.response?.data?.error || 'Failed to resend OTP';
       toast.error(errorMessage);
     }
   };
 
-  return (
+  
+    return (
     <div className="min-h-screen bg-gradient-to-br from-[var(--primary-bg)] via-[var(--secondary-bg)] to-[var(--primary-bg)] flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
         {/* Logo Section */}

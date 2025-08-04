@@ -84,21 +84,20 @@ const DashboardPage: React.FC = () => {
     const fetchData = async () => {
       try {
         if (!user?.shop) {
-          console.log('No shop found for user:', user);
+  
           setError('No shop associated with this account');
           setLoading(false);
           return;
         }
         
-        console.log('Fetching data for shop:', user.shop);
+        
         
         const [analyticsRes, shopRes] = await Promise.all([
           api.get(`/shops/${user.shop}/analytics`),
           api.get(`/shops/${user.shop}`)
         ]);
         
-        console.log('Analytics response:', analyticsRes.data);
-        console.log('shop response:', shopRes.data);
+        
         
         setAnalytics(analyticsRes.data);
         setshop(shopRes.data);

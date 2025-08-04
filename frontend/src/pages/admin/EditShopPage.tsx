@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api';
 import { Store, Clock, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ImageUpload from '../../components/ImageUpload';
@@ -37,7 +37,7 @@ const EditShopPage: React.FC = () => {
   useEffect(() => {
     const fetchshop = async () => {
       try {
-        const { data } = await axios.get(`/api/shops/${id}`);
+        const { data } = await api.get(`/api/shops/${id}`);
         setshop(data);
         
         // Format the time for the input
@@ -109,7 +109,7 @@ const EditShopPage: React.FC = () => {
         qrValidityMinutes: qrMinutes
       };
 
-      await axios.put(`/api/shops/${id}`, payload);
+      await api.put(`/api/shops/${id}`, payload);
       
       toast.success('shop updated successfully');
       navigate('/admin/shops');

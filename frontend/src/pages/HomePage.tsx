@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api';
 import { Store, MapPin, Clock, Star, Zap, ShoppingBag, Users, TrendingUp } from 'lucide-react';
 
 interface shop {
@@ -21,7 +21,7 @@ const HomePage: React.FC = () => {
   useEffect(() => {
     const fetchshops = async () => {
       try {
-        const { data } = await axios.get('/api/shops');
+        const { data } = await api.get('/shops');
         setshops(Array.isArray(data) ? data : []);
         setLoading(false);
       } catch (err) {

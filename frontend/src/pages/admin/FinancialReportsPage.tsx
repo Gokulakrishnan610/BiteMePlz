@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../api';
 import { 
   DollarSign, 
   Download, 
@@ -53,7 +53,7 @@ const FinancialReportsPage: React.FC = () => {
 
   const fetchshops = async () => {
     try {
-      const { data } = await axios.get('/api/shops');
+      const { data } = await api.get('/shops');
       setshops(data);
     } catch (error) {
       toast.error('Failed to fetch shops');
@@ -75,7 +75,7 @@ const FinancialReportsPage: React.FC = () => {
             endDate: dateRange.endDate
           });
 
-          const { data } = await axios.get(`/api/transactions/shop/${shop._id}?${params}`);
+          const { data } = await api.get(`/api/transactions/shop/${shop._id}?${params}`);
           const transactions = data.transactions || [];
 
           // Calculate financial metrics

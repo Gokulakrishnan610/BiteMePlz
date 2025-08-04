@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../api';
 import { 
   Users, 
   TrendingUp, 
@@ -138,7 +138,7 @@ const StudentAnalyticsPage: React.FC = () => {
 
   const fetchshops = async () => {
     try {
-      const { data } = await axios.get('/api/shops');
+      const { data } = await api.get('/shops');
       setshops(data);
     } catch (error) {
       toast.error('Failed to fetch shops');
@@ -160,12 +160,12 @@ const StudentAnalyticsPage: React.FC = () => {
         ? `/api/student-analytics/shop/${selectedshop}?${params}`
         : `/api/student-analytics/overview?${params}`;
 
-      const { data } = await axios.get(endpoint);
+      const { data } = await api.get(endpoint);
       setBehaviorData(data);
 
       // Fetch advanced insights
       if (selectedshop) {
-        const insightsRes = await axios.get(`/api/student-analytics/shop/${selectedshop}/insights`);
+        const insightsRes = await api.get(`/api/student-analytics/shop/${selectedshop}/insights`);
         setAdvancedInsights(insightsRes.data);
       }
 

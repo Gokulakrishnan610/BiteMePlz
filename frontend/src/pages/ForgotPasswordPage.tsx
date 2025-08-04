@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowLeft, Zap, Shield, Key, CheckCircle } from 'lucide-react';
-import axios from 'axios';
+import api from '../api';
 import toast from 'react-hot-toast';
 
 const ForgotPasswordPage: React.FC = () => {
@@ -32,7 +32,7 @@ const ForgotPasswordPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const { data } = await axios.post('/api/users/forgot-password', {
+      const { data } = await api.post('/users/forgot-password', {
         email: formData.email
       });
 
@@ -57,7 +57,7 @@ const ForgotPasswordPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const { data } = await axios.post('/api/users/verify-reset-otp', {
+      const { data } = await api.post('/users/verify-reset-otp', {
         userId,
         otp: formData.otp
       });
@@ -93,7 +93,7 @@ const ForgotPasswordPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const { data } = await axios.post('/api/users/reset-password', {
+      const { data } = await api.post('/users/reset-password', {
         userId,
         resetToken,
         newPassword: formData.newPassword
@@ -110,7 +110,7 @@ const ForgotPasswordPage: React.FC = () => {
 
   const handleResendOTP = async () => {
     try {
-      await axios.post('/api/users/resend-reset-otp', { userId });
+      await api.post('/users/resend-reset-otp', { userId });
       toast.success('New OTP sent to your email');
     } catch (error: any) {
       toast.error('Failed to resend OTP');

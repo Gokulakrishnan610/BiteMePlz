@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api';
 import { 
   ArrowLeft, 
   Store, 
@@ -149,9 +149,9 @@ const shopDetailsPage: React.FC = () => {
   const fetchshopData = async () => {
     try {
       const [shopRes, analyticsRes, transactionStatsRes] = await Promise.all([
-        axios.get(`/api/shops/${id}`),
-        axios.get(`/api/shops/${id}/analytics`),
-        axios.get(`/api/transactions/shop/${id}/stats`)
+        api.get(`/api/shops/${id}`),
+        api.get(`/api/shops/${id}/analytics`),
+        api.get(`/api/transactions/shop/${id}/stats`)
       ]);
       
       setshop(shopRes.data);
@@ -171,7 +171,7 @@ const shopDetailsPage: React.FC = () => {
         if (value) params.append(key, value.toString());
       });
 
-      const { data } = await axios.get(`/api/transactions/shop/${id}?${params}`);
+      const { data } = await api.get(`/api/transactions/shop/${id}?${params}`);
       setTransactions(data.transactions);
     } catch (err) {
       toast.error('Failed to load transactions');
@@ -180,7 +180,7 @@ const shopDetailsPage: React.FC = () => {
 
   const handleTransactionClick = async (transactionId: string) => {
     try {
-      const { data } = await axios.get(`/api/transactions/${transactionId}`);
+      const { data } = await api.get(`/api/transactions/${transactionId}`);
       setSelectedTransaction(data);
     } catch (err) {
       toast.error('Failed to load transaction details');
@@ -195,7 +195,7 @@ const shopDetailsPage: React.FC = () => {
       });
       params.append('limit', '1000'); // Export more records
 
-      const { data } = await axios.get(`/api/transactions/shop/${id}?${params}`);
+      const { data } = await api.get(`/api/transactions/shop/${id}?${params}`);
       
       // Convert to CSV
       const csvContent = [

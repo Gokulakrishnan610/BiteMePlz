@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../api';
 import { 
   Receipt, 
   Filter, 
@@ -79,7 +79,7 @@ const TransactionsPage: React.FC = () => {
 
   const fetchshops = async () => {
     try {
-      const { data } = await axios.get('/api/shops');
+      const { data } = await api.get('/shops');
       setshops(data);
     } catch (error) {
       toast.error('Failed to fetch shops');
@@ -97,7 +97,7 @@ const TransactionsPage: React.FC = () => {
           if (value && key !== 'shop') params.append(key, value.toString());
         });
 
-        const { data } = await axios.get(`/api/transactions/shop/${filters.shop}?${params}`);
+        const { data } = await api.get(`/api/transactions/shop/${filters.shop}?${params}`);
         setTransactions(data.transactions || []);
         
         // Calculate stats
@@ -123,7 +123,7 @@ const TransactionsPage: React.FC = () => {
               if (value && key !== 'shop') params.append(key, value.toString());
             });
 
-            const { data } = await axios.get(`/api/transactions/shop/${shop._id}?${params}`);
+            const { data } = await api.get(`/api/transactions/shop/${shop._id}?${params}`);
             if (data.transactions) {
               allTransactions.push(...data.transactions.map((t: any) => ({
                 ...t,

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api';
 import { Store, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ImageUpload from '../../components/ImageUpload';
@@ -71,14 +71,14 @@ const CreateShopPage: React.FC = () => {
         qrValidityMinutes: qrMinutes
       };
 
-      console.log('Sending payload:', payload);
+      
 
-      const response = await axios.post('/api/users/shop-admin', payload);
+      const response = await api.post('/users/shop-admin', payload);
       
       toast.success('shop created successfully');
       navigate('/admin/shops');
     } catch (error: any) {
-      console.log('Error details:', error.response?.data || error);
+      
       const errorMessage = error.response?.data?.message || error.message || 'Failed to create shop';
       toast.error(errorMessage);
     } finally {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../api';
 import { User, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -21,7 +21,7 @@ const ProfilePage: React.FC = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const { data } = await axios.get('/api/users/profile');
+        const { data } = await api.get('/users/profile');
         setProfile(data);
         setLoading(false);
       } catch (err) {

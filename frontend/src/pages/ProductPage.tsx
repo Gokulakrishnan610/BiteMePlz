@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api';
 import { Package, ArrowLeft, AlertCircle } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -29,7 +29,7 @@ const ProductPage: React.FC = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const { data } = await axios.get(`/api/products/${id}`);
+        const { data } = await api.get(`/api/products/${id}`);
         setProduct(data);
         setLoading(false);
       } catch (err) {

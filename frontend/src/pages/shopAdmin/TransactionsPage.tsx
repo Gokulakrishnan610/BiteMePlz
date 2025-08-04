@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../api';
 import { 
   Receipt, 
   Filter, 
@@ -143,7 +143,7 @@ const TransactionsPage: React.FC = () => {
         if (value) params.append(key, value.toString());
       });
 
-      const { data } = await axios.get(`/api/transactions/shop/${user?.shop}?${params}`);
+      const { data } = await api.get(`/api/transactions/shop/${user?.shop}?${params}`);
       setTransactions(data.transactions || []);
       setPagination({
         currentPage: data.currentPage || 1,
@@ -167,7 +167,7 @@ const TransactionsPage: React.FC = () => {
         previousParams.append('startDate', previousPeriodStart.toISOString().split('T')[0]);
         previousParams.append('endDate', currentPeriodStart.toISOString().split('T')[0]);
         
-        const { data: previousData } = await axios.get(`/api/transactions/shop/${user?.shop}?${previousParams}`);
+        const { data: previousData } = await api.get(`/api/transactions/shop/${user?.shop}?${previousParams}`);
         const previousAmount = previousData.transactions?.reduce((sum: number, t: Transaction) => sum + t.amount, 0) || 0;
         const growthRate = previousAmount > 0 ? ((totalAmount - previousAmount) / previousAmount) * 100 : 0;
         
@@ -206,7 +206,7 @@ const TransactionsPage: React.FC = () => {
       if (filters.startDate) analyticsParams.append('startDate', filters.startDate);
       if (filters.endDate) analyticsParams.append('endDate', filters.endDate);
 
-      const { data } = await axios.get(`/api/transactions/shop/${user?.shop}?${analyticsParams}`);
+      const { data } = await api.get(`/api/transactions/shop/${user?.shop}?${analyticsParams}`);
       const allTransactions = data.transactions || [];
 
       // Generate hourly distribution from real data
@@ -324,7 +324,7 @@ const TransactionsPage: React.FC = () => {
       });
       params.append('limit', '1000'); // Export more records
 
-      const { data } = await axios.get(`/api/transactions/shop/${user?.shop}?${params}`);
+      const { data } = await api.get(`/api/transactions/shop/${user?.shop}?${params}`);
       
       const csvData = [];
       

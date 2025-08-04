@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Upload, X, Image as ImageIcon, Eye, AlertTriangle } from 'lucide-react';
-import axios from 'axios';
+import api from '../api';
 import toast from 'react-hot-toast';
 
 interface ImageUploadProps {
@@ -67,20 +67,16 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       const formData = new FormData();
       formData.append('image', file);
 
-      console.log('Uploading file:', {
-        name: file.name,
-        size: file.size,
-        type: file.type
-      });
+      
 
-      const { data } = await axios.post('/api/upload/single', formData, {
+      const { data } = await api.post('/upload/single', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
         timeout: 30000, // 30 second timeout
       });
 
-      console.log('Upload response:', data);
+      
 
       onImageUpload(data.filePath);
       toast.success('Image uploaded successfully! 🎉', {

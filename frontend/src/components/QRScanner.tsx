@@ -76,7 +76,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError }) => 
         selectedCamera,
         config,
         (decodedText) => {
-          console.log('QR Code detected:', decodedText);
+  
           onScanSuccess(decodedText);
           stopScanner();
         },

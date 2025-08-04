@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api';
 import { Package, AlertCircle, CreditCard, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Loader from '../../components/Loader';
@@ -33,7 +33,7 @@ const OrdersPage: React.FC = () => {
 
   const fetchOrders = async () => {
     try {
-      const { data } = await axios.get('/api/orders/myorders');
+      const { data } = await api.get('/orders/myorders');
       setOrders(data);
       setLoading(false);
     } catch (err) {
@@ -45,7 +45,7 @@ const OrdersPage: React.FC = () => {
   const handlePayment = async (order_id: string, amount: number) => {
     try {
       setProcessingOrder(order_id);
-      const { data } = await axios.post(`/api/orders/${order_id}/pay`);
+      const { data } = await api.post(`/api/orders/${order_id}/pay`);
       
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID||"rzp_test_RVKFS8WX756Anx",
@@ -56,7 +56,7 @@ const OrdersPage: React.FC = () => {
         order_id: data.razorpayorder_id,
         handler: async (response: any) => {
           try {
-            await axios.put(`/api/orders/${order_id}/pay`, {
+            await api.put(`/api/orders/${order_id}/pay`, {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_signature: response.razorpay_signature,
@@ -86,7 +86,7 @@ const OrdersPage: React.FC = () => {
   const handleCancel = async (order_id: string) => {
     try {
       setProcessingOrder(order_id);
-      await axios.put(`/api/orders/${order_id}/cancel`);
+      await api.put(`/api/orders/${order_id}/cancel`);
       await fetchOrders();
       toast.success('Order cancelled successfully');
     } catch (error: any) {
@@ -102,7 +102,7 @@ const OrdersPage: React.FC = () => {
     }
 
     try {
-      await axios.delete(`/api/orders/${order_id}`);
+      await api.delete(`/api/orders/${order_id}`);
       toast.success('Order deleted successfully');
       setOrders(orders.filter(order => order._id !== order_id));
     } catch (error: any) {

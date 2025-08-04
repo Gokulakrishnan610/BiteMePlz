@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api';
 import { ArrowLeft, AlertCircle, QrCode, Trash2, Clock, Wallet } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import toast from 'react-hot-toast';
@@ -67,13 +67,13 @@ const OrderDetailsPage: React.FC = () => {
         order.status !== 'expired'
       ) {
         try {
-          const expiryRes = await axios.get(`${baseURL}/api/orders/check-expiry/${order._id}`);
+          const expiryRes = await api.get(`${baseURL}/api/orders/check-expiry/${order._id}`);
           if (expiryRes.data.balance !== undefined) {
             await refreshBalance();
           } else {
             await refreshBalance();
           }
-          const { data } = await axios.get(`${baseURL}/api/orders/${id}`);
+          const { data } = await api.get(`${baseURL}/api/orders/${id}`);
           setOrder(data);
           if (data.status === 'expired') {
             toast.success('Order expired. Amount refunded to wallet.');
@@ -92,7 +92,7 @@ const OrderDetailsPage: React.FC = () => {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const { data } = await axios.get(`/api/orders/${id}`);
+        const { data } = await api.get(`/api/orders/${id}`);
         setOrder(data);
         setLoading(false);
       } catch (err) {
@@ -143,7 +143,7 @@ const OrderDetailsPage: React.FC = () => {
 
     try {
       setDeleting(true);
-      await axios.delete(`/api/orders/${order._id}`);
+      await api.delete(`/api/orders/${order._id}`);
       toast.success('Order deleted successfully');
       navigate('/orders');
     } catch (error: any) {

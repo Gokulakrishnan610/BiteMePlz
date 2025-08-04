@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../../api';
 import { QrCode, CheckCircle, CreditCard, Receipt, Camera, X, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import QRScanner from '../../components/QRScanner';
@@ -58,7 +58,7 @@ const ScanQRPage: React.FC = () => {
         }
         
         const parsedData = JSON.parse(qrData);
-        const { data } = await axios.put(`/api/orders/${parsedData.order_id}/verify`, { qrData });
+        const { data } = await api.put(`/api/orders/${parsedData.order_id}/verify`, { qrData });
         setVerifiedOrder(data);
         toast.success('Order verified successfully');
       } else {
@@ -66,8 +66,8 @@ const ScanQRPage: React.FC = () => {
           throw new Error('Please enter payment ID');
         }
         
-        const { data: orderData } = await axios.get(`/api/orders/payment/${paymentId}`);
-        const { data } = await axios.put(`/api/orders/${orderData.order_id}/verify`, {
+        const { data: orderData } = await api.get(`/api/orders/payment/${paymentId}`);
+        const { data } = await api.put(`/api/orders/${orderData.order_id}/verify`, {
           qrData: JSON.stringify({
             order_id: orderData.order_id,
             paymentId: orderData.paymentId,
