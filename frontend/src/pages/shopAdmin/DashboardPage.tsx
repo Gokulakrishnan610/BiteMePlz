@@ -92,7 +92,7 @@ const DashboardPage: React.FC = () => {
         
         
         
-        const shopRes = await api.get(`/shops/${user.shop}/`);
+        const shopRes = await api.get(`/api/shops/${user.shop}/`);
         
         // Analytics endpoint doesn't exist yet, so we'll set empty data
         setAnalytics({
@@ -143,7 +143,7 @@ const DashboardPage: React.FC = () => {
     if (!user?.shop) return;
     try {
       setClosing(true);
-      const { data } = await api.post(`/shops/${user.shop}/toggle`);
+              const { data } = await api.post(`/api/shops/${user.shop}/toggle/`);
       setshop(data.shop);
       toast.success(data.message);
     } catch (error: any) {
@@ -171,9 +171,9 @@ const DashboardPage: React.FC = () => {
         validityDate.setDate(validityDate.getDate() + 1);
       }
       
-      const { data } = await api.put(`/shops/${user.shop}`, {
-        final_validity_time: validityDate.toISOString()
-      });
+              const { data } = await api.put(`/api/shops/${user.shop}/`, {
+          final_validity_time: validityDate.toISOString()
+        });
       
       // Update local state with the new time
       setfinal_validity(data.final_validity_time
@@ -203,9 +203,9 @@ const DashboardPage: React.FC = () => {
       }
 
       setUpdatingQR(true);
-      const { data } = await api.put(`/shops/${user.shop}`, {
-        qr_validity_minutes: minutes
-      });
+              const { data } = await api.put(`/api/shops/${user.shop}/`, {
+          qr_validity_minutes: minutes
+        });
       setshop(data);
       setQrValidityMinutes(data.qr_validity_minutes.toString());
       toast.success('QR validity time updated successfully');

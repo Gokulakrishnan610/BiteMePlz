@@ -99,6 +99,220 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=False, methods=['get'])
+    def sub_shop_admins(self, request):
+        """Get all sub-shop admins for the current user's shop"""
+        if request.user.role != 'shopAdmin':
+            return Response({'error': 'Only shop admins can access this endpoint'}, status=status.HTTP_403_FORBIDDEN)
+        
+        if not request.user.shop:
+            return Response({'error': 'No shop associated with this user'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get all users associated with this shop
+        sub_admins = User.objects.filter(shop=request.user.shop, role='shopAdmin')
+        serializer = UserSerializer(sub_admins, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['post'])
+    def sub_shop_admin(self, request):
+        """Create a sub-shop admin for the current user's shop"""
+        if request.user.role != 'shopAdmin':
+            return Response({'error': 'Only shop admins can access this endpoint'}, status=status.HTTP_403_FORBIDDEN)
+        
+        if not request.user.shop:
+            return Response({'error': 'No shop associated with this user'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Extract data from request
+        name = request.data.get('name')
+        email = request.data.get('email')
+        password = request.data.get('password')
+        
+        # Validate required fields
+        if not all([name, email, password]):
+            return Response({'error': 'Name, email, and password are required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if user already exists
+        if User.objects.filter(email=email).exists():
+            return Response({'error': 'A user with this email already exists'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create sub-shop admin user
+        user_data = {
+            'name': name,
+            'email': email,
+            'password': password,
+            'confirm_password': password,
+            'role': 'shopAdmin',
+            'roll_no': f'SUB_ADMIN_{email.split("@")[0]}',
+            'shop': request.user.shop,
+            'is_verified': True  # Sub-admins are pre-verified
+        }
+        
+        user_serializer = UserRegistrationSerializer(data=user_data)
+        if not user_serializer.is_valid():
+            return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create user
+        user = user_serializer.save()
+        
+        return Response({
+            'message': 'Sub-shop admin created successfully',
+            'user': UserSerializer(user).data
+        }, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def forgot_password(self, request):
+        """Send password reset OTP to user's email"""
+        try:
+            email = request.data.get('email')
+            if not email:
+                return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                return Response({'error': 'No user found with this email address'}, status=status.HTTP_404_NOT_FOUND)
+            
+            # Generate OTP
+            import random
+            otp = str(random.randint(100000, 999999))
+            otp_data = {
+                'otp': otp,
+                'created_at': timezone.now().isoformat(),
+                'expires_at': (timezone.now() + timedelta(minutes=10)).isoformat()
+            }
+            
+            user.password_reset_otp = otp_data
+            user.save()
+            
+            # Send OTP email (you can implement this later)
+            # For now, just return success
+            return Response({
+                'message': 'Password reset OTP sent to your email',
+                'userId': str(user.id)
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def verify_reset_otp(self, request):
+        """Verify password reset OTP"""
+        try:
+            user_id = request.data.get('userId')
+            otp = request.data.get('otp')
+            
+            if not user_id or not otp:
+                return Response({'error': 'User ID and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            if not user.password_reset_otp:
+                return Response({'error': 'No OTP found for this user'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Check if OTP is expired
+            otp_data = user.password_reset_otp
+            expires_at = timezone.datetime.fromisoformat(otp_data['expires_at'].replace('Z', '+00:00'))
+            if timezone.now() > expires_at:
+                return Response({'error': 'OTP has expired'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Verify OTP
+            if otp_data['otp'] != otp:
+                return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Generate reset token
+            import secrets
+            reset_token = secrets.token_urlsafe(32)
+            user.password_reset_token = {
+                'token': reset_token,
+                'created_at': timezone.now().isoformat(),
+                'expires_at': (timezone.now() + timedelta(minutes=30)).isoformat()
+            }
+            user.save()
+            
+            return Response({
+                'message': 'OTP verified successfully',
+                'resetToken': reset_token
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def reset_password(self, request):
+        """Reset password using reset token"""
+        try:
+            reset_token = request.data.get('resetToken')
+            new_password = request.data.get('newPassword')
+            
+            if not reset_token or not new_password:
+                return Response({'error': 'Reset token and new password are required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Find user with this reset token
+            users = User.objects.all()
+            user = None
+            for u in users:
+                if u.password_reset_token and u.password_reset_token.get('token') == reset_token:
+                    user = u
+                    break
+            
+            if not user:
+                return Response({'error': 'Invalid reset token'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Check if token is expired
+            token_data = user.password_reset_token
+            expires_at = timezone.datetime.fromisoformat(token_data['expires_at'].replace('Z', '+00:00'))
+            if timezone.now() > expires_at:
+                return Response({'error': 'Reset token has expired'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Update password
+            user.set_password(new_password)
+            user.password_reset_token = None
+            user.password_reset_otp = None
+            user.save()
+            
+            return Response({
+                'message': 'Password reset successfully'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def resend_reset_otp(self, request):
+        """Resend password reset OTP"""
+        try:
+            user_id = request.data.get('userId')
+            
+            if not user_id:
+                return Response({'error': 'User ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            # Generate new OTP
+            import random
+            otp = str(random.randint(100000, 999999))
+            otp_data = {
+                'otp': otp,
+                'created_at': timezone.now().isoformat(),
+                'expires_at': (timezone.now() + timedelta(minutes=10)).isoformat()
+            }
+            
+            user.password_reset_otp = otp_data
+            user.save()
+            
+            return Response({
+                'message': 'New password reset OTP sent to your email'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @action(detail=False, methods=['post'])
     def shop_admin(self, request):
         """Create a shop admin user and shop"""
@@ -401,9 +615,9 @@ class ProductViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        shop_id = self.request.query_params.get('shop_id')
+        shop_id = self.request.query_params.get('shop_id') or self.request.query_params.get('shop')
         if shop_id:
-            return Product.objects.filter(shop_id=shop_id, is_available=True)
+            return Product.objects.filter(shop=shop_id, is_available=True)
         return Product.objects.filter(is_available=True)
 
     def get_permissions(self):
@@ -443,7 +657,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Shop ID is required'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            orders = Order.objects.filter(shop_id=shop_id)
+            orders = Order.objects.filter(shop=shop_id)
             serializer = self.get_serializer(orders, many=True)
             return Response(serializer.data)
         except Exception as e:
@@ -578,7 +792,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Shop ID is required'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            transactions = Transaction.objects.filter(shop_id=shop_id)
+            transactions = Transaction.objects.filter(shop=shop_id)
             serializer = self.get_serializer(transactions, many=True)
             return Response(serializer.data)
         except Exception as e:

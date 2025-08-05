@@ -37,7 +37,7 @@ const EditShopPage: React.FC = () => {
   useEffect(() => {
     const fetchshop = async () => {
       try {
-        const { data } = await api.get(`/shops/${id}/`);
+        const { data } = await api.get(`/api/shops/${id}/`);
         setshop(data);
         
         // Format the time for the input
@@ -109,7 +109,7 @@ const EditShopPage: React.FC = () => {
         qrValidityMinutes: qrMinutes
       };
 
-      await api.put(`/shops/${id}`, payload);
+      await api.put(`/api/shops/${id}/`, payload);
       
       toast.success('shop updated successfully');
       navigate('/admin/shops');

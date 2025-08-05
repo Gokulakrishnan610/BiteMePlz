@@ -39,15 +39,15 @@ const CreateProductPage: React.FC = () => {
       const createData = {
         name: formData.name.trim(),
         description: formData.description.trim(),
-        category: formData.category.toLowerCase().trim(), // Ensure lowercase
         price: Number(formData.price),
         stock: Number(formData.stock),
-        image: formData.image
+        image: formData.image,
+        shop_id: user?.shop
       };
       
       
       
-      const response = await api.post('/api/products', createData);
+      const response = await api.post('/api/products/', createData);
       
       
       toast.success('Product created successfully');

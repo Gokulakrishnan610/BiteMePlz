@@ -148,15 +148,15 @@ const shopDetailsPage: React.FC = () => {
 
   const fetchshopData = async () => {
     try {
-      const shopRes = await api.get(`/shops/${id}/`);
+              const shopRes = await api.get(`/api/shops/${id}/`);
       
       setshop(shopRes.data);
       
       // Load real analytics data
       try {
         const [analyticsRes, transactionStatsRes] = await Promise.all([
-          api.get(`/shops/${id}/analytics/`),
-          api.get(`/shops/${id}/transaction_stats/`)
+                  api.get(`/api/shops/${id}/analytics/`),
+        api.get(`/api/shops/${id}/transaction_stats/`)
         ]);
         
         setAnalytics(analyticsRes.data);

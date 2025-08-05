@@ -65,10 +65,11 @@ class ShopSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     shop = ShopSerializer(read_only=True)
     shop_id = serializers.UUIDField(write_only=True)
+    image = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'description', 'price', 'image', 'shop', 'shop_id', 
+        fields = ['id', 'name', 'description', 'price', 'stock', 'image', 'shop', 'shop_id', 
                  'is_available', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 

@@ -70,7 +70,7 @@ const SubShopAdminsPage: React.FC = () => {
   const fetchSubAdmins = async () => {
     try {
       setLoading(true);
-              const response = await api.get('/api/users/sub-shop-admins');
+              const response = await api.get('/api/users/sub_shop_admins/');
       setSubAdmins(response.data);
     } catch (error: any) {
       console.error('Error fetching sub-shop admins:', error);
@@ -100,7 +100,7 @@ const SubShopAdminsPage: React.FC = () => {
 
     try {
       setCreating(true);
-              await api.post('/api/users/sub-shop-admin', {
+              await api.post('/api/users/sub_shop_admin/', {
         name: formData.name,
         email: formData.email,
         password: formData.password
@@ -508,7 +508,7 @@ const SubShopAdminsPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredSubAdmins.map((admin, index) => (
                 <div 
-                  key={admin._id} 
+                  key={admin._id || `admin-${index}`} 
                   className="group card hover:shadow-2xl transition-all duration-300 border-l-4 border-l-purple-500 transform hover:scale-105"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
