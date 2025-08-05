@@ -53,7 +53,7 @@ const FinancialReportsPage: React.FC = () => {
 
   const fetchshops = async () => {
     try {
-      const { data } = await api.get('/shops');
+      const { data } = await api.get('/api/shops');
       // Handle paginated response
       const shopsData = data.results || data;
       setshops(shopsData);
@@ -82,7 +82,7 @@ const FinancialReportsPage: React.FC = () => {
             shop_id: shop.id
           });
 
-          const { data } = await api.get(`/transactions/shop/?${params}`);
+          const { data } = await api.get(`/api/transactions/shop/?${params}`);
           const transactions = data.transactions || data || [];
 
           // Calculate financial metrics

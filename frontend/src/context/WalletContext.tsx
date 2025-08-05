@@ -40,7 +40,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const response = await api.get('/users/profile');
+      const response = await api.get('/api/users/profile');
       setBalance(response.data.balance || 0);
     } catch (error: any) {
       console.error('Failed to fetch balance:', error);

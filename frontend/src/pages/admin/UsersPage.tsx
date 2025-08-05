@@ -23,7 +23,7 @@ const UsersPage: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const { data } = await api.get('/users');
+      const { data } = await api.get('/api/users');
       // Handle paginated response
       const usersData = data.results || data;
       setUsers(usersData);

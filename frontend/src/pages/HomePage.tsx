@@ -21,7 +21,7 @@ const HomePage: React.FC = () => {
   useEffect(() => {
     const fetchshops = async () => {
       try {
-        const { data } = await api.get('/shops');
+        const { data } = await api.get('/api/shops');
         // Handle paginated response
         const shopsData = data.results || data;
         setshops(Array.isArray(shopsData) ? shopsData : []);

@@ -70,7 +70,7 @@ const SubShopAdminsPage: React.FC = () => {
   const fetchSubAdmins = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/users/sub-shop-admins');
+              const response = await api.get('/api/users/sub-shop-admins');
       setSubAdmins(response.data);
     } catch (error: any) {
       console.error('Error fetching sub-shop admins:', error);
@@ -100,7 +100,7 @@ const SubShopAdminsPage: React.FC = () => {
 
     try {
       setCreating(true);
-      await api.post('/users/sub-shop-admin', {
+              await api.post('/api/users/sub-shop-admin', {
         name: formData.name,
         email: formData.email,
         password: formData.password

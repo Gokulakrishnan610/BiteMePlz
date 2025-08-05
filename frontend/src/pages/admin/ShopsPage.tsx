@@ -35,7 +35,7 @@ const shopsPage: React.FC = () => {
 
   const fetchshops = async () => {
     try {
-      const { data } = await api.get('/shops');
+      const { data } = await api.get('/api/shops');
       // Handle paginated response
       const shopsData = data.results || data;
       setshops(shopsData);

@@ -222,7 +222,7 @@ const shopDetailsPage: React.FC = () => {
       });
       params.append('limit', '1000'); // Export more records
 
-      const { data } = await api.get(`/transactions/shop/?shop_id=${id}&${params}`);
+              const { data } = await api.get(`/api/transactions/shop/?shop_id=${id}&${params}`);
       
       // Convert to CSV
       const csvContent = [

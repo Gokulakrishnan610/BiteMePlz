@@ -66,20 +66,17 @@ const CreateShopPage: React.FC = () => {
         shopName: formData.shopName,
         shopDescription: formData.shopDescription,
         shopLocation: formData.shopLocation,
-        shopImage: formData.shopImage || undefined,
+        shopImage: formData.shopImage || '',
         final_validity_time: final_validityDate.toISOString(),
         qrValidityMinutes: qrMinutes
       };
 
-      
-
-      const response = await api.post('/users/shop_admin/', payload);
+      const response = await api.post('/api/users/shop_admin/', payload);
       
       toast.success('shop created successfully');
       navigate('/admin/shops');
     } catch (error: any) {
-      
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to create shop';
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to create shop';
       toast.error(errorMessage);
     } finally {
       setLoading(false);

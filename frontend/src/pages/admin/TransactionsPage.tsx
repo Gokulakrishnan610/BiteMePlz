@@ -79,7 +79,7 @@ const TransactionsPage: React.FC = () => {
 
   const fetchshops = async () => {
     try {
-      const { data } = await api.get('/shops');
+      const { data } = await api.get('/api/shops');
       // Handle paginated response
       const shopsData = data.results || data;
       setshops(shopsData);
@@ -99,7 +99,7 @@ const TransactionsPage: React.FC = () => {
           if (value && key !== 'shop') params.append(key, value.toString());
         });
 
-        const { data } = await api.get(`/transactions/shop/?shop_id=${filters.shop}&${params}`); // Fixed API call
+        const { data } = await api.get(`/api/transactions/shop/?shop_id=${filters.shop}&${params}`); // Fixed API call
         setTransactions(data.transactions || []);
         
         // Calculate stats
@@ -129,7 +129,7 @@ const TransactionsPage: React.FC = () => {
               if (value && key !== 'shop') params.append(key, value.toString());
             });
 
-            const { data } = await api.get(`/transactions/shop/?shop_id=${shop.id}&${params}`); // Changed to shop.id
+            const { data } = await api.get(`/api/transactions/shop/?shop_id=${shop.id}&${params}`); // Changed to shop.id
             if (data.transactions) {
               allTransactions.push(...data.transactions.map((t: any) => ({
                 ...t,

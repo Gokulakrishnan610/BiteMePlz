@@ -93,7 +93,7 @@ const shopLogsPage: React.FC = () => {
 
   const fetchshops = async () => {
     try {
-      const { data } = await api.get('/shops');
+      const { data } = await api.get('/api/shops');
       // Handle paginated response
       const shopsData = data.results || data;
       setshops(shopsData);
@@ -111,7 +111,7 @@ const shopLogsPage: React.FC = () => {
         if (value) params.append(key, value.toString());
       });
 
-      const { data } = await api.get(`/shop-logs/?${params}`);
+      const { data } = await api.get(`/api/shop-logs/?${params}`);
       setLogs(data.results || data || []);
       setPagination({
         currentPage: data.currentPage || 1,
@@ -138,7 +138,7 @@ const shopLogsPage: React.FC = () => {
       });
       params.append('limit', '1000'); // Export more records
 
-      const { data } = await api.get(`/shop-logs/?${params}`);
+      const { data } = await api.get(`/api/shop-logs/?${params}`);
       
       const csvData = [];
       

@@ -133,7 +133,7 @@ const AnalyticsPage: React.FC = () => {
 
   const fetchshops = async () => {
     try {
-      const { data } = await api.get('/shops');
+      const { data } = await api.get('/api/shops');
       // Handle paginated response
       const shopsData = data.results || data;
       setshops(shopsData);
@@ -182,7 +182,7 @@ const AnalyticsPage: React.FC = () => {
             console.warn(`Shop ${shop.name} has no valid ID, skipping`);
             continue;
           }
-          const { data } = await api.get(`/orders/shop/?shop_id=${shop.id}`);
+          const { data } = await api.get(`/api/orders/shop/?shop_id=${shop.id}`);
           allOrders.push(...data.map((order: any) => ({
             ...order,
             shop_id: shop.id,
@@ -210,7 +210,7 @@ const AnalyticsPage: React.FC = () => {
             console.warn(`Shop ${shop.name} has no valid ID, skipping`);
             continue;
           }
-          const { data } = await api.get(`/transactions/shop/?shop_id=${shop.id}`);
+          const { data } = await api.get(`/api/transactions/shop/?shop_id=${shop.id}`);
           if (data.transactions) {
             allTransactions.push(...data.transactions.map((t: any) => ({
               ...t,

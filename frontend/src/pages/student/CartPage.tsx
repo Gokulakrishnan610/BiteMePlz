@@ -66,7 +66,7 @@ const CartPage: React.FC = () => {
     // Fetch user's remaining balance
     const fetchData = async () => {
       try {
-        const balanceRes = await api.get('/users/profile');
+        const balanceRes = await api.get('/api/users/profile');
 
         setRemainingBalance(balanceRes.data.balance || 0);
       } catch (error) {

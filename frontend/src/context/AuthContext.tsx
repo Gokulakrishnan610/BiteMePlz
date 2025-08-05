@@ -70,7 +70,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const { data } = await api.post('/users/login/', { email, password });
+      const { data } = await api.post('/api/users/login/', { email, password });  
 
       if (!data._id || !data.name || !data.email || !data.role || !data.token) {
         throw new Error('Invalid response from server');
@@ -103,7 +103,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (name: string, email: string, password: string, role: string) => {
     try {
-      const { data } = await api.post('/users/register', {
+      const { data } = await api.post('/api/users/register/', {
         name,
         email,
         password,

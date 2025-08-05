@@ -21,7 +21,7 @@ const ProfilePage: React.FC = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const { data } = await api.get('/users/profile');
+        const { data } = await api.get('/api/users/profile');
         setProfile(data);
         setLoading(false);
       } catch (err) {
