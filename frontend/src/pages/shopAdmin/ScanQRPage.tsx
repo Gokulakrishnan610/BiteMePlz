@@ -58,7 +58,7 @@ const ScanQRPage: React.FC = () => {
         }
         
         const parsedData = JSON.parse(qrData);
-        const { data } = await api.put(`/api/orders/${parsedData.order_id}/verify`, { qrData });
+        const { data } = await api.put(`/orders/${parsedData.order_id}/verify`, { qrData });
         setVerifiedOrder(data);
         toast.success('Order verified successfully');
       } else {
@@ -66,8 +66,8 @@ const ScanQRPage: React.FC = () => {
           throw new Error('Please enter payment ID');
         }
         
-        const { data: orderData } = await api.get(`/api/orders/payment/${paymentId}`);
-        const { data } = await api.put(`/api/orders/${orderData.order_id}/verify`, {
+        const { data: orderData } = await api.get(`/orders/payment/${paymentId}`);
+        const { data } = await api.put(`/orders/${orderData.order_id}/verify`, {
           qrData: JSON.stringify({
             order_id: orderData.order_id,
             paymentId: orderData.paymentId,

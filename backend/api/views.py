@@ -250,20 +250,18 @@ class ShopViewSet(viewsets.ModelViewSet):
     serializer_class = ShopSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        if not self.request.user.is_authenticated:
-            return Shop.objects.filter(is_active=True, is_open=True)
-        elif self.request.user.role == 'admin':
-            return Shop.objects.all()
-        elif self.request.user.role == 'shopAdmin':
-            return Shop.objects.filter(shop_admin=self.request.user)
-        else:
-            return Shop.objects.filter(is_active=True, is_open=True)
-
     def get_permissions(self):
-        if self.action == 'list':
+        if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
+
+    def get_queryset(self):
+        if self.request.user.is_authenticated:
+            if self.request.user.role == 'admin':
+                return Shop.objects.all()
+            elif self.request.user.role == 'shop_admin':
+                return Shop.objects.filter(id=self.request.user.shop.id)
+        return Shop.objects.filter(is_active=True)
 
     def perform_create(self, serializer):
         shop = serializer.save()
@@ -314,6 +312,156 @@ class ShopViewSet(viewsets.ModelViewSet):
         )
         
         return Response(ShopSerializer(shop).data)
+
+    @action(detail=True, methods=['get'])
+    def analytics(self, request, pk=None):
+        """Get shop analytics data"""
+        try:
+            shop = self.get_object()
+            
+            # Get products count
+            total_products = Product.objects.filter(shop=shop).count()
+            out_of_stock = Product.objects.filter(shop=shop, stock=0).count()
+            
+            # Get order statistics
+            orders = Order.objects.filter(shop=shop)
+            total_orders = orders.count()
+            total_paid_orders = orders.filter(status='paid').count()
+            total_verified_orders = orders.filter(status='verified').count()
+            total_expired_orders = orders.filter(status='expired').count()
+            total_revenue = sum(order.total_price for order in orders.filter(status='paid'))
+            
+            # Get daily stats for the last 30 days
+            from datetime import datetime, timedelta
+            from django.utils import timezone
+            
+            end_date = timezone.now()
+            start_date = end_date - timedelta(days=30)
+            
+            daily_stats = []
+            current_date = start_date
+            while current_date <= end_date:
+                day_orders = orders.filter(created_at__date=current_date.date())
+                daily_stats.append({
+                    '_id': {'date': current_date.strftime('%Y-%m-%d')},
+                    'totalOrders': day_orders.count(),
+                    'paidOrders': day_orders.filter(status='paid').count(),
+                    'verifiedOrders': day_orders.filter(status='verified').count(),
+                    'expiredOrders': day_orders.filter(status='expired').count(),
+                    'revenue': sum(order.total_price for order in day_orders.filter(status='paid'))
+                })
+                current_date += timedelta(days=1)
+            
+            # Get monthly sales for the last 12 months
+            monthly_sales = []
+            for i in range(12):
+                month_date = end_date - timedelta(days=30*i)
+                month_orders = orders.filter(
+                    created_at__year=month_date.year,
+                    created_at__month=month_date.month
+                )
+                monthly_sales.append({
+                    '_id': {'month': month_date.month, 'year': month_date.year},
+                    'count': month_orders.count(),
+                    'total': sum(order.total_price for order in month_orders.filter(status='paid'))
+                })
+            
+            # Get top products
+            from django.db.models import Sum
+            top_products = []
+            product_sales = Order.objects.filter(shop=shop, status='paid').values(
+                'items__product__name'
+            ).annotate(
+                total_sold=Sum('items__quantity'),
+                total_revenue=Sum('items__price')
+            ).order_by('-total_revenue')[:10]
+            
+            for product in product_sales:
+                top_products.append({
+                    'name': product['items__product__name'],
+                    'totalSold': product['total_sold'],
+                    'totalRevenue': product['total_revenue']
+                })
+            
+            analytics_data = {
+                'totalProducts': total_products,
+                'outOfStock': out_of_stock,
+                'orderStats': {
+                    'totalOrders': total_orders,
+                    'totalPaidOrders': total_paid_orders,
+                    'totalVerifiedOrders': total_verified_orders,
+                    'totalExpiredOrders': total_expired_orders,
+                    'totalRevenue': total_revenue
+                },
+                'dailyStats': daily_stats,
+                'monthlySales': monthly_sales,
+                'topProducts': top_products
+            }
+            
+            return Response(analytics_data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+    @action(detail=True, methods=['get'])
+    def transaction_stats(self, request, pk=None):
+        """Get shop transaction statistics"""
+        try:
+            shop = self.get_object()
+            
+            # Get transaction statistics by type
+            from django.db.models import Count, Avg, Sum
+            stats = Transaction.objects.filter(
+                order__shop=shop
+            ).values('type').annotate(
+                count=Count('id'),
+                total_amount=Sum('amount'),
+                avg_amount=Avg('amount')
+            )
+            
+            # Get daily transaction stats
+            from datetime import datetime, timedelta
+            from django.utils import timezone
+            
+            end_date = timezone.now()
+            start_date = end_date - timedelta(days=30)
+            
+            daily_stats = []
+            current_date = start_date
+            while current_date <= end_date:
+                day_transactions = Transaction.objects.filter(
+                    order__shop=shop,
+                    created_at__date=current_date.date()
+                )
+                
+                for transaction_type in ['payment', 'refund']:
+                    type_transactions = day_transactions.filter(type=transaction_type)
+                    daily_stats.append({
+                        '_id': {
+                            'date': current_date.strftime('%Y-%m-%d'),
+                            'type': transaction_type
+                        },
+                        'count': type_transactions.count(),
+                        'amount': sum(t.amount for t in type_transactions)
+                    })
+                
+                current_date += timedelta(days=1)
+            
+            transaction_stats = {
+                'stats': [
+                    {
+                        '_id': stat['type'],
+                        'count': stat['count'],
+                        'totalAmount': stat['total_amount'],
+                        'avgAmount': stat['avg_amount']
+                    }
+                    for stat in stats
+                ],
+                'dailyStats': daily_stats
+            }
+            
+            return Response(transaction_stats)
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
 
 
 class ProductViewSet(viewsets.ModelViewSet):

@@ -167,7 +167,7 @@ const StudentAnalyticsPage: React.FC = () => {
 
       // Fetch advanced insights
       if (selectedshop) {
-        const insightsRes = await api.get(`/api/student-analytics/shop/${selectedshop}/insights`);
+        const insightsRes = await api.get(`/student-analytics/shop/${selectedshop}/insights`);
         setAdvancedInsights(insightsRes.data);
       }
 

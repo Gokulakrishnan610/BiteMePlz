@@ -92,7 +92,7 @@ const OrderDetailsPage: React.FC = () => {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const { data } = await api.get(`/api/orders/${id}`);
+        const { data } = await api.get(`/orders/${id}/`);
         setOrder(data);
         setLoading(false);
       } catch (err) {
@@ -143,7 +143,7 @@ const OrderDetailsPage: React.FC = () => {
 
     try {
       setDeleting(true);
-      await api.delete(`/api/orders/${order._id}`);
+              await api.delete(`/orders/${order._id}`);
       toast.success('Order deleted successfully');
       navigate('/orders');
     } catch (error: any) {

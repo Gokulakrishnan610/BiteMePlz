@@ -45,7 +45,7 @@ const OrdersPage: React.FC = () => {
   const handlePayment = async (order_id: string, amount: number) => {
     try {
       setProcessingOrder(order_id);
-      const { data } = await api.post(`/api/orders/${order_id}/pay`);
+              const { data } = await api.post(`/orders/${order_id}/pay`);
       
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID||"rzp_test_RVKFS8WX756Anx",
@@ -56,7 +56,7 @@ const OrdersPage: React.FC = () => {
         order_id: data.razorpayorder_id,
         handler: async (response: any) => {
           try {
-            await api.put(`/api/orders/${order_id}/pay`, {
+            await api.put(`/orders/${order_id}/pay`, {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_signature: response.razorpay_signature,
@@ -86,7 +86,7 @@ const OrdersPage: React.FC = () => {
   const handleCancel = async (order_id: string) => {
     try {
       setProcessingOrder(order_id);
-      await api.put(`/api/orders/${order_id}/cancel`);
+              await api.put(`/orders/${order_id}/cancel`);
       await fetchOrders();
       toast.success('Order cancelled successfully');
     } catch (error: any) {
@@ -102,7 +102,7 @@ const OrdersPage: React.FC = () => {
     }
 
     try {
-      await api.delete(`/api/orders/${order_id}`);
+              await api.delete(`/orders/${order_id}`);
       toast.success('Order deleted successfully');
       setOrders(orders.filter(order => order._id !== order_id));
     } catch (error: any) {

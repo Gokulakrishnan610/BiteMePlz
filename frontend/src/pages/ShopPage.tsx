@@ -45,8 +45,8 @@ const ShopPage: React.FC = () => {
     const fetchshopAndProducts = async () => {
       try {
         const [shopResponse, productsResponse] = await Promise.all([
-          api.get(`/api/shops/${id}`),
-          api.get(`/api/products`, {
+          api.get(`/shops/${id}/`),
+          api.get(`/products`, {
             params: {
               shop: id
             }

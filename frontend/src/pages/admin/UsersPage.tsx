@@ -38,7 +38,7 @@ const UsersPage: React.FC = () => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
 
     try {
-      await api.delete(`/api/users/${id}`);
+              await api.delete(`/users/${id}`);
       toast.success('User deleted successfully');
       fetchUsers();
     } catch (error) {

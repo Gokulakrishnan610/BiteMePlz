@@ -24,7 +24,7 @@ const ProductsPage: React.FC = () => {
     const fetchProducts = async () => {
       try {
         if (!user?.shop) return;
-        const { data } = await api.get(`/api/products?shop=${user.shop}`);
+        const { data } = await api.get(`/products?shop=${user.shop}`);
         setProducts(data);
         setLoading(false);
       } catch (error) {
@@ -40,7 +40,7 @@ const ProductsPage: React.FC = () => {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
 
     try {
-      await api.delete(`/api/products/${id}`);
+              await api.delete(`/products/${id}`);
       toast.success('Product deleted successfully');
       setProducts(products.filter(product => product._id !== id));
     } catch (error) {

@@ -39,7 +39,7 @@ const OrdersPage: React.FC = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const { data } = await api.get(`/api/orders/shop/${user?.shop}`);
+        const { data } = await api.get(`/orders/shop/?shop_id=${user?.shop}`);
         setOrders(data);
         setLoading(false);
       } catch (err) {

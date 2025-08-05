@@ -56,7 +56,7 @@ const shopsPage: React.FC = () => {
 
   const handleDeleteConfirm = async () => {
     try {
-      await api.delete(`/api/shops/${deleteDialog.shop_id}`);
+      await api.delete(`/shops/${deleteDialog.shop_id}`);
       toast.success('shop deleted successfully');
       fetchshops();
     } catch (error) {

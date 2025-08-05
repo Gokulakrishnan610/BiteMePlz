@@ -148,15 +148,42 @@ const shopDetailsPage: React.FC = () => {
 
   const fetchshopData = async () => {
     try {
-      const [shopRes, analyticsRes, transactionStatsRes] = await Promise.all([
-        api.get(`/api/shops/${id}`),
-        api.get(`/api/shops/${id}/analytics`),
-        api.get(`/api/transactions/shop/${id}/stats`)
-      ]);
+      const shopRes = await api.get(`/shops/${id}/`);
       
       setshop(shopRes.data);
-      setAnalytics(analyticsRes.data);
-      setTransactionStats(transactionStatsRes.data);
+      
+      // Load real analytics data
+      try {
+        const [analyticsRes, transactionStatsRes] = await Promise.all([
+          api.get(`/shops/${id}/analytics/`),
+          api.get(`/shops/${id}/transaction_stats/`)
+        ]);
+        
+        setAnalytics(analyticsRes.data);
+        setTransactionStats(transactionStatsRes.data);
+      } catch (analyticsErr) {
+        console.warn('Analytics data not available:', analyticsErr);
+        // Set default empty analytics if endpoints don't exist
+        setAnalytics({
+          totalProducts: 0,
+          outOfStock: 0,
+          orderStats: {
+            totalOrders: 0,
+            totalPaidOrders: 0,
+            totalVerifiedOrders: 0,
+            totalExpiredOrders: 0,
+            totalRevenue: 0,
+          },
+          dailyStats: [],
+          monthlySales: [],
+          topProducts: [],
+        });
+        setTransactionStats({
+          stats: [],
+          dailyStats: [],
+        });
+      }
+      
       setLoading(false);
     } catch (err) {
       setError('Failed to load shop data');
@@ -171,8 +198,8 @@ const shopDetailsPage: React.FC = () => {
         if (value) params.append(key, value.toString());
       });
 
-      const { data } = await api.get(`/api/transactions/shop/${id}?${params}`);
-      setTransactions(data.transactions);
+      const { data } = await api.get(`/transactions/?shop_id=${id}&${params}`);
+      setTransactions(data.results || data.transactions || []);
     } catch (err) {
       toast.error('Failed to load transactions');
     }
@@ -180,7 +207,7 @@ const shopDetailsPage: React.FC = () => {
 
   const handleTransactionClick = async (transactionId: string) => {
     try {
-      const { data } = await api.get(`/api/transactions/${transactionId}`);
+      const { data } = await api.get(`/transactions/${transactionId}/`);
       setSelectedTransaction(data);
     } catch (err) {
       toast.error('Failed to load transaction details');
@@ -195,12 +222,12 @@ const shopDetailsPage: React.FC = () => {
       });
       params.append('limit', '1000'); // Export more records
 
-      const { data } = await api.get(`/api/transactions/shop/${id}?${params}`);
+      const { data } = await api.get(`/transactions/shop/?shop_id=${id}&${params}`);
       
       // Convert to CSV
       const csvContent = [
         ['Date', 'Type', 'Amount', 'Status', 'Payment Method', 'User', 'Order ID', 'Description'].join(','),
-        ...data.transactions.map((t: Transaction) => [
+        ...(data.results || data.transactions || []).map((t: Transaction) => [
           new Date(t.createdAt).toLocaleString(),
           t.type,
           t.amount,

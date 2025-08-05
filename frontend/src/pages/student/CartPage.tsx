@@ -221,7 +221,7 @@ const CartPage: React.FC = () => {
               clearInterval(timer);
             }
             
-            await api.put(`/api/orders/${orderResponse.data.order._id}/pay`, {
+            await api.put(`/orders/${orderResponse.data.order._id}/pay`, {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_signature: response.razorpay_signature,
@@ -246,7 +246,7 @@ const CartPage: React.FC = () => {
             
             if (currentorder_id) {
               try {
-                await api.put(`/api/orders/${currentorder_id}/cancel`);
+                await api.put(`/orders/${currentorder_id}/cancel`);
                 toast.error('Payment cancelled');
               } catch (error) {
                 console.error('Error cancelling order:', error);
@@ -281,7 +281,7 @@ const CartPage: React.FC = () => {
         if (razorpay && typeof razorpay.close === 'function') {
           razorpay.close();
           if (currentorder_id) {
-            api.put(`/api/orders/${currentorder_id}/cancel`)
+            api.put(`/orders/${currentorder_id}/cancel`)
               .then(() => {
                 toast.error('Payment time expired');
                 setPaymentInitiated(false);

@@ -128,8 +128,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(userData);
       setToken(data.token);
       
-      // Set token in axios defaults for backward compatibility
-      axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+      // Set token in api defaults for backward compatibility
+      api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
       
       localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('token', data.token);
@@ -143,8 +143,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     setToken(null);
     
-    // Clear axios defaults
-    delete axios.defaults.headers.common['Authorization'];
+    // Clear api defaults
+    delete api.defaults.headers.common['Authorization'];
     
     localStorage.removeItem('user');
     localStorage.removeItem('token');

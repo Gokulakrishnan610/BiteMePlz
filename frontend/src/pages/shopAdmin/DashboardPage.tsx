@@ -92,14 +92,23 @@ const DashboardPage: React.FC = () => {
         
         
         
-        const [analyticsRes, shopRes] = await Promise.all([
-          api.get(`/shops/${user.shop}/analytics`),
-          api.get(`/shops/${user.shop}`)
-        ]);
+        const shopRes = await api.get(`/shops/${user.shop}/`);
         
-        
-        
-        setAnalytics(analyticsRes.data);
+        // Analytics endpoint doesn't exist yet, so we'll set empty data
+        setAnalytics({
+          totalProducts: 0,
+          outOfStock: 0,
+          orderStats: {
+            totalOrders: 0,
+            totalPaidOrders: 0,
+            totalVerifiedOrders: 0,
+            totalExpiredOrders: 0,
+            totalRevenue: 0,
+          },
+          dailyStats: [],
+          monthlySales: [],
+          topProducts: [],
+        });
         setshop(shopRes.data);
         
         // Handle final validity time

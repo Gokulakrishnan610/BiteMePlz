@@ -44,7 +44,7 @@ const EditProductPage: React.FC = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const { data } = await api.get(`/api/products/${id}`);
+        const { data } = await api.get(`/products/${id}/`);
 
         
         // Normalize the category to ensure it matches our enum values
@@ -96,7 +96,7 @@ const EditProductPage: React.FC = () => {
       
 
       
-      const response = await api.put(`/api/products/${id}`, updateData);
+              const response = await api.put(`/products/${id}`, updateData);
 
       
       toast.success('Product updated successfully');
