@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create a custom axios instance with base URL
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: 'http://localhost:8000/api',
   timeout: 10000,
 });
 

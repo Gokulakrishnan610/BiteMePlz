@@ -2,19 +2,15 @@ import uuid
 import qrcode
 import io
 import base64
-import os
-from datetime import datetime, timedelta
+from datetime import timedelta
 from decimal import Decimal
 from django.utils import timezone
-from django.conf import settings
 from rest_framework import status, viewsets, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import authenticate
 from django.db import transaction
 from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
 from .models import User, Shop, Product, Order, Transaction, ShopLog, StudentAnalytics
 from .serializers import (
     UserSerializer, UserRegistrationSerializer, UserLoginSerializer,
@@ -26,47 +22,12 @@ from .serializers import (
 class FileUploadViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
-    @action(detail=False, methods=['get'])
-    def test(self, request):
-        return Response({'message': 'Upload endpoint is working'}, status=status.HTTP_200_OK)
-
-    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
-    def test_upload(self, request):
-        """Test upload endpoint without authentication"""
-        if 'image' not in request.FILES:
-            return Response({'error': 'No image file provided'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        file = request.FILES['image']
-        print(f"Test upload - File received: {file.name}, size: {file.size}, type: {file.content_type}")
-        
-        try:
-            filename = f"{uuid.uuid4().hex}_{file.name}"
-            file_path = default_storage.save(f'uploads/{filename}', file)
-            print(f"Test upload - File saved to: {file_path}")
-            
-            return Response({
-                'filePath': f'/media/{file_path}',
-                'filename': filename
-            }, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            import traceback
-            print(f"Test upload error: {str(e)}")
-            print(traceback.format_exc())
-            return Response({'error': f'Upload failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
     @action(detail=False, methods=['post'])
     def single(self, request):
-        print(f"User authenticated: {request.user.is_authenticated}")
-        print(f"User: {request.user}")
-        print(f"Request method: {request.method}")
-        print(f"Request headers: {dict(request.headers)}")
-        print(f"Upload request received: {request.FILES}")
-        
         if 'image' not in request.FILES:
             return Response({'error': 'No image file provided'}, status=status.HTTP_400_BAD_REQUEST)
         
         file = request.FILES['image']
-        print(f"File received: {file.name}, size: {file.size}, type: {file.content_type}")
         
         # Validate file type
         allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
@@ -82,22 +43,15 @@ class FileUploadViewSet(viewsets.ViewSet):
         try:
             # Generate unique filename
             filename = f"{uuid.uuid4().hex}_{file.name}"
-            print(f"Generated filename: {filename}")
             
-            # Save file directly without reading it first
+            # Save file
             file_path = default_storage.save(f'uploads/{filename}', file)
-            print(f"File saved to: {file_path}")
             
-            # Return the file path
-            print(f"Successfully saved file: {file_path}")
             return Response({
                 'filePath': f'/media/{file_path}',
                 'filename': filename
             }, status=status.HTTP_201_CREATED)
         except Exception as e:
-            import traceback
-            print(f"Upload error: {str(e)}")
-            print(traceback.format_exc())
             return Response({'error': f'Upload failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -160,12 +114,6 @@ class UserViewSet(viewsets.ModelViewSet):
             final_validity_time = request.data.get('final_validity_time')
             qr_validity_minutes = request.data.get('qrValidityMinutes', 20)
 
-            # Debug: Print received data
-            print(f"Received data: {request.data}")
-            print(f"shop_name: {shop_name}")
-            print(f"admin_name: {admin_name}")
-            print(f"admin_email: {admin_email}")
-
             # Validate required fields
             if not all([shop_name, shop_description, shop_location, admin_name, admin_email, admin_password]):
                 missing_fields = []
@@ -176,40 +124,35 @@ class UserViewSet(viewsets.ModelViewSet):
                 if not admin_email: missing_fields.append('email')
                 if not admin_password: missing_fields.append('password')
                 error_msg = f'Missing required fields: {", ".join(missing_fields)}'
-                print(f"Validation error: {error_msg}")
                 return Response({'error': error_msg}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Create shop admin user - handle password without confirm_password
+            # Create shop admin user
             user_data = {
                 'name': admin_name,
                 'email': admin_email,
                 'password': admin_password,
-                'confirm_password': admin_password,  # Add confirm_password for serializer validation
+                'confirm_password': admin_password,
                 'role': 'shopAdmin',
-                'roll_no': f'SHOP_ADMIN_{admin_email.split("@")[0]}'  # Generate roll_no for shop admin
+                'roll_no': f'SHOP_ADMIN_{admin_email.split("@")[0]}'
             }
             
-            print(f"User data for serializer: {user_data}")
             user_serializer = UserRegistrationSerializer(data=user_data)
             if not user_serializer.is_valid():
-                print(f"User serializer errors: {user_serializer.errors}")
-                # Check if it's an email uniqueness error
                 if 'email' in user_serializer.errors and 'unique' in str(user_serializer.errors['email']):
                     return Response({'error': 'A user with this email already exists. Please use a different email address.'}, status=status.HTTP_400_BAD_REQUEST)
                 return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             
             # Create user
             user = user_serializer.save()
-            print(f"User created successfully: {user.id}")
             
             # Create shop
             shop_data = {
                 'name': shop_name,
                 'description': shop_description,
                 'location': shop_location,
-                'shop_admin_id': user.id,  # Use shop_admin_id instead of shop_admin
+                'shop_admin_id': user.id,
                 'final_validity_time': final_validity_time,
-                'next_opening_time': final_validity_time,  # Set same as final validity for now
+                'next_opening_time': final_validity_time,
                 'qr_validity_minutes': qr_validity_minutes
             }
             
@@ -217,16 +160,13 @@ class UserViewSet(viewsets.ModelViewSet):
             if shop_image and shop_image.strip():
                 shop_data['image'] = shop_image
             
-            print(f"Shop data for serializer: {shop_data}")
             shop_serializer = ShopSerializer(data=shop_data)
             if not shop_serializer.is_valid():
-                print(f"Shop serializer errors: {shop_serializer.errors}")
                 # Delete the user if shop creation fails
                 user.delete()
                 return Response(shop_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             
             shop = shop_serializer.save()
-            print(f"Shop created successfully: {shop.id}")
             
             # Update user with shop reference
             user.shop = shop
@@ -239,9 +179,6 @@ class UserViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_201_CREATED)
             
         except Exception as e:
-            import traceback
-            print(f"Shop admin creation error: {str(e)}")
-            print(traceback.format_exc())
             return Response({'error': f'Failed to create shop admin: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -332,9 +269,6 @@ class ShopViewSet(viewsets.ModelViewSet):
             total_revenue = sum(order.total_price for order in orders.filter(status='paid'))
             
             # Get daily stats for the last 30 days
-            from datetime import datetime, timedelta
-            from django.utils import timezone
-            
             end_date = timezone.now()
             start_date = end_date - timedelta(days=30)
             
@@ -419,9 +353,6 @@ class ShopViewSet(viewsets.ModelViewSet):
             )
             
             # Get daily transaction stats
-            from datetime import datetime, timedelta
-            from django.utils import timezone
-            
             end_date = timezone.now()
             start_date = end_date - timedelta(days=30)
             
@@ -493,6 +424,16 @@ class OrderViewSet(viewsets.ModelViewSet):
         if self.request.user.role in ['admin', 'shopAdmin']:
             return Order.objects.all()
         return Order.objects.filter(user=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def myorders(self, request):
+        """Get orders for the current user"""
+        try:
+            orders = Order.objects.filter(user=request.user).order_by('-created_at')
+            serializer = self.get_serializer(orders, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=False, methods=['get'])
     def shop(self, request):

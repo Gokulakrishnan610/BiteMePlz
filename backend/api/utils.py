@@ -3,12 +3,9 @@ from django.conf import settings
 from django.utils.html import strip_tags
 
 def send_otp_email(email, otp, user_name):
-    """
-    Send OTP email to user
-    """
+    """Send OTP email to user"""
     subject = 'Campus Kiosk - Email Verification'
     
-    # HTML content
     html_message = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px; text-align: center;">
@@ -52,7 +49,6 @@ def send_otp_email(email, otp, user_name):
     </div>
     """
     
-    # Plain text content
     plain_message = f"""
     Campus Kiosk - Email Verification
     
@@ -71,7 +67,6 @@ def send_otp_email(email, otp, user_name):
     """
     
     try:
-        # Send email
         send_mail(
             subject=subject,
             message=strip_tags(plain_message),
@@ -86,12 +81,9 @@ def send_otp_email(email, otp, user_name):
         return False
 
 def send_resend_otp_email(email, otp, user_name):
-    """
-    Send resend OTP email to user
-    """
+    """Send resend OTP email to user"""
     subject = 'Campus Kiosk - New Verification Code'
     
-    # HTML content
     html_message = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px; text-align: center;">
@@ -135,7 +127,6 @@ def send_resend_otp_email(email, otp, user_name):
     </div>
     """
     
-    # Plain text content
     plain_message = f"""
     Campus Kiosk - New Verification Code
     
@@ -154,7 +145,6 @@ def send_resend_otp_email(email, otp, user_name):
     """
     
     try:
-        # Send email
         send_mail(
             subject=subject,
             message=strip_tags(plain_message),
