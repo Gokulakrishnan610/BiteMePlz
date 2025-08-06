@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export interface CartItem {
-  product: string;
+  product_id: string;
   name: string;
   image: string;
   price: number;

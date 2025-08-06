@@ -119,7 +119,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Shop ID is required either at top level or within order_items.")
         
         # Ensure total_price is a Decimal
-        total_price = validated_data.get('totalPrice', 0.0) # Use totalPrice from frontend
+        total_price = validated_data.get('total_price', 0.0) # Use total_price from frontend
         print(f"OrderSerializer create - raw totalPrice from frontend: {total_price}")
         validated_data['total_price'] = Decimal(str(total_price))
         print(f"OrderSerializer create - converted total_price: {validated_data['total_price']}")

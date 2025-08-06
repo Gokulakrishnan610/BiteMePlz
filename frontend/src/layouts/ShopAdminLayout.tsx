@@ -68,14 +68,14 @@ const ShopAdminLayout: React.FC = () => {
         {/* Logo Section */}
         <div className="p-6 border-b border-[var(--border-color)]">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-gradient-to-r from-[var(--accent-purple)] to-[var(--accent-violet)] rounded-xl">
-              <Zap className="text-white" size={24} />
-            </div>
+              <img
+                src="https://students.rajalakshmi.org/images/rec_logo.png"
+                alt="REC KIOSK Logo"
+                className="h-10 w-auto"
+              />
+              <div className="flex h-16 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent-purple to-accent-violet text-white"></div>
             <div>
-              <h1 className="text-xl font-bold gradient-text">
-                {user?.is_sub_admin ? 'Sub-Admin' : 'Shop Admin'}
-              </h1>
-              <p className="text-[var(--muted-text)] text-sm">Campus Kiosk</p>
+             
             </div>
           </div>
         </div>

@@ -139,21 +139,27 @@ const CartPage: React.FC = () => {
         shopIds.length > 1
           ? {
               order_items: cartItems.map((item) => ({
-            product_id: item.product,
-            quantity: item.quantity,
-            shop_id: item.shop_id,
-            shop_name: item.shop_name,
-          })),
-              totalPrice: getTotalPrice(),
+                product_id: item.product_id,
+                quantity: item.quantity,
+                shop_id: item.shop_id,
+                shop_name: item.shop_name,
+              })),
+              total_price: getTotalPrice(),
               paymentMethod: "balance",
             }
           : {
-              order_items: cartItems,
+              order_items: cartItems.map((item) => ({
+                product_id: item.product_id,
+                quantity: item.quantity,
+                shop_id: item.shop_id,
+                shop_name: item.shop_name,
+              })),
               shop_id: shopIds[0],
-              totalPrice: getTotalPrice(),
+              total_price: getTotalPrice(),
               paymentMethod: "balance",
             }
 
+      console.log("Sending order creation data:", requestData)
       const orderResponse = await api.post(endpoint, requestData)
       clearCart()
       toast.success("Payment successful! Your order has been placed.")
@@ -291,6 +297,7 @@ const CartPage: React.FC = () => {
       )
     } catch (error: any) {
       console.error("Payment error:", error)
+      console.log("Full error object:", error)
       setPaymentInitiated(false)
       setCurrentorder_id(null)
       toast.error(error.response?.data?.message || error.message || "Payment failed")

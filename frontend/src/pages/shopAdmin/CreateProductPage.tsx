@@ -70,7 +70,8 @@ const CreateProductPage: React.FC = () => {
       toast.success('Product created successfully');
       navigate('/shop-admin/products');
     } catch (error: any) {
-      console.error('Error creating product:', error);
+      console.error('Error creating product:', error); // Log the full error object for debugging
+      console.log(error);
       
       // Handle specific error cases
       if (error.response?.status === 400) {

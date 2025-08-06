@@ -192,6 +192,8 @@ class UserViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_200_OK)
             
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
@@ -358,6 +360,8 @@ class UserViewSet(viewsets.ModelViewSet):
             
             # Create user
             user = user_serializer.save()
+            user.is_verified = True  # Auto-verify shop admin
+            user.save()
             
             # Create shop
             shop_data = {
@@ -648,10 +652,16 @@ class ProductViewSet(viewsets.ModelViewSet):
                     return Response({'error': 'Shop not found'}, status=status.HTTP_404_NOT_FOUND)
             
             # Create the product
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
         except Exception as e:
-
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            import traceback
+            traceback.print_exc()
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def perform_create(self, serializer):
         serializer.save()

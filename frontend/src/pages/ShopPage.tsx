@@ -109,7 +109,7 @@ const ShopPage: React.FC = () => {
       return
     }
     addToCart({
-      product: product._id,
+      product_id: product._id,
       name: product.name,
       image: product.image,
       price: product.price,
