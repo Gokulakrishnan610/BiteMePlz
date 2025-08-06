@@ -170,11 +170,7 @@ const SubShopAdminsPage: React.FC = () => {
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <div className="relative">
-            <div className="flex space-x-2 text-4xl font-bold text-purple-600 mb-4">
-              <span className="animate-bounce" style={{ animationDelay: '0ms' }}>R</span>
-              <span className="animate-bounce" style={{ animationDelay: '150ms' }}>E</span>
-              <span className="animate-bounce" style={{ animationDelay: '300ms' }}>C</span>
-            </div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600 mb-4"></div>
             <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
               <div className="w-16 h-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full animate-pulse"></div>
             </div>

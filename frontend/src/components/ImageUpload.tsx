@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, X, Image as ImageIcon, Eye, AlertTriangle } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 import api from '../api';
 import toast from 'react-hot-toast';
 
@@ -85,15 +85,19 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           color: '#166534',
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Upload error:', error);
       
       let errorMessage = 'Failed to upload image';
       
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { message?: string } } };
+        if (axiosError.response?.data?.message) {
+          errorMessage = axiosError.response.data.message;
+        }
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        const errorWithMessage = error as { message: string };
+        errorMessage = errorWithMessage.message;
       }
       
       toast.error(errorMessage, {

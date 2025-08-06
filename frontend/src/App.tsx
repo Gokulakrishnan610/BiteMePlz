@@ -1,6 +1,5 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
 import { useAuth } from './context/AuthContext';
 import { WalletProvider } from './context/WalletContext';
 import { ToastProvider } from './components/ToastContainer';
@@ -57,11 +56,16 @@ function App() {
   const { loading } = useAuth();
   const [maintenanceMode, setMaintenanceMode] = React.useState(false);
 
-  // Optionally, you can persist this in localStorage or fetch from backend
-  // React.useEffect(() => {
-  //   const stored = localStorage.getItem('maintenanceMode');
-  //   if (stored) setMaintenanceMode(stored === 'true');
-  // }, []);
+  // Persist maintenance mode in localStorage
+  React.useEffect(() => {
+    const stored = localStorage.getItem('maintenanceMode');
+    if (stored) setMaintenanceMode(stored === 'true');
+  }, []);
+
+  // Update localStorage when maintenance mode changes
+  React.useEffect(() => {
+    localStorage.setItem('maintenanceMode', maintenanceMode.toString());
+  }, [maintenanceMode]);
 
   if (maintenanceMode) {
     return <MaintenancePage />;
@@ -69,8 +73,22 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--primary)]"></div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="flex items-center justify-center mb-4">
+            <img 
+              src="/images/rec college.png" 
+              alt="REC College Logo" 
+              className="h-16 w-auto object-contain"
+            />
+          </div>
+          <div className="flex items-center justify-center space-x-2">
+            <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"></div>
+            <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+            <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+          </div>
+          <p className="text-gray-500 mt-4 text-sm">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -78,32 +96,6 @@ function App() {
   return (
     <ToastProvider>
       <WalletProvider>
-        <Toaster 
-          position="bottom-right"
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
-              color: '#ffffff',
-              border: '1px solid #a259ff',
-              borderRadius: '12px',
-              boxShadow: '0 10px 25px rgba(162, 89, 255, 0.3)',
-            },
-            success: {
-              iconTheme: {
-                primary: '#10B981',
-                secondary: '#ffffff',
-              },
-            },
-            error: {
-              iconTheme: {
-                primary: '#EF4444',
-                secondary: '#ffffff',
-              },
-            },
-          }}
-        />
-        
         <LocalhostNotification />
         
         <Routes>
@@ -189,7 +181,7 @@ function App() {
             <Route path="sub-admins" element={<SubShopAdminsPage />} />
           </Route>
           
-          {/* 404 Page */}
+          {/* 404 Page - Must be last */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </WalletProvider>

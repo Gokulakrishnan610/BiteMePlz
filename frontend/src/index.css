@@ -449,3 +449,31 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* New UI utilities */
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+}
+
+.shadow-input {
+  box-shadow: 0px 2px 3px -1px rgba(0, 0, 0, 0.1), 0px 1px 0px 0px rgba(25, 28, 33, 0.02), 0px 0px 0px 1px
+    rgba(25, 28, 33, 0.08);
+}
+
+/* Custom duration for the purple falling animation */
+.duration-\[2000ms\] {
+  transition-duration: 2000ms;
+}

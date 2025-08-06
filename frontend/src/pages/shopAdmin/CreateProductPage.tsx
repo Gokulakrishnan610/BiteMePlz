@@ -14,61 +14,103 @@ const CreateProductPage: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    category: 'others', // Default to 'others'
     price: '',
     stock: '',
     image: ''
   });
-
-  const categories = [
-    { value: 'food', label: 'Food' },
-    { value: 'beverages', label: 'Beverages' },
-    { value: 'snacks', label: 'Snacks' },
-    { value: 'stationery', label: 'Stationery' },
-    { value: 'electronics', label: 'Electronics' },
-    { value: 'others', label: 'Others' }
-  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      // Validate required fields
+      if (!formData.name.trim() || !formData.description.trim() || !formData.price || !formData.stock) {
+        toast.error('Please fill in all required fields');
+        setLoading(false);
+        return;
+      }
+
+      // Validate price and stock
+      const price = Number(formData.price);
+      const stock = Number(formData.stock);
       
+      if (price <= 0) {
+        toast.error('Price must be greater than 0');
+        setLoading(false);
+        return;
+      }
       
+      if (stock < 0) {
+        toast.error('Stock cannot be negative');
+        setLoading(false);
+        return;
+      }
+
+      // Validate shop_id for shop admins
+      if (!user?.shop) {
+        toast.error('Shop information not found. Please contact administrator.');
+        setLoading(false);
+        return;
+      }
+
       const createData = {
         name: formData.name.trim(),
         description: formData.description.trim(),
-        price: Number(formData.price),
-        stock: Number(formData.stock),
-        image: formData.image,
-        shop_id: user?.shop
+        price: price,
+        stock: stock,
+        image: formData.image || '',
+        shop_id: user.shop
       };
       
-      
+      console.log('Creating product with data:', createData);
       
       const response = await api.post('/api/products/', createData);
-      
       
       toast.success('Product created successfully');
       navigate('/shop-admin/products');
     } catch (error: any) {
       console.error('Error creating product:', error);
-      toast.error(error.response?.data?.message || 'Failed to create product');
+      
+      // Handle specific error cases
+      if (error.response?.status === 400) {
+        const errorData = error.response.data;
+        if (errorData.error) {
+          toast.error(errorData.error);
+        } else if (errorData.message) {
+          toast.error(errorData.message);
+        } else {
+          toast.error('Invalid data provided. Please check your input.');
+        }
+      } else if (error.response?.status === 403) {
+        toast.error('You do not have permission to create products for this shop.');
+      } else if (error.response?.status === 404) {
+        toast.error('Shop not found. Please contact administrator.');
+      } else if (error.response?.status === 500) {
+        toast.error('Server error. Please try again later.');
+      } else {
+        toast.error('Failed to create product. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
+    // Validate input based on field type
+    if (name === 'price' || name === 'stock') {
+      const numValue = Number(value);
+      if (value && (isNaN(numValue) || numValue < 0)) {
+        return; // Don't update if invalid
+      }
+    }
     
-    setFormData(prev => {
-      const newData = { ...prev, [name]: value };
-      
-      return newData;
-    });
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleImageUpload = (imagePath: string) => {
@@ -77,7 +119,14 @@ const CreateProductPage: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Add New Product</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Add New Product</h1>
+        {user?.shop && (
+          <div className="text-sm text-[var(--muted-text)]">
+            Shop: {user.shop}
+          </div>
+        )}
+      </div>
 
       <div className="card">
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
@@ -95,28 +144,6 @@ const CreateProductPage: React.FC = () => {
                 required
                 placeholder="Enter product name"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
-                Category *
-              </label>
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                className="input"
-                required
-              >
-                {categories.map((category) => (
-                  <option key={category.value} value={category.value}>
-                    {category.label}
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-[var(--muted-text)] mt-1">
-                Selected: {categories.find(cat => cat.value === formData.category)?.label || formData.category}
-              </p>
             </div>
 
             <div>
@@ -144,11 +171,14 @@ const CreateProductPage: React.FC = () => {
                 value={formData.price}
                 onChange={handleChange}
                 className="input"
-                min="0"
+                min="0.01"
                 step="0.01"
                 required
-                placeholder="Enter price"
+                placeholder="Enter price (e.g., 99.99)"
               />
+              <p className="text-xs text-[var(--muted-text)] mt-1">
+                Price must be greater than ₹0
+              </p>
             </div>
 
             <div>
@@ -163,8 +193,11 @@ const CreateProductPage: React.FC = () => {
                 className="input"
                 min="0"
                 required
-                placeholder="Enter stock quantity"
+                placeholder="Enter stock quantity (e.g., 50)"
               />
+              <p className="text-xs text-[var(--muted-text)] mt-1">
+                Available quantity in stock
+              </p>
             </div>
 
             <div>
@@ -186,6 +219,7 @@ const CreateProductPage: React.FC = () => {
               type="button"
               onClick={() => navigate('/shop-admin/products')}
               className="btn-secondary"
+              disabled={loading}
             >
               Cancel
             </button>
@@ -196,8 +230,8 @@ const CreateProductPage: React.FC = () => {
             >
               {loading ? (
                 <span className="flex items-center">
-                  <Loader size={16} className="mr-2" />
-                  Creating...
+                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-current mr-2"></div>
+                  Creating Product...
                 </span>
               ) : (
                 'Create Product'

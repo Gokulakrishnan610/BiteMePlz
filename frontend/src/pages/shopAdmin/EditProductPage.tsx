@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api';
-import { Package, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Loader from '../../components/Loader';
 import ImageUpload from '../../components/ImageUpload';
@@ -44,7 +44,7 @@ const EditProductPage: React.FC = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const { data } = await api.get(`/products/${id}/`);
+        const { data } = await api.get(`/api/products/${id}/`);
 
         
         // Normalize the category to ensure it matches our enum values
@@ -96,7 +96,7 @@ const EditProductPage: React.FC = () => {
       
 
       
-              const response = await api.put(`/products/${id}`, updateData);
+              await api.put(`/api/products/${id}/`, updateData);
 
       
       toast.success('Product updated successfully');
@@ -287,7 +287,7 @@ const EditProductPage: React.FC = () => {
             >
               {saving ? (
                 <span className="flex items-center">
-                  <Loader size={16} className="mr-2" />
+                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
                   Saving...
                 </span>
               ) : (

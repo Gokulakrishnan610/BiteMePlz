@@ -35,7 +35,7 @@ interface shop {
   name: string;
 }
 
-const shopLogsPage: React.FC = () => {
+const ShopLogsPage: React.FC = () => {
   const [logs, setLogs] = useState<shopLog[]>([]);
   const [shops, setshops] = useState<shop[]>([]);
   const [loading, setLoading] = useState(true);
@@ -490,4 +490,4 @@ const shopLogsPage: React.FC = () => {
   );
 };
 
-export default shopLogsPage;
+export default ShopLogsPage;

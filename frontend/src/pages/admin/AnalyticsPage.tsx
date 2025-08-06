@@ -4,18 +4,14 @@ import {
   TrendingUp, 
   DollarSign, 
   Users, 
-  Store,
-  Calendar,
   RefreshCw,
   Download,
   BarChart3,
-  PieChart,
   Activity,
   Target,
-  Clock,
   ShoppingCart
 } from 'lucide-react';
-import { Line, Bar, Doughnut, Pie } from 'react-chartjs-2';
+import { Line, Bar, Pie } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -667,11 +663,7 @@ const AnalyticsPage: React.FC = () => {
 
       {loading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="flex space-x-2 text-4xl font-bold text-purple-600">
-            <span className="animate-bounce" style={{ animationDelay: '0ms' }}>R</span>
-            <span className="animate-bounce" style={{ animationDelay: '150ms' }}>E</span>
-            <span className="animate-bounce" style={{ animationDelay: '300ms' }}>C</span>
-          </div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
         </div>
       ) : (
         <>

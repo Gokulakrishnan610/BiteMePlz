@@ -16,7 +16,7 @@ interface shop {
   final_validity_time: string;
 }
 
-const shopsPage: React.FC = () => {
+const ShopsPage: React.FC = () => {
   const [shops, setshops] = useState<shop[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -228,4 +228,4 @@ const shopsPage: React.FC = () => {
   );
 };
 
-export default shopsPage;
+export default ShopsPage;

@@ -6,6 +6,10 @@ import { ArrowLeft, AlertCircle, QrCode, Trash2, Clock, Wallet } from 'lucide-re
 import QRCode from 'react-qr-code';
 import toast from 'react-hot-toast';
 import { useWallet } from '../../context/WalletContext';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
+import { Button } from '../../components/ui/button';
+import Navbar from '../../components/Navbar';
 
 interface OrderItem {
   name: string;
@@ -38,7 +42,6 @@ const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 function parseLocalDateTime(dateString: string | Date) {
   if (!dateString) return null;
   if (dateString instanceof Date) return dateString;
-  // Remove milliseconds and timezone if present
   const cleanString = dateString.split('.')[0].replace('Z', '');
   const [datePart, timePart] = cleanString.split('T');
   if (!datePart || !timePart) return null;
@@ -106,12 +109,10 @@ const OrderDetailsPage: React.FC = () => {
 
   useEffect(() => {
     if (!order?.qr_valid_until) return;
-
     const checkAndSetExpiry = () => {
       const now = new Date().getTime();
       const validUntil = new Date(order.qr_valid_until).getTime();
       const difference = validUntil - now;
-
       if (difference <= 0) {
         setIsQRExpired(true);
         setTimeLeft(0);
@@ -121,16 +122,13 @@ const OrderDetailsPage: React.FC = () => {
       }
     };
 
-    // Initial check
     checkAndSetExpiry();
-
     const interval = setInterval(checkAndSetExpiry, 1000);
-
     return () => clearInterval(interval);
   }, [order]);
 
   useEffect(() => {
-          if (order?.status === 'expired' && order.is_paid && !order.is_verified) {
+    if (order?.status === 'expired' && order.is_paid && !order.is_verified) {
       toast.success('Order expired. Amount refunded to wallet.');
       refreshBalance();
     }
@@ -140,10 +138,9 @@ const OrderDetailsPage: React.FC = () => {
     if (!order || !window.confirm('Are you sure you want to delete this order?')) {
       return;
     }
-
     try {
       setDeleting(true);
-              await api.delete(`/orders/${order._id}`);
+      await api.delete(`/orders/${order._id}`);
       toast.success('Order deleted successfully');
       navigate('/orders');
     } catch (error: any) {
@@ -166,208 +163,262 @@ const OrderDetailsPage: React.FC = () => {
 
   const canDelete = order?.is_verified || order?.status === 'expired';
 
+  // UPDATED LOADING STATE
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="pt-32 md:pt-40">
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
+  // UPDATED ERROR STATE
   if (error || !order) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="mx-auto text-[var(--error)] mb-4" size={48} />
-          <p className="text-[var(--error)] mb-4">{error}</p>
-          <Link to="/orders" className="btn-primary">
-            Back to Orders
-          </Link>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="pt-32 md:pt-40">
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className="flex items-center justify-center h-64">
+              <Card className="max-w-md w-full">
+                <CardContent className="p-8 text-center">
+                  <AlertCircle className="mx-auto text-red-500 mb-4" size={48} />
+                  <p className="text-red-600 mb-4 text-lg">{error}</p>
+                  <Link to="/orders">
+                    <Button className="bg-purple-600 hover:bg-purple-700">Back to Orders</Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
+  // COMPLETELY NEW RETURN JSX
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <Link
-          to="/orders"
-          className="flex items-center text-[var(--primary)] hover:underline"
-        >
-          <ArrowLeft size={20} className="mr-2" />
-          Back to Orders
-        </Link>
-        {canDelete && (
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="btn-error flex items-center"
-          >
-            <Trash2 size={20} className="mr-2" />
-            {deleting ? 'Deleting...' : 'Delete Order'}
-          </button>
-        )}
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <div className="card mb-8">
-            <div className="p-6">
-              <h1 className="text-2xl font-bold mb-4">
-                Order #{order._id.slice(-8)}
-              </h1>
-              <div className="flex flex-wrap gap-2 mb-4">
-                <span className={`badge ${
-                  order.is_paid ? 'badge-success' : 'badge-error'
-                }`}>
-                                      {order.is_paid ? 'Paid' : 'Pending'}
-                </span>
-                <span className={`badge ${
-                  order.is_verified ? 'badge-success' : 'badge-warning'
-                }`}>
-                  {order.is_verified ? 'Verified' : 'Not Verified'}
-                </span>
-                <span className={`badge ${
-                  order.status === 'completed' ? 'badge-success' : 
-                  order.status === 'expired' ? 'badge-error' : 
-                  'badge-warning'
-                }`}>
-                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                </span>
-              </div>
-              <p className="text-[var(--gray-600)]">
-                Placed on {new Date(order.createdAt).toLocaleString()}
-              </p>
-              {order.payment_result?.razorpay_payment_id && (
-                <p className="text-[var(--gray-600)]">
-                  Payment ID: {order.payment_result.razorpay_payment_id}
-                </p>
-              )}
-              {order.payment_result?.method === 'balance' && (
-                <p className="text-[var(--gray-600)]">
-                  Payment Method: Wallet Balance
-                </p>
-              )}
-            </div>
+      <div className="pt-20 md:pt-24">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          {/* Header */}
+          <div className="flex justify-between items-center mb-8">
+            <Link to="/orders" className="flex items-center text-purple-600 hover:text-purple-700 transition-colors">
+              <ArrowLeft size={20} className="mr-2" />
+              <span className="font-medium">Back to Orders</span>
+            </Link>
+            {canDelete && (
+              <Button onClick={handleDelete} disabled={deleting} variant="destructive" className="flex items-center">
+                <Trash2 size={20} className="mr-2" />
+                {deleting ? 'Deleting...' : 'Delete Order'}
+              </Button>
+            )}
           </div>
 
-          <div className="card">
-            <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Order Items</h2>
-              <div className="space-y-4">
-                {order.order_items.map((item, index) => (
-                  <div key={index} className="flex items-center">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-16 h-16 object-cover rounded"
-                    />
-                    <div className="ml-4 flex-1">
-                      <p className="font-medium">{item.name}</p>
-                      <p className="text-[var(--gray-600)]">
-                        {item.quantity} x ₹{item.price}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold">
-                        ₹{item.quantity * item.price}
-                      </p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main Content */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Order Header */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-2xl font-bold text-gray-900 mb-4">
+                        Order #{order._id.slice(-8)}
+                      </CardTitle>
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        <Badge
+                          variant={order.is_paid ? "default" : "destructive"}
+                          className={order.is_paid ? "bg-green-600 hover:bg-green-700" : ""}
+                        >
+                          {order.is_paid ? 'Paid' : 'Pending'}
+                        </Badge>
+                        <Badge
+                          variant={order.is_verified ? "default" : "secondary"}
+                          className={
+                            order.is_verified ? "bg-green-600 hover:bg-green-700" : "bg-yellow-500 hover:bg-yellow-600"
+                          }
+                        >
+                          {order.is_verified ? 'Verified' : 'Not Verified'}
+                        </Badge>
+                        <Badge
+                          variant={
+                            order.status === 'completed'
+                              ? "default"
+                              : order.status === 'expired'
+                                ? "destructive"
+                                : "secondary"
+                          }
+                          className={
+                            order.status === 'completed'
+                              ? "bg-green-600 hover:bg-green-700"
+                              : order.status === 'expired'
+                                ? ""
+                                : "bg-yellow-500 hover:bg-yellow-600"
+                          }
+                        >
+                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-              <div className="mt-6 pt-6 border-t">
-                <div className="flex justify-between">
-                  <span className="font-semibold">Total</span>
-                  <span className="font-semibold">₹{order.total_price}</span>
-                </div>
-              </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-sm text-gray-600">
+                    <p>Placed on {new Date(order.createdAt).toLocaleString()}</p>
+                    {order.payment_result?.razorpay_payment_id && (
+                      <p>Payment ID: {order.payment_result.razorpay_payment_id}</p>
+                    )}
+                    {order.payment_result?.method === 'balance' && <p>Payment Method: Wallet Balance</p>}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Order Items */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl font-semibold">Order Items</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {order.order_items.map((item, index) => (
+                      <div key={index} className="flex items-center p-4 bg-gray-50 rounded-lg">
+                        <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                          <img
+                            src={item.image || 'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg'}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="ml-4 flex-1">
+                          <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                          <p className="text-sm text-gray-600">
+                            {item.quantity} x ₹{item.price}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-gray-900">₹{item.quantity * item.price}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-semibold text-gray-900">Total</span>
+                      <span className="text-lg font-bold text-purple-600">₹{order.total_price}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
+
+            {/* Sidebar */}
+            {order.is_paid && (
+              <div className="lg:col-span-1 space-y-6">
+                {/* Order Status */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-xl font-semibold">Order Status</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <p className="text-sm text-gray-600 mb-1">Item Purchased</p>
+                        <p className="font-medium text-gray-900">{order.order_items[0]?.name}</p>
+                      </div>
+
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <p className="text-sm text-gray-600 mb-1">Amount Paid</p>
+                        <p className="font-medium text-gray-900">₹{order.total_price}</p>
+                      </div>
+
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <p className="text-sm text-gray-600 mb-1">QR Code Valid Until</p>
+                        <div className="flex items-center">
+                          <Clock size={16} className="mr-2 text-gray-500" />
+                          <p className={`font-medium ${isQRExpired ? 'text-red-600' : 'text-gray-900'}`}>
+                            {isQRExpired ? 'Expired' : formatTime(timeLeft)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <p className="text-sm text-gray-600 mb-1">Balance Remaining</p>
+                        <div className="flex items-center">
+                          <Wallet size={16} className="mr-2 text-gray-500" />
+                          <p className="font-medium text-gray-900">₹{order.balance_amount}</p>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <p className="text-sm text-gray-600 mb-1">Current Wallet Balance</p>
+                        <div className="flex items-center">
+                          <Wallet size={16} className="mr-2 text-gray-500" />
+                          <p className="font-medium text-gray-900">₹{balance}</p>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <p className="text-sm text-gray-600 mb-1">Current Time</p>
+                        <p className="font-medium text-gray-900">{formatISTTime(new Date())}</p>
+                      </div>
+
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <p className="text-sm text-gray-600 mb-1">Final Validity</p>
+                        <p className="font-medium text-gray-900">{formatISTTime(order?.final_validity)}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* QR Code */}
+                {order.qr_code && !isQRExpired && !order.is_verified && (
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center">
+                        <QrCode size={24} className="text-purple-600 mr-2" />
+                        <CardTitle className="text-xl font-semibold">Verification QR</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="bg-white p-6 rounded-lg border-2 border-gray-200 flex justify-center">
+                        <QRCode value={order.qr_code} size={200} />
+                      </div>
+                      <p className="text-sm text-gray-600 mt-4 text-center">
+                        Show this QR code to the shop staff to verify your purchase
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* QR Expired Message */}
+                {isQRExpired && !order.is_verified && (
+                  <Card className="border-red-200 bg-red-50">
+                    <CardContent className="p-6">
+                      <div className="flex items-center mb-2">
+                        <AlertCircle className="text-red-600 mr-2" size={20} />
+                        <p className="font-semibold text-red-800">QR Code Expired</p>
+                      </div>
+                      <p className="text-red-700 text-sm">
+                        QR code has expired. You can still use your balance until{' '}
+                        {parseLocalDateTime(order.final_validity)?.toLocaleString() || 'Not Set'}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
           </div>
         </div>
-
-        {order.is_paid && (
-          <div className="lg:col-span-1">
-            <div className="card mb-6">
-              <div className="p-6">
-                <h2 className="text-xl font-semibold mb-4">Order Status</h2>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-[var(--gray-600)]">Item Purchased</p>
-                    <p className="font-medium">{order.order_items[0]?.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[var(--gray-600)]">Amount Paid</p>
-                    <p className="font-medium">₹{order.total_price}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[var(--gray-600)]">QR Code Valid Until</p>
-                    <div className="flex items-center">
-                      <Clock size={16} className="mr-2" />
-                      <p className={`font-medium ${isQRExpired ? 'text-[var(--error)]' : ''}`}>
-                        {isQRExpired ? 'Expired' : formatTime(timeLeft)}
-                      </p>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[var(--gray-600)]">Balance Remaining</p>
-                    <div className="flex items-center">
-                      <Wallet size={16} className="mr-2" />
-                      <p className="font-medium">₹{order.balance_amount}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[var(--gray-600)]">Current Wallet Balance</p>
-                    <div className="flex items-center">
-                      <Wallet size={16} className="mr-2" />
-                      <p className="font-medium">₹{balance}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[var(--gray-600)]">Current Time</p>
-                    <p className="font-medium">
-                      {formatISTTime(new Date())}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[var(--gray-600)]">Final Validity</p>
-                    <p className="font-medium">
-                      {formatISTTime(order?.final_validity)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {order.qr_code && !isQRExpired && !order.is_verified && (
-              <div className="card">
-                <div className="p-6">
-                  <div className="flex items-center mb-4">
-                    <QrCode size={24} className="text-[var(--primary)] mr-2" />
-                    <h2 className="text-xl font-semibold">Verification QR</h2>
-                  </div>
-                  <div className="bg-white p-4 rounded-lg flex justify-center">
-                    <QRCode value={order.qr_code} size={200} />
-                  </div>
-                  <p className="text-sm text-[var(--gray-600)] mt-4 text-center">
-                    Show this QR code to the shop staff to verify your purchase
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {isQRExpired && !order.is_verified && (
-              <div className="card bg-[var(--error)] bg-opacity-10">
-                <div className="p-6">
-                  <p className="text-black text-center font-medium">
-                    QR code has expired. You can still use your balance until {parseLocalDateTime(order.final_validity)?.toLocaleString() || 'Not Set'}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

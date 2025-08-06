@@ -20,7 +20,7 @@ const LoginPage: React.FC = () => {
       await login(email, password);
       toast.success('Login successful');
       navigate('/');
-    } catch (error) {
+    } catch {
       toast.error('Invalid email or password');
     } finally {
       setLoading(false);
@@ -32,34 +32,23 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--primary-bg)] via-[var(--secondary-bg)] to-[var(--primary-bg)] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        {/* Logo Section */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="p-4 rounded-full bg-gradient-to-r from-[var(--accent-purple)] to-[var(--accent-violet)] glow">
-              <Zap size={32} className="text-white" />
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold gradient-text mb-2">Campus Kiosk</h1>
-          <p className="text-[var(--muted-text)]">Your digital campus marketplace</p>
-        </div>
-
         {/* Login Form */}
-        <div className="form-container p-8">
+        <div className="bg-white rounded-2xl shadow-xl p-8 border border-purple-100">
           <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
-              <LogIn className="text-[var(--accent-purple)]" size={48} />
+            <div className="flex justify-center mb-6">
+              <img 
+                src="/images/rec college.png" 
+                alt="REC College Logo" 
+                className="h-20 w-auto object-contain"
+              />
             </div>
-            <h2 className="text-2xl font-bold text-[var(--primary-text)] mb-2">Welcome Back</h2>
-            <p className="text-[var(--secondary-text)]">
-              Sign in to your account to continue
-            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="form-group">
-              <label htmlFor="email" className="form-label">
+            <div className="space-y-2">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 <Mail size={16} className="inline mr-2" />
                 Email Address
               </label>
@@ -68,14 +57,15 @@ const LoginPage: React.FC = () => {
                 id="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors bg-white text-black placeholder-gray-400"
                 placeholder="Enter your email"
+                style={{ color: 'black' }}
                 required
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="password" className="form-label">
+            <div className="space-y-2">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 <Lock size={16} className="inline mr-2" />
                 Password
               </label>
@@ -85,14 +75,14 @@ const LoginPage: React.FC = () => {
                   id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="input pr-12"
+                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
                   placeholder="Enter your password"
                   required
                 />
                 <button
                   type="button"
                   onClick={togglePasswordVisibility}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-[var(--muted-text)] hover:text-[var(--accent-purple)] transition-colors"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-purple-600 transition-colors"
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
@@ -102,7 +92,7 @@ const LoginPage: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn-primary py-3 text-lg"
+              className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <span className="flex items-center justify-center">
@@ -120,16 +110,16 @@ const LoginPage: React.FC = () => {
             <div className="text-center space-y-4">
               <Link 
                 to="/forgot-password" 
-                className="text-[var(--accent-purple)] hover:text-[var(--accent-violet)] transition-colors block"
+                className="text-purple-600 hover:text-purple-700 transition-colors block"
               >
                 Forgot your password?
               </Link>
-              <div className="border-t border-[var(--border-color)] pt-4">
-                <p className="text-[var(--secondary-text)]">
+              <div className="border-t border-gray-200 pt-4">
+                <p className="text-gray-600">
                   Don't have an account?{' '}
                   <Link 
                     to="/register" 
-                    className="text-[var(--accent-purple)] hover:text-[var(--accent-violet)] font-medium transition-colors"
+                    className="text-purple-600 hover:text-purple-700 font-medium transition-colors"
                   >
                     Register here
                   </Link>
@@ -141,8 +131,8 @@ const LoginPage: React.FC = () => {
 
         {/* Footer */}
         <div className="text-center mt-8">
-          <p className="text-[var(--muted-text)] text-sm">
-            © 2024 Campus Kiosk. All rights reserved.
+          <p className="text-gray-500 text-sm">
+            © 2024 REC College. All rights reserved.
           </p>
         </div>
       </div>

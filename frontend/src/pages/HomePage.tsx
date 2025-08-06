@@ -1,285 +1,413 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import api from '../api';
-import { Store, MapPin, Clock, Star, Zap, ShoppingBag, Users, TrendingUp } from 'lucide-react';
+"use client"
 
-interface shop {
-  id: string;
-  name: string;
-  description: string;
-  location: string;
-  image: string;
-  is_open: boolean;
-  final_validity_time: string;
+import type React from "react"
+import { useEffect, useState } from "react"
+import { Link } from "react-router-dom"
+import api from "../api"
+import { Search, MapPin, Clock, Star, Coffee, Utensils, Cookie, BookOpen, Smartphone, Package } from "lucide-react"
+import { Card, CardContent } from "../components/ui/card"
+import { Badge } from "../components/ui/badge"
+import { Button } from "../components/ui/button"
+import { Input } from "../components/ui/input"
+import Navbar from "../components/Navbar"
+import LoadingScreen from "../components/LoadingScreen"
+
+interface Shop {
+  id: string
+  name: string
+  description: string
+  location: string
+  image: string
+  is_open: boolean
+  final_validity_time: string
+  category?: string
+  rating?: number
+  delivery_time?: string
+  delivery_fee?: number
+}
+
+interface Product {
+  _id: string
+  name: string
+  category: string
+  is_available: boolean
+  stock: number
+  shop: string
+}
+
+const categoryIconMap: { [key: string]: any } = {
+  All: Package,
+  food: Utensils,
+  beverages: Coffee,
+  snacks: Cookie,
+  stationery: BookOpen,
+  electronics: Smartphone,
+  others: Package,
 }
 
 const HomePage: React.FC = () => {
-  const [shops, setshops] = useState<shop[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [shops, setShops] = useState<Shop[]>([])
+  const [filteredShops, setFilteredShops] = useState<Shop[]>([])
+  const [availableCategories, setAvailableCategories] = useState<string[]>(["All"])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("All")
+
+  // Add these new state variables for the loading screen
+  const [showLoadingScreen, setShowLoadingScreen] = useState(true)
+  const [componentsLoaded, setComponentsLoaded] = useState(0)
+
+  // Fetch available categories from products
+  const fetchAvailableCategories = async () => {
+    try {
+      const { data } = await api.get("/api/products/")
+      const products = data.results || data
+
+      if (Array.isArray(products)) {
+        // Get unique categories from products that are available and in stock
+        const categories = new Set<string>()
+
+        products.forEach((product: Product) => {
+          if (product.is_available && product.stock > 0 && product.category) {
+            categories.add(product.category.toLowerCase())
+          }
+        })
+
+        const categoryArray = ["All", ...Array.from(categories)]
+        setAvailableCategories(categoryArray)
+      }
+    } catch (error) {
+      console.error("Failed to fetch categories:", error)
+      // Fallback to default categories if API fails
+      setAvailableCategories(["All", "food", "beverages", "snacks", "stationery", "electronics", "others"])
+    }
+  }
 
   useEffect(() => {
-    const fetchshops = async () => {
+    const fetchData = async () => {
       try {
-        const { data } = await api.get('/api/shops');
-        // Handle paginated response
-        const shopsData = data.results || data;
-        setshops(Array.isArray(shopsData) ? shopsData : []);
-        setLoading(false);
+        // Fetch both shops and categories
+        await Promise.all([fetchShops(), fetchAvailableCategories()])
+        setLoading(false)
       } catch (err) {
-        setError('Failed to load shops');
-        setLoading(false);
+        setError("Failed to load data")
+        setLoading(false)
       }
-    };
+    }
 
-    fetchshops();
-  }, []);
+    fetchData()
+  }, [])
+
+  const fetchShops = async () => {
+    try {
+      const { data } = await api.get("/api/shops")
+      const shopsData = data.results || data
+      setShops(Array.isArray(shopsData) ? shopsData : [])
+      setFilteredShops(Array.isArray(shopsData) ? shopsData : [])
+    } catch (err) {
+      throw new Error("Failed to load shops")
+    }
+  }
+
+  useEffect(() => {
+    const filterShops = async () => {
+      let filtered = shops
+
+      if (selectedCategory !== "All") {
+        // Filter shops that have products in the selected category with stock
+        try {
+          const { data } = await api.get("/api/products/", {
+            params: {
+              category: selectedCategory,
+              is_available: true,
+              stock__gt: 0, // Products with stock greater than 0
+            },
+          })
+
+          const products = data.results || data
+          const shopIdsWithCategory = new Set(products.map((product: Product) => product.shop))
+
+          filtered = shops.filter((shop) => shopIdsWithCategory.has(shop.id))
+        } catch (error) {
+          console.error("Failed to filter shops by category:", error)
+          // Fallback to original filtering method
+          filtered = shops.filter((shop) => {
+            return shop.category === selectedCategory || shop.category === selectedCategory.toLowerCase()
+          })
+        }
+      }
+
+      if (searchQuery) {
+        filtered = filtered.filter(
+          (shop) =>
+            shop.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            shop.description.toLowerCase().includes(searchQuery.toLowerCase()),
+        )
+      }
+
+      setFilteredShops(filtered)
+    }
+
+    filterShops()
+  }, [shops, selectedCategory, searchQuery])
+
+  // Add this useEffect for component loading animation
+  useEffect(() => {
+    if (!showLoadingScreen && !loading) {
+      const components = [
+        () => setComponentsLoaded(1), // Navbar
+        () => setComponentsLoaded(2), // Search bar
+        () => setComponentsLoaded(3), // Categories
+        () => setComponentsLoaded(4), // First row of cards
+        () => setComponentsLoaded(5), // All cards
+      ]
+
+      components.forEach((component, index) => {
+        setTimeout(component, (index + 1) * 800)
+      })
+    }
+  }, [showLoadingScreen, loading])
 
   const getTimeUntilClosure = (final_validity_time: string) => {
-    if (!final_validity_time) return null;
-    
-    const now = new Date();
-    const final_validity = new Date(final_validity_time);
-    const timeDiff = final_validity.getTime() - now.getTime();
-    
-    if (timeDiff <= 0) return null;
-    
-    const hours = Math.floor(timeDiff / (1000 * 60 * 60));
-    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return { hours, minutes };
-  };
+    if (!final_validity_time) return null
+
+    const now = new Date()
+    const final_validity = new Date(final_validity_time)
+    const timeDiff = final_validity.getTime() - now.getTime()
+
+    if (timeDiff <= 0) return null
+
+    const hours = Math.floor(timeDiff / (1000 * 60 * 60))
+    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60))
+
+    return { hours, minutes }
+  }
+
+  const getCategoryIcon = (category: string) => {
+    return categoryIconMap[category] || categoryIconMap[category.toLowerCase()] || Package
+  }
+
+  const formatCategoryName = (category: string) => {
+    if (category === "All") return "All"
+    return category.charAt(0).toUpperCase() + category.slice(1)
+  }
+
+  // Add this condition to show the loading screen first
+  if (showLoadingScreen) {
+    return <LoadingScreen onComplete={() => setShowLoadingScreen(false)} />
+  }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[var(--primary-bg)] via-[var(--secondary-bg)] to-[var(--primary-bg)]">
-        <div className="flex space-x-2 text-4xl font-bold">
-          <span className="animate-bounce text-[var(--accent-purple)]" style={{ animationDelay: '0ms' }}>L</span>
-          <span className="animate-bounce text-[var(--accent-violet)]" style={{ animationDelay: '150ms' }}>O</span>
-          <span className="animate-bounce text-[var(--accent-purple)]" style={{ animationDelay: '300ms' }}>A</span>
-          <span className="animate-bounce text-[var(--accent-violet)]" style={{ animationDelay: '450ms' }}>D</span>
-          <span className="animate-bounce text-[var(--accent-purple)]" style={{ animationDelay: '600ms' }}>I</span>
-          <span className="animate-bounce text-[var(--accent-violet)]" style={{ animationDelay: '750ms' }}>N</span>
-          <span className="animate-bounce text-[var(--accent-purple)]" style={{ animationDelay: '900ms' }}>G</span>
+      <div className="min-h-screen bg-white">
+        <Navbar />
+        {/* Header Skeleton */}
+        <div className="pt-32 md:pt-40">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="h-8 bg-gray-200 rounded w-48 mb-4 animate-pulse"></div>
+            <div className="h-12 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </div>
+
+        {/* Categories Skeleton */}
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-10 bg-gray-200 rounded-full w-20 flex-shrink-0 animate-pulse"></div>
+            ))}
+          </div>
+        </div>
+
+        {/* Cards Skeleton */}
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div key={i} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div className="aspect-[4/3] bg-gray-200 animate-pulse"></div>
+                <div className="p-3 space-y-2">
+                  <div className="h-5 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                  <div className="flex justify-between items-center">
+                    <div className="h-4 bg-gray-200 rounded w-16 animate-pulse"></div>
+                    <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-    );
+    )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[var(--primary-bg)] via-[var(--secondary-bg)] to-[var(--primary-bg)]">
-        <div className="text-center card p-8 max-w-md">
-          <p className="text-[var(--error)] mb-4 text-lg">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="btn-primary"
-          >
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center bg-white p-8 rounded-lg shadow-md max-w-md">
+          <p className="text-red-600 mb-4 text-lg">{error}</p>
+          <Button onClick={() => window.location.reload()} className="bg-purple-600 hover:bg-purple-700">
             Retry
-          </button>
+          </Button>
         </div>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--primary-bg)] via-[var(--secondary-bg)] to-[var(--primary-bg)]">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-[var(--accent-purple)]/10 to-[var(--accent-violet)]/10"></div>
-        <div className="container mx-auto px-4 py-20 relative">
-          <div className="text-center max-w-4xl mx-auto">
-            <div className="flex justify-center mb-6">
-              <div className="p-4 rounded-full bg-gradient-to-r from-[var(--accent-purple)] to-[var(--accent-violet)] glow">
-                <Zap size={48} className="text-white" />
-              </div>
-            </div>
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 fade-in">
-              <span className="gradient-text">Campus Kiosk</span>
-            </h1>
-            <p className="text-xl md:text-2xl text-[var(--secondary-text)] mb-8 max-w-3xl mx-auto leading-relaxed slide-in">
-              Your ultimate digital marketplace for campus shopping. Quick, convenient, and secure transactions at your fingertips.
-            </p>
-            <div className="flex flex-wrap justify-center gap-4 mb-12">
-              <div key="easy-shopping" className="flex items-center space-x-2 bg-[var(--card-bg)] px-6 py-3 rounded-full border border-[var(--border-color)]">
-                <ShoppingBag className="text-[var(--accent-purple)]" size={20} />
-                <span className="text-[var(--secondary-text)]">Easy shopping</span>
-              </div>
-              <div key="campus-community" className="flex items-center space-x-2 bg-[var(--card-bg)] px-6 py-3 rounded-full border border-[var(--border-color)]">
-                <Users className="text-[var(--accent-violet)]" size={20} />
-                <span className="text-[var(--secondary-text)]">Campus Community</span>
-              </div>
-              <div key="real-time-updates" className="flex items-center space-x-2 bg-[var(--card-bg)] px-6 py-3 rounded-full border border-[var(--border-color)]">
-                <TrendingUp className="text-[var(--accent-purple)]" size={20} />
-                <span className="text-[var(--secondary-text)]">Real-time Updates</span>
-              </div>
-            </div>
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+
+      {/* Header with fade-in animation */}
+      <div
+        className={`pt-32 md:pt-40 bg-white border-b border-gray-200 transition-opacity duration-500 ${componentsLoaded >= 1 ? "opacity-100" : "opacity-0"}`}
+      >
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <Input
+              type="text"
+              placeholder="Search shops and items"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-4 py-3 w-full border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900 placeholder-gray-500"
+            />
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* shops Section */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text">
-            Discover Campus Stores
-          </h2>
-          <p className="text-[var(--secondary-text)] text-lg max-w-2xl mx-auto">
-            Browse through our collection of campus shops and find everything you need
-          </p>
+      {/* Categories with fade-in animation */}
+      <div
+        className={`max-w-7xl mx-auto px-4 py-4 transition-opacity duration-500 ${componentsLoaded >= 2 ? "opacity-100" : "opacity-0"}`}
+      >
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          {availableCategories.map((category) => {
+            const IconComponent = getCategoryIcon(category)
+            return (
+              <Button
+                key={category}
+                variant={selectedCategory === category ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCategory(category)}
+                className={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
+                  selectedCategory === category
+                    ? "bg-[#6a1b9a] text-white hover:bg-[#5a1688]"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                <IconComponent size={16} />
+                {formatCategoryName(category)}
+              </Button>
+            )
+          })}
         </div>
+      </div>
 
-        {shops.length === 0 ? (
+      {/* Shops Grid with staggered animation */}
+      <div
+        className={`max-w-7xl mx-auto px-4 pb-8 transition-opacity duration-500 ${componentsLoaded >= 3 ? "opacity-100" : "opacity-0"}`}
+      >
+        {filteredShops.length === 0 ? (
           <div className="text-center py-16">
-            <div className="card p-12 max-w-md mx-auto">
-              <Store size={64} className="text-[var(--muted-text)] mx-auto mb-6" />
-              <h3 className="text-2xl font-semibold text-[var(--secondary-text)] mb-4">
-                No shops Available
-              </h3>
-              <p className="text-[var(--muted-text)]">
-                Please check back later for available shops.
-              </p>
+            <div className="text-gray-400 mb-4">
+              <Search size={48} className="mx-auto" />
             </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No shops found</h3>
+            <p className="text-gray-600">
+              {selectedCategory !== "All"
+                ? `No shops have products in the "${formatCategoryName(selectedCategory)}" category with stock available.`
+                : "Try adjusting your search or filters"}
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {shops.map((shop, index) => {
-              const timeUntilClosure = getTimeUntilClosure(shop.final_validity_time);
-              const is_open = shop.is_open && timeUntilClosure;
-              
-              // Skip shops without valid IDs
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredShops.map((shop, index) => {
+              const timeUntilClosure = getTimeUntilClosure(shop.final_validity_time)
+              const isOpen = shop.is_open && timeUntilClosure
+              const cardDelay = Math.floor(index / 4) * 200 + (index % 4) * 100
+
               if (!shop.id) {
-                console.warn(`Shop ${shop.name} has no valid ID, skipping`);
-                return null;
+                console.warn(`Shop ${shop.name} has no valid ID, skipping`)
+                return null
               }
-              
+
               return (
                 <Link
                   key={shop.id}
                   to={`/shop/${shop.id}`}
-                  className="group card hover:scale-105 transition-all duration-300 glow-hover overflow-hidden"
-                  style={{ animationDelay: `${index * 100}ms` }}
+                  className={`group transition-opacity duration-500 ${
+                    componentsLoaded >= 4 + Math.floor(index / 4) ? "opacity-100" : "opacity-0"
+                  }`}
+                  style={{ transitionDelay: `${cardDelay}ms` }}
                 >
-                  {/* Image Container */}
-                  <div className="relative aspect-video w-full overflow-hidden">
-                    <img
-                      src={shop.image || 'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg'}
-                      alt={shop.name}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                    
-                    {/* Status Badge */}
-                    <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-sm font-medium backdrop-blur-md ${
-                      is_open 
-                        ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                        : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                    }`}>
-                      {is_open ? 'Open' : 'Closed'}
-                    </div>
-
-                    {/* Rating Badge */}
-                    <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md rounded-full px-3 py-1 flex items-center space-x-1">
-                      <Star className="text-yellow-400 fill-current" size={14} />
-                      <span className="text-sm font-medium text-white">4.8</span>
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-6">
-                    {/* Header */}
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-gradient-to-br from-[var(--accent-purple)] to-[var(--accent-violet)] rounded-lg">
-                          <Store className="text-white" size={20} />
+                  <Card className="overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow duration-200 bg-white font-sans">
+                    <div className="relative aspect-[4/3] overflow-hidden">
+                      <img
+                        src={shop.image || "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"}
+                        alt={shop.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                      />
+                      {!isOpen && (
+                        <div className="absolute inset-0 bg-gray-900/60 flex items-center justify-center">
+                          <Badge variant="secondary" className="bg-white text-gray-900">
+                            Closed
+                          </Badge>
                         </div>
-                        <h3 className="text-xl font-bold text-[var(--primary-text)] group-hover:text-[var(--accent-purple)] transition-colors">
+                      )}
+                      {(shop.delivery_fee === 0 || !shop.delivery_fee) && isOpen && (
+                        <Badge className="absolute top-2 left-2 bg-purple-600 hover:bg-purple-600 text-white text-xs">
+                          Free delivery
+                        </Badge>
+                      )}
+                    </div>
+
+                    <CardContent className="p-3">
+                      <div className="flex items-start justify-between mb-1">
+                        <h3 className="font-semibold text-gray-900 text-sm leading-tight group-hover:text-purple-600 transition-colors">
                           {shop.name}
                         </h3>
                       </div>
-                    </div>
 
-                    {/* Description */}
-                    <p className="text-[var(--secondary-text)] mb-4 line-clamp-2 leading-relaxed">
-                      {shop.description}
-                    </p>
+                      <p className="text-xs text-gray-600 mb-2 line-clamp-1">{shop.description}</p>
 
-                    {/* Location */}
-                    <div className="flex items-center space-x-2 text-[var(--muted-text)] mb-4">
-                      <MapPin size={16} />
-                      <span className="text-sm font-medium">{shop.location}</span>
-                    </div>
-
-                    {/* Time Info */}
-                    {timeUntilClosure && (
-                      <div className="flex items-center space-x-2 text-[var(--muted-text)] mb-4">
-                        <Clock size={16} />
-                        <span className="text-sm">
-                          Closes in {timeUntilClosure.hours}h {timeUntilClosure.minutes}m
-                        </span>
+                      <div className="flex items-center justify-between text-xs text-gray-600">
+                        <div className="flex items-center">
+                          <Star className="w-3 h-3 text-yellow-400 fill-current mr-1" />
+                          <span className="font-medium">{shop.rating || 4.8}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Clock className="w-3 h-3 mr-1" />
+                          <span>{shop.delivery_time || "15-25 min"}</span>
+                        </div>
+                        {shop.delivery_fee && shop.delivery_fee > 0 && (
+                          <span className="text-gray-500">${shop.delivery_fee.toFixed(2)} delivery</span>
+                        )}
                       </div>
-                    )}
 
-                    {/* Footer */}
-                    <div className="flex items-center justify-between pt-4 border-t border-[var(--border-color)]">
-                      <div className="flex items-center space-x-2 text-[var(--muted-text)]">
-                        <div className={`w-2 h-2 rounded-full ${is_open ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                        <span className="text-sm">{is_open ? 'Available' : 'Closed'}</span>
+                      <div className="flex items-center mt-2 text-xs text-gray-500">
+                        <MapPin className="w-3 h-3 mr-1" />
+                        <span className="truncate">{shop.location}</span>
                       </div>
-                      <div className="flex items-center space-x-1 text-[var(--accent-purple)] font-medium group-hover:text-[var(--accent-violet)] transition-colors">
-                        <span className="text-sm">Visit Store</span>
-                        <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Hover Effect Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-[var(--accent-purple)]/5 to-[var(--accent-violet)]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                      {timeUntilClosure && (
+                        <div className="flex items-center mt-1 text-xs text-gray-500">
+                          <Clock className="w-3 h-3 mr-1" />
+                          <span>
+                            Closes in {timeUntilClosure.hours}h {timeUntilClosure.minutes}m
+                          </span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </Link>
-              );
+              )
             })}
           </div>
         )}
-      </section>
-
-      {/* Features Section */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 gradient-text">
-            Why Choose Campus Kiosk?
-          </h2>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div key="lightning-fast" className="card p-8 text-center hover:scale-105 transition-transform duration-300">
-            <div className="w-16 h-16 bg-gradient-to-r from-[var(--accent-purple)] to-[var(--accent-violet)] rounded-full flex items-center justify-center mx-auto mb-6">
-              <Zap className="text-white" size={32} />
-            </div>
-            <h3 className="text-xl font-bold mb-4 text-[var(--primary-text)]">Lightning Fast</h3>
-            <p className="text-[var(--secondary-text)]">Quick and seamless shopping experience with instant order processing</p>
-          </div>
-          
-          <div key="easy-shopping-features" className="card p-8 text-center hover:scale-105 transition-transform duration-300">
-            <div className="w-16 h-16 bg-gradient-to-r from-[var(--accent-violet)] to-[var(--accent-purple)] rounded-full flex items-center justify-center mx-auto mb-6">
-                              <ShoppingBag className="text-white" size={32} />
-            </div>
-            <h3 className="text-xl font-bold mb-4 text-[var(--primary-text)]">Easy shopping</h3>
-            <p className="text-[var(--secondary-text)]">Browse, select, and purchase with just a few clicks</p>
-          </div>
-          
-          <div key="campus-community-features" className="card p-8 text-center hover:scale-105 transition-transform duration-300">
-            <div className="w-16 h-16 bg-gradient-to-r from-[var(--accent-purple)] to-[var(--accent-violet)] rounded-full flex items-center justify-center mx-auto mb-6">
-              <Users className="text-white" size={32} />
-            </div>
-            <h3 className="text-xl font-bold mb-4 text-[var(--primary-text)]">Campus Community</h3>
-            <p className="text-[var(--secondary-text)]">Built specifically for campus life and student needs</p>
-          </div>
-        </div>
-      </section>
+      </div>
     </div>
-  );
-};
+  )
+}
 
 export default HomePage;

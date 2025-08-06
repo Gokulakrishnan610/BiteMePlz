@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../api';
-import { BarChart2, Users, Store, TrendingUp, RefreshCw, DollarSign, ShoppingBag, Package } from 'lucide-react';
-import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import { Users, Store, RefreshCw, DollarSign, ShoppingBag } from 'lucide-react';
+import { Line, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -64,15 +64,14 @@ interface DashboardStats {
   }>;
 }
 
-interface AdminDashboardPageProps {
-  setMaintenanceMode: React.Dispatch<React.SetStateAction<boolean>>;
+interface DashboardPageProps {
+  setMaintenanceMode?: (mode: boolean) => void;
 }
 
-const DashboardPage: React.FC<AdminDashboardPageProps> = ({ setMaintenanceMode }) => {
+const DashboardPage: React.FC<DashboardPageProps> = ({ setMaintenanceMode }) => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [maintenanceMode, setLocalMaintenanceMode] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();

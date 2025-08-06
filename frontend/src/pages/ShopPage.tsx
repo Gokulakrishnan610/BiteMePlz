@@ -1,223 +1,247 @@
-  import React, { useEffect, useState } from 'react';
-  import { useParams, Link, useNavigate } from 'react-router-dom';
-  import api from '../api';
-  import { Package, AlertCircle, Store, Clock, ArrowLeft, ShoppingCart, MapPin, Zap, Search, X } from 'lucide-react';
-  import { useCart } from '../context/CartContext';
-  import { useAuth } from '../context/AuthContext';
-  import toast from 'react-hot-toast';
+"use client"
 
-  interface Product {
-    _id: string;
-    name: string;
-    description: string;
-    category: string;
-    price: number;
-    stock: number;
-    image: string;
-    is_available: boolean;
-  }
+import type React from "react"
+import { useEffect, useState } from "react"
+import { useParams, Link, useNavigate } from "react-router-dom"
+import api from "../api"
+import { Package, AlertCircle, Store, Clock, ArrowLeft, ShoppingCart, MapPin, Search, X, Star } from "lucide-react"
+import { useCart } from "../context/CartContext"
+import { useAuth } from "../context/AuthContext"
+import toast from "react-hot-toast"
+import { Card, CardContent } from "../components/ui/card"
+import { Badge } from "../components/ui/badge"
+import { Button } from "../components/ui/button"
+import { Input } from "../components/ui/input"
+import Navbar from "../components/Navbar"
 
-  interface shop {
-    _id: string;
-    name: string;
-    description: string;
-    location: string;
-    image: string;
-    is_open: boolean;
-    final_validity_time: string;
-  }
+interface Product {
+  _id: string
+  name: string
+  description: string
+  category: string
+  price: number
+  stock: number
+  image: string
+  is_available: boolean
+}
 
+interface Shop {
+  _id: string
+  name: string
+  description: string
+  location: string
+  image: string
+  is_open: boolean
+  final_validity_time: string
+}
 
-  const ShopPage: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
-    const { user } = useAuth();
-    const [shop, setshop] = useState<shop | null>(null);
-    const [products, setProducts] = useState<Product[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [selectedCategory, setSelectedCategory] = useState<string>('all');
-    const [searchQuery, setSearchQuery] = useState<string>('');
-    const { addToCart } = useCart();
+const ShopPage: React.FC = () => {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const [shop, setShop] = useState<Shop | null>(null)
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [searchQuery, setSearchQuery] = useState<string>("")
+  const { addToCart } = useCart()
 
-    useEffect(() => {
-      const fetchshopAndProducts = async () => {
-        try {
-          const [shopResponse, productsResponse] = await Promise.all([
-            api.get(`/api/shops/${id}/`),
-            api.get(`/api/products/`, {
-              params: {
-                shop: id
-              }
-            })
-          ]);
-          setshop(shopResponse.data);
-          // Get all products, not just available ones, but filter them properly
-          const allProducts = productsResponse.data.results || [];
-          setProducts(allProducts.filter((product: Product) => product.is_available));
-          setLoading(false);
-        } catch (err) {
-          setError('Failed to load shop data');
-          setLoading(false);
-        }
-      };
-
-      if (id) {
-        fetchshopAndProducts();
+  useEffect(() => {
+    const fetchShopAndProducts = async () => {
+      try {
+        const [shopResponse, productsResponse] = await Promise.all([
+          api.get(`/api/shops/${id}/`),
+          api.get(`/api/products/`, {
+            params: {
+              shop: id,
+            },
+          }),
+        ])
+        setShop(shopResponse.data)
+        const allProducts = productsResponse.data.results || []
+        setProducts(allProducts.filter((product: Product) => product.is_available))
+        setLoading(false)
+      } catch (err) {
+        setError("Failed to load shop data")
+        setLoading(false)
       }
-    }, [id]);
-
-    const isshopAcceptingOrders = () => {
-      if (!shop) return false;
-      
-      return shop.is_open;
-    };
-
-
-    const getTimeUntilClosure = () => {
-      if (!shop) return null;
-      
-      const now = new Date();
-      const final_validity = new Date(shop.final_validity_time);
-      const timeDiff = final_validity.getTime() - now.getTime();
-
-      
-      if (timeDiff <= 0) return null;
-      
-      const hours = Math.floor(timeDiff / (1000 * 60 * 60));
-      const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
-      
-      return { hours, minutes };
-    };
-
-    const handleAddToCart = (product: Product) => {
-      if (!user) {
-        toast.error('Please login to add items to cart');
-        navigate('/login');
-        return;
-      }
-
-      if (!isshopAcceptingOrders()) {
-        toast.error('shop is no longer accepting orders for today');
-        return;
-      }
-
-      if (product.stock === 0) {
-        toast.error('Product is out of stock');
-        return;
-      }
-
-      addToCart({
-        product: product._id,
-        name: product.name,
-        image: product.image,
-        price: product.price,
-        quantity: 1,
-        stock: product.stock,
-        shop_id: shop!._id,
-        shop_name: shop!.name
-      });
-      toast.success('Added to cart');
-    };
-
-    // Get unique categories from products, filtering out undefined/null values
-    const validCategories = products
-      .map(product => product.category)
-      .filter(category => category && typeof category === 'string');
-    
-    const categories = ['all', ...new Set(validCategories)];
-
-    const categoryLabels: { [key: string]: string } = {
-      all: 'All Products',
-      food: 'Food',
-      beverages: 'Beverages',
-      snacks: 'Snacks',
-      stationery: 'Stationery',
-      electronics: 'Electronics',
-      others: 'Others'
-    };
-
-    // Filter products based on category and search query
-    const filteredProducts = products.filter(product => {
-      // Category filter
-      const categoryMatch = selectedCategory === 'all' || product.category === selectedCategory;
-      
-      // Search filter
-      const searchMatch = searchQuery.length === 0 || 
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (product.category && product.category.toLowerCase().includes(searchQuery.toLowerCase()));
-      
-      return categoryMatch && searchMatch;
-    });
-
-    const clearSearch = () => {
-      setSearchQuery('');
-    };
-
-    if (loading) {
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-[var(--primary-bg)] via-[var(--secondary-bg)] to-[var(--primary-bg)] flex items-center justify-center">
-          <div className="flex space-x-2 text-4xl font-bold">
-            <span key="loading-l" className="animate-bounce text-[var(--accent-purple)]" style={{ animationDelay: '0ms' }}>L</span>
-            <span key="loading-o" className="animate-bounce text-[var(--accent-violet)]" style={{ animationDelay: '150ms' }}>O</span>
-            <span key="loading-a" className="animate-bounce text-[var(--accent-purple)]" style={{ animationDelay: '300ms' }}>A</span>
-            <span key="loading-d" className="animate-bounce text-[var(--accent-violet)]" style={{ animationDelay: '450ms' }}>D</span>
-            <span key="loading-i" className="animate-bounce text-[var(--accent-purple)]" style={{ animationDelay: '600ms' }}>I</span>
-            <span key="loading-n" className="animate-bounce text-[var(--accent-violet)]" style={{ animationDelay: '750ms' }}>N</span>
-            <span key="loading-g" className="animate-bounce text-[var(--accent-purple)]" style={{ animationDelay: '900ms' }}>G</span>
-          </div>
-        </div>
-      );
     }
 
-    if (error || !shop) {
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-[var(--primary-bg)] via-[var(--secondary-bg)] to-[var(--primary-bg)] flex items-center justify-center">
-          <div className="text-center card p-8 max-w-md">
-            <AlertCircle className="mx-auto text-[var(--error)] mb-4" size={48} />
-            <p className="text-[var(--error)] mb-4 text-lg">{error || 'shop not found'}</p>
-            <Link to="/" className="btn-primary">
-              Back to shops
-            </Link>
-          </div>
-        </div>
-      );
+    if (id) {
+      fetchShopAndProducts()
     }
+  }, [id])
 
-    const shopAcceptingOrders = isshopAcceptingOrders();
-    const timeUntilClosure = getTimeUntilClosure();
+  const isShopAcceptingOrders = () => {
+    if (!shop) return false
+    return shop.is_open
+  }
 
+  const getTimeUntilClosure = () => {
+    if (!shop) return null
+
+    const now = new Date()
+    const final_validity = new Date(shop.final_validity_time)
+    const timeDiff = final_validity.getTime() - now.getTime()
+
+    if (timeDiff <= 0) return null
+
+    const hours = Math.floor(timeDiff / (1000 * 60 * 60))
+    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60))
+
+    return { hours, minutes }
+  }
+
+  const handleAddToCart = (product: Product) => {
+    if (!user) {
+      toast.error("Please login to add items to cart")
+      navigate("/login")
+      return
+    }
+    if (!isShopAcceptingOrders()) {
+      toast.error("Shop is no longer accepting orders for today")
+      return
+    }
+    if (product.stock === 0) {
+      toast.error("Product is out of stock")
+      return
+    }
+    addToCart({
+      product: product._id,
+      name: product.name,
+      image: product.image,
+      price: product.price,
+      quantity: 1,
+      stock: product.stock,
+      shop_id: shop!._id,
+      shop_name: shop!.name,
+    })
+    toast.success("Added to cart")
+  }
+
+  const validCategories = products
+    .map((product) => product.category)
+    .filter((category) => category && typeof category === "string")
+
+  const categories = ["all", ...new Set(validCategories)].filter(Boolean)
+
+  const categoryLabels: { [key: string]: string } = {
+    all: "All Products",
+    food: "Food",
+    beverages: "Beverages",
+    snacks: "Snacks",
+    stationery: "Stationery",
+    electronics: "Electronics",
+    others: "Others",
+  }
+
+  const filteredProducts = products.filter((product) => {
+    const categoryMatch = selectedCategory === "all" || product.category === selectedCategory
+
+    const searchMatch =
+      searchQuery.length === 0 ||
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (product.category && product.category.toLowerCase().includes(searchQuery.toLowerCase()))
+
+    return categoryMatch && searchMatch
+  })
+
+  const clearSearch = () => {
+    setSearchQuery("")
+  }
+
+  if (loading) {
     return (
-      <div key="shop-page" className="min-h-screen bg-gradient-to-br from-[var(--primary-bg)] via-[var(--secondary-bg)] to-[var(--primary-bg)]">
-        <div key="shop-container" className="container mx-auto px-4 py-8">
-          {/* Back Button */}
-          <Link
-            to="/"
-            className="inline-flex items-center text-[var(--secondary-text)] hover:text-[var(--accent-purple)] transition-colors duration-200 mb-8 group"
-          >
-            <ArrowLeft size={20} className="mr-2 group-hover:-translate-x-1 transition-transform" />
-            Back to shops
-          </Link>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="pt-32 md:pt-40">
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
-          {/* shop Header */}
-          <div key="shop-header" className="card mb-8 overflow-hidden">
+  if (error || !shop) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="pt-32 md:pt-40">
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className="flex items-center justify-center h-64">
+              <Card className="max-w-md w-full">
+                <CardContent className="p-8 text-center">
+                  <AlertCircle className="mx-auto text-red-500 mb-4" size={48} />
+                  <p className="text-red-600 mb-4 text-lg">{error || "Shop not found"}</p>
+                  <Link to="/">
+                    <Button className="bg-purple-600 hover:bg-purple-700">Back to Shops</Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const shopAcceptingOrders = isShopAcceptingOrders()
+  const timeUntilClosure = getTimeUntilClosure()
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+
+      <div className="pt-20 md:pt-24">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          {/* Back Button - Mobile */}
+          <div className="flex items-center mb-8 md:hidden">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center text-purple-600 hover:text-purple-700 transition-colors mr-4"
+            >
+              <ArrowLeft size={20} className="mr-2" />
+              <span className="font-medium">Back</span>
+            </button>
+            <h1 className="text-3xl font-bold text-gray-900">Shop Details</h1>
+          </div>
+
+          {/* Back Button - Laptop (Parallel to Navbar) */}
+          <div className="hidden md:flex items-center justify-between mb-8">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center text-purple-600 hover:text-purple-700 transition-colors"
+            >
+              <ArrowLeft size={20} className="mr-2" />
+              <span className="font-medium">Back</span>
+            </button>
+            <h1 className="text-3xl font-bold text-gray-900">Shop Details</h1>
+            <div className="w-20"></div> {/* Spacer for balance */}
+          </div>
+
+          {/* Shop Header */}
+          <Card className="mb-8 overflow-hidden">
             <div className="relative">
               <div className="aspect-video md:aspect-[3/1] w-full overflow-hidden">
                 <img
-                  src={shop.image || 'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg'}
+                  src={shop.image || "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"}
                   alt={shop.name}
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
               </div>
-              
-              {/* shop Info Overlay */}
+
+              {/* Shop Info Overlay */}
               <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="flex items-center space-x-3 mb-2">
-                      <div className="p-2 bg-gradient-to-r from-[var(--accent-purple)] to-[var(--accent-violet)] rounded-lg">
+                      <div className="p-2 bg-purple-600 rounded-lg">
                         <Store className="text-white" size={24} />
                       </div>
                       <h1 className="text-3xl md:text-4xl font-bold">{shop.name}</h1>
@@ -228,86 +252,99 @@
                         <MapPin size={16} />
                         <span>{shop.location}</span>
                       </div>
+                      <div className="flex items-center space-x-1">
+                        <Star size={16} className="text-yellow-400 fill-current" />
+                        <span>4.8</span>
+                      </div>
                     </div>
                   </div>
-                  <div className={`px-4 py-2 rounded-full text-sm font-medium backdrop-blur-md ${
-                    shopAcceptingOrders 
-                      ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                      : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                  }`}>
-                    {shopAcceptingOrders ? 'Open' : 'Closed'}
+                  <Badge
+                    className={
+                      shopAcceptingOrders
+                        ? "bg-green-600 hover:bg-green-700 text-white"
+                        : "bg-red-600 hover:bg-red-700 text-white"
+                    }
+                  >
+                    {shopAcceptingOrders ? "Open" : "Closed"}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Shop Status Messages */}
+          {!shopAcceptingOrders ? (
+            <Card className="mb-8 border-purple-200 bg-purple-50">
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <AlertCircle className="text-purple-600 mr-4 flex-shrink-0" size={32} />
+                  <div>
+                    <p className="text-purple-800 font-semibold text-lg mb-1">Shop is closed for orders</p>
+                    <p className="text-purple-700">Orders are no longer being accepted for today.</p>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* shop Status Messages */}
-          {!shopAcceptingOrders ? (
-            <div key="shop-closed" className="mb-8 card p-6">
-              <div className="flex items-center">
-                <AlertCircle className="text-red-400 mr-4 flex-shrink-0" size={32} />
-                <div>
-                  <p className="text-red-400 font-semibold text-lg mb-1">shop is closed for orders</p>
-                  <p className="text-[var(--secondary-text)]">Orders are no longer being accepted for today.</p>
-                </div>
-              </div>
-            </div>
-          ) : timeUntilClosure ? (
-            <div key="shop-closing-soon" className="mb-8 card p-6 border border-yellow-500/30 bg-yellow-500/5">
-              <div className="flex items-center">
-                <Clock className="text-yellow-400 mr-4 flex-shrink-0" size={32} />
-                <div>
-                  <p className="text-yellow-400 font-semibold text-lg mb-1">
-                    shop closes in {timeUntilClosure.hours}h {timeUntilClosure.minutes}m
-                  </p>
-                  <p className="text-[var(--secondary-text)]">Complete your order before the shop closes.</p>
-                </div>
-              </div>
-            </div>
-          ) : null}
+              </CardContent>
+            </Card>
+          ) : (
+            timeUntilClosure && (
+              <Card className="mb-8 border-purple-200 bg-purple-50">
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <Clock className="text-purple-600 mr-4 flex-shrink-0" size={32} />
+                    <div>
+                      <p className="text-purple-800 font-semibold text-lg mb-1">
+                        Shop closes in {timeUntilClosure.hours}h {timeUntilClosure.minutes}m
+                      </p>
+                      <p className="text-purple-700">Complete your order before the shop closes.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          )}
 
           {/* Search Bar */}
-          <div key="search-bar" className="mb-6">
+          <div className="mb-6">
             <div className="relative max-w-md mx-auto">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-[var(--muted-text)]" />
-              </div>
-              <input
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <Input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search products..."
-                className="input pl-10 pr-10 w-full"
+                className="pl-10 pr-10 bg-white text-gray-900 border-gray-300 focus:border-purple-500 focus:ring-purple-500"
               />
               {searchQuery && (
                 <button
-                  key="clear-search-input"
                   onClick={clearSearch}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-[var(--muted-text)] hover:text-[var(--accent-purple)]"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-purple-600"
                 >
-                  <X className="h-5 w-5" />
+                  <X size={20} />
                 </button>
               )}
             </div>
           </div>
 
-          {/* Category Filter - Only show when there are products */}
+          {/* Category Filter */}
           {products.length > 0 && (
-            <div key="category-filter" className="mb-8">
+            <div className="mb-8">
               <div className="flex flex-wrap gap-3 justify-center">
                 {categories.map((category) => (
-                  <button
-                    key={category}
+                  <Button
+                    key={category || "unknown"}
                     onClick={() => setSelectedCategory(category)}
-                    className={`px-6 py-3 rounded-full font-medium transition-all duration-200 ${
+                    variant={selectedCategory === category ? "default" : "outline"}
+                    className={
                       selectedCategory === category
-                        ? 'bg-gradient-to-r from-[var(--accent-purple)] to-[var(--accent-violet)] text-white shadow-lg'
-                        : 'bg-[var(--card-bg)] text-[var(--secondary-text)] border border-[var(--border-color)] hover:border-[var(--accent-purple)] hover:text-[var(--accent-purple)]'
-                    }`}
+                        ? "bg-purple-600 hover:bg-purple-700 text-white"
+                        : "border-purple-600 text-purple-600 hover:bg-purple-50 bg-transparent"
+                    }
                   >
-                    {categoryLabels[category] || (category && typeof category === 'string' ? category.charAt(0).toUpperCase() + category.slice(1) : 'Unknown')}
-                  </button>
+                    {categoryLabels[category] ||
+                      (category && typeof category === "string"
+                        ? category.charAt(0).toUpperCase() + category.slice(1)
+                        : "Unknown")}
+                  </Button>
                 ))}
               </div>
             </div>
@@ -315,142 +352,125 @@
 
           {/* Search Results Info */}
           {searchQuery && (
-            <div key="search-results-info" className="mb-6 text-center">
-              <p className="text-[var(--secondary-text)]">
-                {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} found for "{searchQuery}"
-                {selectedCategory !== 'all' && ` in ${categoryLabels[selectedCategory] || selectedCategory}`}
+            <div className="mb-6 text-center">
+              <p className="text-gray-600">
+                {filteredProducts.length} product{filteredProducts.length !== 1 ? "s" : ""} found for "{searchQuery}"
+                {selectedCategory !== "all" && ` in ${categoryLabels[selectedCategory] || selectedCategory}`}
               </p>
             </div>
           )}
 
           {/* Products Grid */}
           {filteredProducts.length === 0 ? (
-            <div key="no-products" className="text-center py-16">
-              <div className="card p-12 max-w-md mx-auto">
-                <Package size={64} className="text-[var(--muted-text)] mx-auto mb-6" />
-                <h3 className="text-2xl font-semibold text-[var(--secondary-text)] mb-4">
-                  {searchQuery ? 'No Products Found' : 'No Products Available'}
-                </h3>
-                <p className="text-[var(--muted-text)]">
-                  {searchQuery 
-                    ? `No products match your search "${searchQuery}"${selectedCategory !== 'all' ? ` in ${categoryLabels[selectedCategory] || selectedCategory}` : ''}.`
-                    : selectedCategory === 'all' 
-                    ? "This shop doesn't have any products yet." 
-                    : `No products found in the ${categoryLabels[selectedCategory] || selectedCategory} category.`}
-                </p>
-                {(searchQuery || selectedCategory !== 'all') && (
-                  <div key="action-buttons" className="mt-4 space-x-2">
+            <div className="text-center py-16">
+              <Card className="max-w-md mx-auto">
+                <CardContent className="p-12 text-center">
+                  <Package size={64} className="text-gray-400 mx-auto mb-6" />
+                  <h3 className="text-2xl font-semibold text-gray-900 mb-4">
+                    {searchQuery ? "No Products Found" : "No Products Available"}
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    {searchQuery
+                      ? `No products match your search "${searchQuery}"${selectedCategory !== "all" ? ` in ${categoryLabels[selectedCategory] || selectedCategory}` : ""}.`
+                      : selectedCategory === "all"
+                        ? "This shop doesn't have any products yet."
+                        : `No products found in the ${categoryLabels[selectedCategory] || selectedCategory} category.`}
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     {searchQuery && (
-                      <button
-                        key="clear-search"
-                        onClick={clearSearch}
-                        className="btn-secondary text-sm"
-                      >
+                      <Button key="clear-search" onClick={clearSearch} variant="outline">
                         Clear Search
-                      </button>
+                      </Button>
                     )}
-                    {selectedCategory !== 'all' && (
-                      <button
-                        key="view-all-products"
-                        onClick={() => setSelectedCategory('all')}
-                        className="btn-secondary text-sm"
-                      >
+                    {selectedCategory !== "all" && (
+                      <Button key="view-all" onClick={() => setSelectedCategory("all")} variant="outline">
                         View All Products
-                      </button>
+                      </Button>
                     )}
                   </div>
-                )}
-              </div>
+                </CardContent>
+              </Card>
             </div>
           ) : (
-            <div key="products-grid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredProducts.map((product, index) => (
-                <div 
-                  key={product._id} 
-                  className="card hover:scale-105 transition-all duration-300 glow-hover overflow-hidden group"
+                <Card
+                  key={product._id}
+                  className="overflow-hidden hover:shadow-lg transition-all duration-300 group"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   {/* Product Image */}
                   <div className="relative aspect-square w-full overflow-hidden">
                     <img
-                      src={product.image || 'https://images.pexels.com/photos/1667088/pexels-photo-1667088.jpeg'}
+                      src={product.image || "https://images.pexels.com/photos/1667088/pexels-photo-1667088.jpeg"}
                       alt={product.name}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[var(--primary-bg)]/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    
+
                     {/* Category Badge */}
                     {product.category && (
-                      <div key={`category-badge-${product._id}`} className="absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-medium backdrop-blur-md bg-[var(--accent-purple)]/20 text-[var(--accent-purple)] border border-[var(--accent-purple)]/30">
+                      <Badge key="category" className="absolute top-3 left-3 bg-purple-600 hover:bg-purple-700 text-white text-xs">
                         {categoryLabels[product.category] || product.category}
-                      </div>
+                      </Badge>
                     )}
 
                     {/* Stock Badge */}
-                    <div key={`stock-badge-${product._id}`} className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-medium backdrop-blur-md ${
-                      product.stock > 0 
-                        ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                        : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                    }`}>
-                      {product.stock > 0 ? `${product.stock} left` : 'Out of stock'}
-                    </div>
+                    <Badge
+                      key="stock"
+                      className={`absolute top-3 right-3 text-xs ${
+                        product.stock > 0
+                          ? "bg-green-600 hover:bg-green-700 text-white"
+                          : "bg-red-600 hover:bg-red-700 text-white"
+                      }`}
+                    >
+                      {product.stock > 0 ? `${product.stock} left` : "Out of stock"}
+                    </Badge>
 
                     {/* Quick Add Button */}
                     {product.stock > 0 && shopAcceptingOrders && (
-                      <button
-                        key={`quick-add-button-${product._id}`}
+                      <Button
+                        key="quick-add"
                         onClick={() => handleAddToCart(product)}
-                        className="absolute bottom-3 right-3 p-2 bg-gradient-to-r from-[var(--accent-purple)] to-[var(--accent-violet)] text-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 shadow-lg"
+                        size="sm"
+                        className="absolute bottom-3 right-3 bg-purple-600 hover:bg-purple-700 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-all duration-300"
                       >
                         <ShoppingCart size={16} />
-                      </button>
+                      </Button>
                     )}
                   </div>
 
                   {/* Product Info */}
-                  <div className="p-4">
-                    <h3 className="text-lg font-semibold text-[var(--primary-text)] mb-2 group-hover:text-[var(--accent-purple)] transition-colors">
+                  <CardContent className="p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors">
                       {product.name}
                     </h3>
-                    <p className="text-[var(--secondary-text)] text-sm mb-4 line-clamp-2">
-                      {product.description}
-                    </p>
-                    
+                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">{product.description}</p>
+
                     <div className="flex items-center justify-between mb-4">
-                      <div key={`price-container-${product._id}`} className="flex items-center space-x-2">
-                        <span className="text-2xl font-bold gradient-text">₹{product.price}</span>
-                      </div>
+                      <span className="text-2xl font-bold text-purple-600">₹{product.price}</span>
                     </div>
 
-                    <button
-                      key={`add-to-cart-button-${product._id}`}
+                    <Button
                       onClick={() => handleAddToCart(product)}
                       disabled={product.stock === 0 || !shopAcceptingOrders}
-                      className={`w-full py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 ${
-                        (product.stock === 0 || !shopAcceptingOrders)
-                          ? 'bg-[var(--border-color)] text-[var(--muted-text)] cursor-not-allowed'
-                          : 'btn-primary hover:shadow-lg'
+                      className={`w-full ${
+                        product.stock === 0 || !shopAcceptingOrders
+                          ? "bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300"
+                          : "bg-purple-600 hover:bg-purple-700 text-white"
                       }`}
                     >
-                      <ShoppingCart size={18} />
-                      <span key={`button-text-${product._id}`}>
-                        {product.stock === 0 
-                          ? 'Out of Stock' 
-                          : !shopAcceptingOrders 
-                          ? 'shop Closed' 
-                          : 'Add to Cart'}
-                      </span>
-                    </button>
-                  </div>
-
-                
-                </div>
+                      <ShoppingCart size={18} className="mr-2" />
+                      {product.stock === 0 ? "Out of Stock" : !shopAcceptingOrders ? "Shop Closed" : "Add to Cart"}
+                    </Button>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           )}
         </div>
       </div>
-    );
-  };
+    </div>
+  )
+}
 
-  export default ShopPage;
+export default ShopPage

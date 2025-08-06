@@ -1,12 +1,8 @@
 import React from 'react';
 
-const Loader: React.FC<{ size?: number; className?: string }> = ({ size = 48, className = '' }) => (
+const Loader: React.FC<{ className?: string }> = ({ className = '' }) => (
   <div className={`flex items-center justify-center ${className}`}>
-    <div className="flex space-x-2 text-4xl font-bold">
-      <span className="animate-bounce text-[var(--accent-purple)]" style={{ animationDelay: '0ms' }}>R</span>
-      <span className="animate-bounce text-[var(--accent-violet)]" style={{ animationDelay: '150ms' }}>E</span>
-      <span className="animate-bounce text-[var(--accent-purple)]" style={{ animationDelay: '300ms' }}>C</span>
-    </div>
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
   </div>
 );
 

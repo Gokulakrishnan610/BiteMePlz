@@ -625,6 +625,37 @@ class ProductViewSet(viewsets.ModelViewSet):
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
 
+    def create(self, request, *args, **kwargs):
+        """Custom create method to validate shop_id for shop admins"""
+        try:
+            # Get the data
+            data = request.data.copy()
+            shop_id = data.get('shop_id')
+            
+            # Validate shop_id for shop admins
+            if request.user.role == 'shopAdmin':
+                if not shop_id:
+                    return Response({'error': 'Shop ID is required for shop admins'}, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Ensure shop admin can only create products for their own shop
+                if str(request.user.shop.id) != str(shop_id):
+                    return Response({'error': 'You can only create products for your own shop'}, status=status.HTTP_403_FORBIDDEN)
+                
+                # Verify shop exists
+                try:
+                    shop = Shop.objects.get(id=shop_id)
+                except Shop.DoesNotExist:
+                    return Response({'error': 'Shop not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            # Create the product
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            product = serializer.save()
+            
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
     def perform_create(self, serializer):
         serializer.save()
 

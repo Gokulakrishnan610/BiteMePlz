@@ -126,7 +126,7 @@ const Header: React.FC = () => {
                       className="block px-4 py-3 text-sm text-[var(--secondary-text)] hover:bg-[var(--hover-bg)] hover:text-[var(--accent-purple)] transition-colors duration-200"
                       onClick={closeMenus}
                     >
-                      Profile
+                      Settings
                     </Link>
                     <hr className="my-2 border-[var(--border-color)]" />
                     <button
@@ -197,7 +197,7 @@ const Header: React.FC = () => {
                     className="text-[var(--secondary-text)] hover:text-[var(--accent-purple)] transition-colors duration-200 py-2"
                     onClick={closeMenus}
                   >
-                    Profile
+                    Settings
                   </Link>
                   <button
                     onClick={handleLogout}

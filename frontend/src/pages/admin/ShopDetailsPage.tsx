@@ -116,7 +116,7 @@ interface TransactionStats {
   }>;
 }
 
-const shopDetailsPage: React.FC = () => {
+const ShopDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [shop, setshop] = useState<shop | null>(null);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
@@ -661,4 +661,4 @@ const shopDetailsPage: React.FC = () => {
   );
 };
 
-export default shopDetailsPage;
+export default ShopDetailsPage;

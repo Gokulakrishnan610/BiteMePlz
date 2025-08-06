@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   BarChart3, Store, Users, LogOut, Menu, X,
   Receipt, TrendingUp, DollarSign, Zap,
-  Activity, FileText
+  FileText
 } from 'lucide-react';
 
 const AdminLayout: React.FC = () => {
