@@ -10,7 +10,8 @@ import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import Navbar from "../components/Navbar"
-import LoadingScreen from "../components/LoadingScreen"
+import SimpleLoading from "../components/SimpleLoading"
+
 
 interface Shop {
   id: string
@@ -32,7 +33,10 @@ interface Product {
   category: string
   is_available: boolean
   stock: number
-  shop: string
+  shop: {
+    id: string
+    name: string
+  }
 }
 
 const categoryIconMap: { [key: string]: any } = {
@@ -53,9 +57,8 @@ const HomePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
+  const [isFiltering, setIsFiltering] = useState(false)
 
-  // Add these new state variables for the loading screen
-  const [showLoadingScreen, setShowLoadingScreen] = useState(true)
   const [componentsLoaded, setComponentsLoaded] = useState(0)
 
   // Fetch available categories from products
@@ -74,13 +77,15 @@ const HomePage: React.FC = () => {
           }
         })
 
-        const categoryArray = ["All", ...Array.from(categories)]
+        // Sort categories alphabetically for better UX
+        const sortedCategories = Array.from(categories).sort()
+        const categoryArray = ["All", ...sortedCategories]
         setAvailableCategories(categoryArray)
       }
     } catch (error) {
       console.error("Failed to fetch categories:", error)
       // Fallback to default categories if API fails
-      setAvailableCategories(["All", "food", "beverages", "snacks", "stationery", "electronics", "others"])
+      setAvailableCategories(["All", "beverages", "electronics", "food", "others", "snacks", "stationery"])
     }
   }
 
@@ -112,6 +117,7 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     const filterShops = async () => {
+      setIsFiltering(true)
       let filtered = shops
 
       if (selectedCategory !== "All") {
@@ -119,16 +125,22 @@ const HomePage: React.FC = () => {
         try {
           const { data } = await api.get("/api/products/", {
             params: {
-              category: selectedCategory,
+              category: selectedCategory.toLowerCase(),
               is_available: true,
               stock__gt: 0, // Products with stock greater than 0
             },
           })
 
           const products = data.results || data
-          const shopIdsWithCategory = new Set(products.map((product: Product) => product.shop))
+          console.log(`Found ${products.length} products for category: ${selectedCategory}`)
+          console.log('Products:', products)
+          
+          const shopIdsWithCategory = new Set(products.map((product: Product) => product.shop.id))
+          console.log('Shop IDs with category:', Array.from(shopIdsWithCategory))
+          console.log('Available shops:', shops.map(shop => ({ id: shop.id, name: shop.name })))
 
           filtered = shops.filter((shop) => shopIdsWithCategory.has(shop.id))
+          console.log(`Filtered to ${filtered.length} shops`)
         } catch (error) {
           console.error("Failed to filter shops by category:", error)
           // Fallback to original filtering method
@@ -147,6 +159,7 @@ const HomePage: React.FC = () => {
       }
 
       setFilteredShops(filtered)
+      setIsFiltering(false)
     }
 
     filterShops()
@@ -154,7 +167,7 @@ const HomePage: React.FC = () => {
 
   // Add this useEffect for component loading animation
   useEffect(() => {
-    if (!showLoadingScreen && !loading) {
+    if (!loading) {
       const components = [
         () => setComponentsLoaded(1), // Navbar
         () => setComponentsLoaded(2), // Search bar
@@ -167,7 +180,7 @@ const HomePage: React.FC = () => {
         setTimeout(component, (index + 1) * 800)
       })
     }
-  }, [showLoadingScreen, loading])
+  }, [loading])
 
   const getTimeUntilClosure = (final_validity_time: string) => {
     if (!final_validity_time) return null
@@ -184,61 +197,43 @@ const HomePage: React.FC = () => {
     return { hours, minutes }
   }
 
+  const isShopOpen = (shop: Shop) => {
+    // Check if shop is marked as open
+    if (!shop.is_open) return false
+    
+    // Check if shop has passed its final validity time
+    if (shop.final_validity_time) {
+      const now = new Date()
+      const final_validity = new Date(shop.final_validity_time)
+      if (now > final_validity) return false
+    }
+    
+    return true
+  }
+
   const getCategoryIcon = (category: string) => {
     return categoryIconMap[category] || categoryIconMap[category.toLowerCase()] || Package
   }
 
-  const formatCategoryName = (category: string) => {
+  const getCategoryLabel = (category: string) => {
     if (category === "All") return "All"
-    return category.charAt(0).toUpperCase() + category.slice(1)
+    
+    const labels: { [key: string]: string } = {
+      food: "Food",
+      beverages: "Beverages", 
+      snacks: "Snacks",
+      stationery: "Stationery",
+      electronics: "Electronics",
+      others: "Others",
+    }
+    
+    return labels[category.toLowerCase()] || category.charAt(0).toUpperCase() + category.slice(1)
   }
 
-  // Add this condition to show the loading screen first
-  if (showLoadingScreen) {
-    return <LoadingScreen onComplete={() => setShowLoadingScreen(false)} />
-  }
+
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-white">
-        <Navbar />
-        {/* Header Skeleton */}
-        <div className="pt-32 md:pt-40">
-          <div className="max-w-7xl mx-auto px-4 py-4">
-            <div className="h-8 bg-gray-200 rounded w-48 mb-4 animate-pulse"></div>
-            <div className="h-12 bg-gray-200 rounded animate-pulse"></div>
-          </div>
-        </div>
-
-        {/* Categories Skeleton */}
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-10 bg-gray-200 rounded-full w-20 flex-shrink-0 animate-pulse"></div>
-            ))}
-          </div>
-        </div>
-
-        {/* Cards Skeleton */}
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <div key={i} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                <div className="aspect-[4/3] bg-gray-200 animate-pulse"></div>
-                <div className="p-3 space-y-2">
-                  <div className="h-5 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
-                  <div className="flex justify-between items-center">
-                    <div className="h-4 bg-gray-200 rounded w-16 animate-pulse"></div>
-                    <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    )
+    return <SimpleLoading />
   }
 
   if (error) {
@@ -277,6 +272,8 @@ const HomePage: React.FC = () => {
         </div>
       </div>
 
+
+
       {/* Categories with fade-in animation */}
       <div
         className={`max-w-7xl mx-auto px-4 py-4 transition-opacity duration-500 ${componentsLoaded >= 2 ? "opacity-100" : "opacity-0"}`}
@@ -297,7 +294,7 @@ const HomePage: React.FC = () => {
                 }`}
               >
                 <IconComponent size={16} />
-                {formatCategoryName(category)}
+                {getCategoryLabel(category)}
               </Button>
             )
           })}
@@ -308,7 +305,12 @@ const HomePage: React.FC = () => {
       <div
         className={`max-w-7xl mx-auto px-4 pb-8 transition-opacity duration-500 ${componentsLoaded >= 3 ? "opacity-100" : "opacity-0"}`}
       >
-        {filteredShops.length === 0 ? (
+        {isFiltering ? (
+          <div className="text-center py-16">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Finding shops with {getCategoryLabel(selectedCategory)}...</p>
+          </div>
+        ) : filteredShops.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-gray-400 mb-4">
               <Search size={48} className="mx-auto" />
@@ -316,15 +318,25 @@ const HomePage: React.FC = () => {
             <h3 className="text-lg font-medium text-gray-900 mb-2">No shops found</h3>
             <p className="text-gray-600">
               {selectedCategory !== "All"
-                ? `No shops have products in the "${formatCategoryName(selectedCategory)}" category with stock available.`
+                ? `No shops have products in the "${getCategoryLabel(selectedCategory)}" category with stock available.`
                 : "Try adjusting your search or filters"}
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div>
+            {/* Category Summary */}
+            {selectedCategory !== "All" && (
+              <div className="mb-6 text-center">
+                <p className="text-gray-600">
+                  Showing shops with {getCategoryLabel(selectedCategory)} products in stock
+                </p>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-fr">
             {filteredShops.map((shop, index) => {
               const timeUntilClosure = getTimeUntilClosure(shop.final_validity_time)
-              const isOpen = shop.is_open && timeUntilClosure
+              const isOpen = isShopOpen(shop)
               const cardDelay = Math.floor(index / 4) * 200 + (index % 4) * 100
 
               if (!shop.id) {
@@ -336,13 +348,13 @@ const HomePage: React.FC = () => {
                 <Link
                   key={shop.id}
                   to={`/shop/${shop.id}`}
-                  className={`group transition-opacity duration-500 ${
+                  className={`group transition-opacity duration-500 h-full ${
                     componentsLoaded >= 4 + Math.floor(index / 4) ? "opacity-100" : "opacity-0"
                   }`}
                   style={{ transitionDelay: `${cardDelay}ms` }}
                 >
-                  <Card className="overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow duration-200 bg-white font-sans">
-                    <div className="relative aspect-[4/3] overflow-hidden">
+                  <Card className="overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow duration-200 bg-white font-sans h-full flex flex-col">
+                    <div className="relative aspect-[4/3] overflow-hidden flex-shrink-0">
                       <img
                         src={shop.image || "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"}
                         alt={shop.name}
@@ -355,23 +367,33 @@ const HomePage: React.FC = () => {
                           </Badge>
                         </div>
                       )}
-                      {(shop.delivery_fee === 0 || !shop.delivery_fee) && isOpen && (
-                        <Badge className="absolute top-2 left-2 bg-purple-600 hover:bg-purple-600 text-white text-xs">
-                          Free delivery
+                      {isOpen && (
+                        <Badge className="absolute top-2 left-2 bg-green-600 hover:bg-green-600 text-white text-xs">
+                          Open
                         </Badge>
                       )}
                     </div>
 
-                    <CardContent className="p-3">
+                    <CardContent className="p-3 flex-1 flex flex-col">
                       <div className="flex items-start justify-between mb-1">
-                        <h3 className="font-semibold text-gray-900 text-sm leading-tight group-hover:text-purple-600 transition-colors">
+                        <h3 className="font-semibold text-gray-900 text-sm leading-tight group-hover:text-purple-600 transition-colors line-clamp-2 min-h-[2.5rem]">
                           {shop.name}
                         </h3>
+                        <Badge 
+                          variant={isOpen ? "default" : "secondary"}
+                          className={`text-xs ${
+                            isOpen 
+                              ? "bg-green-600 hover:bg-green-700 text-white" 
+                              : "bg-gray-500 hover:bg-gray-600 text-white"
+                          }`}
+                        >
+                          {isOpen ? "Open" : "Closed"}
+                        </Badge>
                       </div>
 
-                      <p className="text-xs text-gray-600 mb-2 line-clamp-1">{shop.description}</p>
+                      <p className="text-xs text-gray-600 mb-2 line-clamp-2 min-h-[2rem]">{shop.description}</p>
 
-                      <div className="flex items-center justify-between text-xs text-gray-600">
+                      <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
                         <div className="flex items-center">
                           <Star className="w-3 h-3 text-yellow-400 fill-current mr-1" />
                           <span className="font-medium">{shop.rating || 4.8}</span>
@@ -380,21 +402,26 @@ const HomePage: React.FC = () => {
                           <Clock className="w-3 h-3 mr-1" />
                           <span>{shop.delivery_time || "15-25 min"}</span>
                         </div>
-                        {shop.delivery_fee && shop.delivery_fee > 0 && (
-                          <span className="text-gray-500">${shop.delivery_fee.toFixed(2)} delivery</span>
-                        )}
                       </div>
 
-                      <div className="flex items-center mt-2 text-xs text-gray-500">
-                        <MapPin className="w-3 h-3 mr-1" />
+                      <div className="flex items-center text-xs text-gray-500 mb-1">
+                        <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
                         <span className="truncate">{shop.location}</span>
                       </div>
 
-                      {timeUntilClosure && (
-                        <div className="flex items-center mt-1 text-xs text-gray-500">
-                          <Clock className="w-3 h-3 mr-1" />
-                          <span>
+                      {isOpen && timeUntilClosure && (
+                        <div className="flex items-center text-xs text-gray-500">
+                          <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
+                          <span className="truncate">
                             Closes in {timeUntilClosure.hours}h {timeUntilClosure.minutes}m
+                          </span>
+                        </div>
+                      )}
+                      {!isOpen && shop.final_validity_time && (
+                        <div className="flex items-center text-xs text-gray-500">
+                          <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
+                          <span className="truncate">
+                            Closed
                           </span>
                         </div>
                       )}
@@ -403,6 +430,7 @@ const HomePage: React.FC = () => {
                 </Link>
               )
             })}
+          </div>
           </div>
         )}
       </div>

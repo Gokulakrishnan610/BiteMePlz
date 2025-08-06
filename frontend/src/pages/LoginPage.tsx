@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { LogIn, Eye, EyeOff, Zap, Mail, Lock } from 'lucide-react';
+import { LogIn, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import LoadingScreen from '../components/LoadingScreen';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showPostLoginAnimation, setShowPostLoginAnimation] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -19,17 +21,24 @@ const LoginPage: React.FC = () => {
     try {
       await login(email, password);
       toast.success('Login successful');
-      navigate('/');
+      setShowPostLoginAnimation(true);
     } catch {
       toast.error('Invalid email or password');
-    } finally {
       setLoading(false);
     }
+  };
+
+  const handleAnimationComplete = () => {
+    navigate('/');
   };
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
+
+  if (showPostLoginAnimation) {
+    return <LoadingScreen onComplete={handleAnimationComplete} />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50 flex items-center justify-center px-4">

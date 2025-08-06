@@ -13,6 +13,7 @@ import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import Navbar from "../components/Navbar"
+import SimpleLoading from "../components/SimpleLoading"
 
 interface Product {
   _id: string
@@ -120,20 +121,26 @@ const ShopPage: React.FC = () => {
     toast.success("Added to cart")
   }
 
+  // Get unique categories from products that are available and have stock
   const validCategories = products
+    .filter((product) => product.is_available && product.stock > 0)
     .map((product) => product.category)
     .filter((category) => category && typeof category === "string")
 
   const categories = ["all", ...new Set(validCategories)].filter(Boolean)
 
-  const categoryLabels: { [key: string]: string } = {
-    all: "All Products",
-    food: "Food",
-    beverages: "Beverages",
-    snacks: "Snacks",
-    stationery: "Stationery",
-    electronics: "Electronics",
-    others: "Others",
+  const getCategoryLabel = (category: string) => {
+    const labels: { [key: string]: string } = {
+      all: "All Products",
+      food: "Food",
+      beverages: "Beverages",
+      snacks: "Snacks",
+      stationery: "Stationery",
+      electronics: "Electronics",
+      others: "Others",
+    }
+    
+    return labels[category] || category.charAt(0).toUpperCase() + category.slice(1)
   }
 
   const filteredProducts = products.filter((product) => {
@@ -153,18 +160,7 @@ const ShopPage: React.FC = () => {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="pt-32 md:pt-40">
-          <div className="max-w-7xl mx-auto px-4 py-8">
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+    return <SimpleLoading />
   }
 
   if (error || !shop) {
@@ -329,9 +325,9 @@ const ShopPage: React.FC = () => {
           {products.length > 0 && (
             <div className="mb-8">
               <div className="flex flex-wrap gap-3 justify-center">
-                {categories.map((category) => (
+                {categories.map((category, index) => (
                   <Button
-                    key={category || "unknown"}
+                    key={`${category || 'unknown'}-${index}`}
                     onClick={() => setSelectedCategory(category)}
                     variant={selectedCategory === category ? "default" : "outline"}
                     className={
@@ -340,10 +336,7 @@ const ShopPage: React.FC = () => {
                         : "border-purple-600 text-purple-600 hover:bg-purple-50 bg-transparent"
                     }
                   >
-                    {categoryLabels[category] ||
-                      (category && typeof category === "string"
-                        ? category.charAt(0).toUpperCase() + category.slice(1)
-                        : "Unknown")}
+                    {getCategoryLabel(category)}
                   </Button>
                 ))}
               </div>
@@ -355,7 +348,7 @@ const ShopPage: React.FC = () => {
             <div className="mb-6 text-center">
               <p className="text-gray-600">
                 {filteredProducts.length} product{filteredProducts.length !== 1 ? "s" : ""} found for "{searchQuery}"
-                {selectedCategory !== "all" && ` in ${categoryLabels[selectedCategory] || selectedCategory}`}
+                {selectedCategory !== "all" && ` in ${getCategoryLabel(selectedCategory)}`}
               </p>
             </div>
           )}
@@ -371,19 +364,19 @@ const ShopPage: React.FC = () => {
                   </h3>
                   <p className="text-gray-600 mb-6">
                     {searchQuery
-                      ? `No products match your search "${searchQuery}"${selectedCategory !== "all" ? ` in ${categoryLabels[selectedCategory] || selectedCategory}` : ""}.`
+                      ? `No products match your search "${searchQuery}"${selectedCategory !== "all" ? ` in ${getCategoryLabel(selectedCategory)}` : ""}.`
                       : selectedCategory === "all"
                         ? "This shop doesn't have any products yet."
-                        : `No products found in the ${categoryLabels[selectedCategory] || selectedCategory} category.`}
+                        : `No products found in the ${getCategoryLabel(selectedCategory)} category.`}
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     {searchQuery && (
-                      <Button key="clear-search" onClick={clearSearch} variant="outline">
+                      <Button key="clear-search-button" onClick={clearSearch} variant="outline">
                         Clear Search
                       </Button>
                     )}
                     {selectedCategory !== "all" && (
-                      <Button key="view-all" onClick={() => setSelectedCategory("all")} variant="outline">
+                      <Button key="view-all-button" onClick={() => setSelectedCategory("all")} variant="outline">
                         View All Products
                       </Button>
                     )}
@@ -393,9 +386,10 @@ const ShopPage: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredProducts.map((product, index) => (
+              {filteredProducts
+                .map((product, index) => (
                 <Card
-                  key={product._id}
+                  key={`product-${product._id}`}
                   className="overflow-hidden hover:shadow-lg transition-all duration-300 group"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
@@ -409,14 +403,13 @@ const ShopPage: React.FC = () => {
 
                     {/* Category Badge */}
                     {product.category && (
-                      <Badge key="category" className="absolute top-3 left-3 bg-purple-600 hover:bg-purple-700 text-white text-xs">
-                        {categoryLabels[product.category] || product.category}
+                      <Badge className="absolute top-3 left-3 bg-purple-600 hover:bg-purple-700 text-white text-xs">
+                        {getCategoryLabel(product.category)}
                       </Badge>
                     )}
 
                     {/* Stock Badge */}
                     <Badge
-                      key="stock"
                       className={`absolute top-3 right-3 text-xs ${
                         product.stock > 0
                           ? "bg-green-600 hover:bg-green-700 text-white"
@@ -429,7 +422,6 @@ const ShopPage: React.FC = () => {
                     {/* Quick Add Button */}
                     {product.stock > 0 && shopAcceptingOrders && (
                       <Button
-                        key="quick-add"
                         onClick={() => handleAddToCart(product)}
                         size="sm"
                         className="absolute bottom-3 right-3 bg-purple-600 hover:bg-purple-700 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-all duration-300"

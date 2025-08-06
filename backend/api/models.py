@@ -69,12 +69,22 @@ class Shop(models.Model):
 
 
 class Product(models.Model):
+    CATEGORY_CHOICES = [
+        ('food', 'Food'),
+        ('beverages', 'Beverages'),
+        ('snacks', 'Snacks'),
+        ('stationery', 'Stationery'),
+        ('electronics', 'Electronics'),
+        ('others', 'Others'),
+    ]
+    
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     stock = models.IntegerField(default=0)
     image = models.CharField(max_length=500, blank=True, null=True)  # Changed to CharField to store image path
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='others')
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='products')
     is_available = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
