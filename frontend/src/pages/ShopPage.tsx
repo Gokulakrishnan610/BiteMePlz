@@ -389,7 +389,7 @@ const ShopPage: React.FC = () => {
               {filteredProducts
                 .map((product, index) => (
                 <Card
-                  key={`product-${product._id}`}
+                  key={`product-${product._id || index}`}
                   className="overflow-hidden hover:shadow-lg transition-all duration-300 group"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >

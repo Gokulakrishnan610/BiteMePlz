@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = True
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
 
@@ -89,7 +89,7 @@ USE_I18N = True
 USE_TZ = True
 
 # URL settings
-APPEND_SLASH = False
+APPEND_SLASH = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
@@ -192,4 +192,8 @@ EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = config('EMAIL_HOST_USER') 
+DEFAULT_FROM_EMAIL = config('EMAIL_HOST_USER')
+
+# Razorpay settings
+RAZORPAY_KEY_ID = config('RAZORPAY_KEY_ID', default='rzp_test_RVKFS8WX756Anx')
+RAZORPAY_KEY_SECRET = config('RAZORPAY_KEY_SECRET', default='kpUZ6zd9t5q7VRM2c76xnqdo')

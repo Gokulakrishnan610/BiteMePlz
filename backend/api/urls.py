@@ -21,6 +21,9 @@ router.register(r'shop-logs', ShopLogViewSet)
 router.register(r'student-analytics', StudentAnalyticsViewSet)
 router.register(r'upload', FileUploadViewSet, basename='upload')
 
+# Ensure the multi-shop endpoint is properly registered
+# The DefaultRouter will automatically register the multi_shop action as /api/orders/multi-shop/
+
 class RegisterView(APIView):
     permission_classes = [AllowAny]
     
@@ -209,4 +212,4 @@ urlpatterns = [
     path('users/resend-otp/', ResendOTPView.as_view(), name='resend-otp'),
     path('users/login/', LoginView.as_view(), name='login'),
     path('', include(router.urls)),
-] 
+]

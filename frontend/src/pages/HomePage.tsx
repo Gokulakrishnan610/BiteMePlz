@@ -106,7 +106,7 @@ const HomePage: React.FC = () => {
 
   const fetchShops = async () => {
     try {
-      const { data } = await api.get("/api/shops")
+      const { data } = await api.get("/api/shops/")
       const shopsData = data.results || data
       setShops(Array.isArray(shopsData) ? shopsData : [])
       setFilteredShops(Array.isArray(shopsData) ? shopsData : [])

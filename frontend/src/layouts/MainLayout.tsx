@@ -1,6 +1,5 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { CartProvider } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -14,7 +13,6 @@ const MainLayout: React.FC = () => {
   return (
     <CartProvider>
       <div className="flex flex-col min-h-screen">
-        {shouldShowHeader && <Header />}
         <main className="flex-grow">
           <Outlet />
         </main>

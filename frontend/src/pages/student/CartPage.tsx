@@ -134,11 +134,16 @@ const CartPage: React.FC = () => {
       setIsLoading(true)
       setPaymentInitiated(true)
 
-      const endpoint = shopIds.length > 1 ? "/api/orders/multi-shop" : "/api/orders"
+      const endpoint = shopIds.length > 1 ? "/api/orders/multi-shop/" : "/api/orders/"
       const requestData =
         shopIds.length > 1
           ? {
-              order_items: cartItems,
+              order_items: cartItems.map((item) => ({
+            product_id: item.product,
+            quantity: item.quantity,
+            shop_id: item.shop_id,
+            shop_name: item.shop_name,
+          })),
               totalPrice: getTotalPrice(),
               paymentMethod: "balance",
             }
@@ -173,11 +178,16 @@ const CartPage: React.FC = () => {
       setIsLoading(true)
       setPaymentInitiated(true)
 
-      const endpoint = shopIds.length > 1 ? "/api/orders/multi-shop" : "/api/orders"
+      const endpoint = shopIds.length > 1 ? "/api/orders/multi-shop/" : "/api/orders/"
       const requestData =
         shopIds.length > 1
           ? {
-              order_items: cartItems,
+              order_items: cartItems.map((item) => ({
+                product_id: item.product,
+                quantity: item.quantity,
+                shop_id: item.shop_id,
+                shop_name: item.shop_name,
+              })),
               totalPrice: getTotalPrice(),
               paymentMethod: "razorpay",
             }
@@ -189,29 +199,32 @@ const CartPage: React.FC = () => {
             }
 
       const orderResponse = await api.post(endpoint, requestData)
-      setCurrentorder_id(orderResponse.data.order._id)
+      
+      // Handle different response structures for single vs multi-shop orders
+      const orderId = shopIds.length > 1 ? orderResponse.data.orders[0]._id : orderResponse.data.order._id
+      setCurrentorder_id(orderId)
       startPaymentTimer()
       const options = {
-        key: orderResponse.data.razorpayKeyId,
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || orderResponse.data.razorpayKeyId,
         amount: getTotalPrice() * 100,
         currency: "INR",
         name: "Campus Kiosk",
         description: "Payment for your order",
-        order_id: orderResponse.data.razorpayorder_id,
+        order_id: orderResponse.data.razorpay_order_id,
         handler: async (response: any) => {
           try {
             if (timer) {
               clearInterval(timer)
             }
 
-            await api.put(`/orders/${orderResponse.data.order._id}/pay`, {
+            await api.put(`/orders/${orderId}/pay`, {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_signature: response.razorpay_signature,
             })
             clearCart()
             toast.success("Payment successful! Your order has been placed.")
-            navigate(`/order/${orderResponse.data.order._id}`)
+            navigate(`/order/${orderId}`)
           } catch (error: any) {
             toast.error(error.response?.data?.message || "Payment verification failed")
           } finally {

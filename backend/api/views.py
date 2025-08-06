@@ -648,12 +648,9 @@ class ProductViewSet(viewsets.ModelViewSet):
                     return Response({'error': 'Shop not found'}, status=status.HTTP_404_NOT_FOUND)
             
             # Create the product
-            serializer = self.get_serializer(data=data)
-            serializer.is_valid(raise_exception=True)
-            product = serializer.save()
-            
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
         except Exception as e:
+
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     def perform_create(self, serializer):
@@ -669,6 +666,81 @@ class OrderViewSet(viewsets.ModelViewSet):
         if self.request.user.role in ['admin', 'shopAdmin']:
             return Order.objects.all()
         return Order.objects.filter(user=self.request.user)
+        
+    def create(self, request, *args, **kwargs):
+        """Create a single shop order"""
+        try:
+
+            print(f"Incoming request data: {request.data}")
+            serializer = self.get_serializer(data=request.data, context={'request': request})
+            serializer.is_valid(raise_exception=True)
+            try:
+                order = serializer.save()
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            # Handle payment based on method
+            payment_method = request.data.get('paymentMethod', 'balance')
+            total_price = order.total_price # Use the total_price calculated by the serializer
+
+            if payment_method == 'balance':
+                if request.user.balance < total_price:
+                    return Response({'error': 'Insufficient balance'}, status=status.HTTP_400_BAD_REQUEST)
+                
+                request.user.balance -= total_price
+                request.user.save()
+                
+                order.is_paid = True
+                order.paid_at = timezone.now()
+                order.payment_result = {'method': 'balance', 'status': 'success'}
+                order.save()
+                
+                Transaction.objects.create(
+                    user=order.user,
+                    shop=order.shop,
+                    order=order,
+                    amount=order.total_price,
+                    type='payment',
+                    payment_method='balance',
+                    description=f'Payment for order {order.order_id}'
+                )
+                
+                order_data = self.get_serializer(order).data
+                order_data['_id'] = order_data['id']
+                
+                return Response({
+                    'message': 'Order created successfully',
+                    'order': order_data
+                }, status=status.HTTP_201_CREATED)
+            elif payment_method == 'razorpay':
+                import razorpay
+                from django.conf import settings
+                
+                client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+                
+                razorpay_order = client.order.create({
+                    'amount': int(total_price * 100),
+                    'currency': 'INR',
+                    'receipt': f'order_{uuid.uuid4().hex[:8]}',
+                    'payment_capture': 1
+                })
+                
+                order_data = self.get_serializer(order).data
+                order_data['_id'] = order_data['id']
+                
+                return Response({
+                    'message': 'Order created successfully',
+                    'order': order_data,
+                    'razorpay_order_id': razorpay_order['id'],
+                    'razorpayKeyId': settings.RAZORPAY_KEY_ID
+                }, status=status.HTTP_201_CREATED)
+            else:
+                return Response({'error': 'Invalid payment method'}, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=False, methods=['get'])
     def myorders(self, request):
@@ -691,6 +763,112 @@ class OrderViewSet(viewsets.ModelViewSet):
             orders = Order.objects.filter(shop=shop_id)
             serializer = self.get_serializer(orders, many=True)
             return Response(serializer.data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+    @action(detail=False, methods=['post'])
+    def multi_shop(self, request):
+        """Create orders for multiple shops in a single request"""
+        try:
+            # Extract data from request
+            order_items = request.data.get('order_items', [])
+            payment_method = request.data.get('paymentMethod', 'balance')
+            
+            if not order_items:
+                return Response({'error': 'Order items are required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Group items by shop
+            items_by_shop = {}
+            for item in order_items:
+                shop_id = item.get('shop_id')
+                if not shop_id:
+                    return Response({'error': 'Shop ID is required for each item'}, status=status.HTTP_400_BAD_REQUEST)
+                
+                if shop_id not in items_by_shop:
+                    items_by_shop[shop_id] = []
+                
+                items_by_shop[shop_id].append(item)
+            
+            # Create an order for each shop
+            orders = []
+            total_price = Decimal('0.0')
+            
+            with transaction.atomic():
+                for shop_id, items in items_by_shop.items():
+                    # Create order data
+                    order_data = {
+                        'shop_id': shop_id,
+                        'order_items': items,
+                        'user': request.user
+                    }
+                    
+                    # Create serializer
+                    serializer = self.get_serializer(data=order_data)
+                    serializer.is_valid(raise_exception=True)
+                    
+                    # Save order
+                    order = self.perform_create(serializer)
+                    orders.append(order)
+                    total_price += order.total_price
+                
+                # Process payment if using balance
+                if payment_method == 'balance':
+                    if request.user.balance < total_price:
+                        raise Exception('Insufficient balance')
+                    
+                    # Deduct from balance
+                    request.user.balance -= total_price
+                    request.user.save()
+                    
+                    # Mark orders as paid
+                    for order in orders:
+                        order.is_paid = True
+                        order.paid_at = timezone.now()
+                        order.payment_result = {'method': 'balance', 'status': 'success'}
+                        order.save()
+                        
+                        # Create transaction
+                        Transaction.objects.create(
+                            user=order.user,
+                            shop=order.shop,
+                            order=order,
+                            amount=order.total_price,
+                            type='payment',
+                            payment_method='balance',
+                            description=f'Payment for order {order.order_id}'
+                        )
+                elif payment_method == 'razorpay':
+                    # For Razorpay, we'll create the orders but not mark them as paid yet
+                    # The frontend will handle the payment process and call the pay endpoint
+                    # Import Razorpay if needed
+                    import razorpay
+                    from django.conf import settings
+                    
+                    # Initialize Razorpay client
+                    client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+                    
+                    # Create Razorpay order
+                    razorpay_order = client.order.create({
+                        'amount': int(total_price * 100),  # Amount in paise
+                        'currency': 'INR',
+                        'receipt': f'order_{uuid.uuid4().hex[:8]}',
+                        'payment_capture': 1  # Auto-capture
+                    })
+                    
+                    # Return response with Razorpay order details
+                    return Response({
+                        'message': 'Orders created successfully',
+                        'orders': self.get_serializer(orders, many=True).data,
+                        'razorpay_order_id': razorpay_order['id'],
+                        'razorpayKeyId': settings.RAZORPAY_KEY_ID
+                    }, status=status.HTTP_201_CREATED)
+            
+            # Return response for balance payment
+            return Response({
+                'message': 'Orders created successfully',
+                'orders': self.get_serializer(orders, many=True).data
+            }, status=status.HTTP_201_CREATED)
+            
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -801,6 +979,54 @@ class OrderViewSet(viewsets.ModelViewSet):
                     payment_method='balance',
                     description=f'Payment for order {order.order_id}'
                 )
+            elif payment_method == 'razorpay' or request.data.get('razorpay_payment_id'):
+                # Verify Razorpay payment
+                razorpay_payment_id = request.data.get('razorpay_payment_id')
+                razorpay_order_id = request.data.get('razorpay_order_id')
+                razorpay_signature = request.data.get('razorpay_signature')
+                
+                if not all([razorpay_payment_id, razorpay_order_id, razorpay_signature]):
+                    return Response({'error': 'Missing Razorpay payment details'}, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Import Razorpay if needed
+                import razorpay
+                from django.conf import settings
+                
+                # Initialize Razorpay client
+                client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+                
+                # Verify signature
+                try:
+                    params_dict = {
+                        'razorpay_order_id': razorpay_order_id,
+                        'razorpay_payment_id': razorpay_payment_id,
+                        'razorpay_signature': razorpay_signature
+                    }
+                    client.utility.verify_payment_signature(params_dict)
+                    
+                    # Mark as paid
+                    order.is_paid = True
+                    order.paid_at = timezone.now()
+                    order.payment_result = {
+                        'method': 'razorpay',
+                        'status': 'success',
+                        'razorpay_payment_id': razorpay_payment_id,
+                        'razorpay_order_id': razorpay_order_id
+                    }
+                    order.save()
+                    
+                    # Create transaction
+                    Transaction.objects.create(
+                        user=order.user,
+                        shop=order.shop,
+                        order=order,
+                        amount=order.total_price,
+                        type='payment',
+                        payment_method='razorpay',
+                        description=f'Razorpay payment for order {order.order_id}'
+                    )
+                except Exception as e:
+                    return Response({'error': f'Payment verification failed: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
             
             return Response(OrderSerializer(order).data)
 
@@ -864,4 +1090,4 @@ class StudentAnalyticsViewSet(viewsets.ModelViewSet):
                 'spending_pattern': {}
             }
         )
-        return Response(StudentAnalyticsSerializer(analytics).data) 
+        return Response(StudentAnalyticsSerializer(analytics).data)

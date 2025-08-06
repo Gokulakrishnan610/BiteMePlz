@@ -73,11 +73,23 @@ class ProductSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
+class OrderItemSerializer(serializers.Serializer):
+    product_id = serializers.UUIDField(write_only=True)
+    quantity = serializers.IntegerField()
+    shop_id = serializers.UUIDField(write_only=True)
+    shop_name = serializers.CharField(required=False)
+    # Add fields to match the incoming data from frontend for validation purposes
+    name = serializers.CharField(required=False)
+    image = serializers.CharField(required=False)
+    price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+    stock = serializers.IntegerField(required=False)
+
 class OrderSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     shop = ShopSerializer(read_only=True)
-    user_id = serializers.UUIDField(write_only=True)
-    shop_id = serializers.UUIDField(write_only=True)
+    user_id = serializers.UUIDField(write_only=True, required=False)
+    shop_id = serializers.UUIDField(write_only=True, required=False)
+    order_items = OrderItemSerializer(many=True)
 
     class Meta:
         model = Order
@@ -85,7 +97,90 @@ class OrderSerializer(serializers.ModelSerializer):
                  'total_price', 'payment_result', 'is_paid', 'paid_at', 'qr_code', 'qr_valid_until',
                  'balance_amount', 'held_amount', 'final_validity', 'is_verified', 'verified_at',
                  'status', 'expires_at', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'order_id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'order_id', 'created_at', 'updated_at', 'qr_code', 'qr_valid_until', 'balance_amount', 'held_amount', 'final_validity', 'is_verified', 'verified_at', 'status', 'expires_at']
+
+    def create(self, validated_data):
+        print(f"OrderSerializer create - validated_data: {validated_data}")
+        order_items_data = validated_data.pop('order_items')
+        user = self.context['request'].user
+        print(f"OrderSerializer create - user: {user}")
+        shop_id = validated_data.get('shop_id')
+        print(f"OrderSerializer create - shop_id: {shop_id}")
+
+        if not shop_id:
+            # If shop_id is not provided at the top level, try to infer it from the first order item
+            if order_items_data and isinstance(order_items_data, list) and len(order_items_data) > 0:
+                inferred_shop_id = order_items_data[0].get('shop_id')
+                if inferred_shop_id:
+                    validated_data['shop_id'] = inferred_shop_id
+                else:
+                    raise serializers.ValidationError("Shop ID is required either at top level or within order_items.")
+            else:
+                raise serializers.ValidationError("Shop ID is required either at top level or within order_items.")
+        
+        # Ensure total_price is a Decimal
+        total_price = validated_data.get('totalPrice', 0.0) # Use totalPrice from frontend
+        print(f"OrderSerializer create - raw totalPrice from frontend: {total_price}")
+        validated_data['total_price'] = Decimal(str(total_price))
+        print(f"OrderSerializer create - converted total_price: {validated_data['total_price']}")
+        
+        # Set user and shop
+        validated_data['user'] = user
+        try:
+            shop = Shop.objects.get(id=validated_data['shop_id'])
+            validated_data['shop'] = shop
+            print(f"OrderSerializer create - shop object: {shop}")
+        except Shop.DoesNotExist:
+            raise serializers.ValidationError(f"Shop with ID {validated_data['shop_id']} does not exist.")
+
+        # Generate order_id and expires_at
+        validated_data['order_id'] = f"ORD-{uuid.uuid4().hex[:10].upper()}"
+        validated_data['expires_at'] = timezone.now() + timedelta(minutes=10) # Example: order expires in 10 minutes
+
+        # Create the order
+        order = Order.objects.create(**validated_data)
+        print(f"OrderSerializer create - order created: {order}")
+
+        # Process order items and calculate total price
+        processed_order_items = []
+        for item_data in order_items_data:
+            print(f"OrderSerializer create - processing item_data: {item_data}")
+            product_id = item_data.get('product_id')
+            quantity = item_data.get('quantity')
+            
+            if not product_id or not quantity:
+                raise serializers.ValidationError("Product ID and quantity are required for each order item.")
+            
+            try:
+                product = Product.objects.get(id=product_id)
+                print(f"OrderSerializer create - product found: {product.name}")
+            except Product.DoesNotExist:
+                raise serializers.ValidationError(f"Product with ID {product_id} does not exist.")
+            
+            if product.stock < quantity:
+                raise serializers.ValidationError(f"Not enough stock for product {product.name}. Available: {product.stock}, Requested: {quantity}")
+            
+            # Deduct stock
+            product.stock -= quantity
+            product.save()
+            print(f"OrderSerializer create - product stock updated for {product.name}. New stock: {product.stock}")
+
+            # Add product details to the order item for storage in JSONField
+            processed_order_items.append({
+                'product_id': str(product.id),
+                'name': product.name,
+                'image': product.image,
+                'price': str(product.price),
+                'quantity': quantity,
+                'shop_id': str(product.shop.id),
+                'shop_name': product.shop.name,
+            })
+        
+        order.order_items = processed_order_items
+        order.save()
+        print(f"OrderSerializer create - order_items saved to order: {order.order_items}")
+
+        return order
 
 
 class TransactionSerializer(serializers.ModelSerializer):
@@ -126,4 +221,4 @@ class StudentAnalyticsSerializer(serializers.ModelSerializer):
         model = StudentAnalytics
         fields = ['id', 'user', 'user_id', 'shop', 'shop_id', 'total_spent', 'total_orders',
                  'favorite_products', 'spending_pattern', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at'] 
+        read_only_fields = ['id', 'created_at', 'updated_at']
