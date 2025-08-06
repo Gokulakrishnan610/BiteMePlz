@@ -53,14 +53,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addToCart = (item: CartItem) => {
     // Check if item already exists in cart (same product from same shop)
     const existingItem = cartItems.find(i => 
-      i.product === item.product && i.shop_id === item.shop_id
+      i.product_id === item.product_id && i.shop_id === item.shop_id
     );
     
     if (existingItem) {
       // Update quantity if it exists
       setCartItems(
         cartItems.map(i =>
-          i.product === item.product && i.shop_id === item.shop_id
+          i.product_id === item.product_id && i.shop_id === item.shop_id
             ? { ...i, quantity: Math.min(i.quantity + item.quantity, i.stock) }
             : i
         )
@@ -73,14 +73,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const removeFromCart = (productId: string, shop_id: string) => {
     setCartItems(cartItems.filter(item => 
-      !(item.product === productId && item.shop_id === shop_id)
+      !(item.product_id === productId && item.shop_id === shop_id)
     ));
   };
 
   const updateQuantity = (productId: string, shop_id: string, quantity: number) => {
     setCartItems(
       cartItems.map(item =>
-        item.product === productId && item.shop_id === shop_id
+        item.product_id === productId && item.shop_id === shop_id
           ? { ...item, quantity: Math.min(quantity, item.stock) }
           : item
       )

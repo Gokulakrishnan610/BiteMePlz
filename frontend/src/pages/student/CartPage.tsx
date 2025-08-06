@@ -189,7 +189,7 @@ const CartPage: React.FC = () => {
         shopIds.length > 1
           ? {
               order_items: cartItems.map((item) => ({
-                product_id: item.product,
+                product_id: item.product_id,
                 quantity: item.quantity,
                 shop_id: item.shop_id,
                 shop_name: item.shop_name,
@@ -453,7 +453,7 @@ const CartPage: React.FC = () => {
                     <div className="space-y-4">
                       {shopData.items.map((item, index) => (
                         <div
-                          key={`${item.product}-${item.shop_id}`}
+                          key={`${item.product_id}-${item.shop_id}`}
                           className={`flex items-center justify-between py-6 h-32 ${index !== shopData.items.length - 1 ? "border-b border-gray-200" : ""}`}
                         >
                           <div className="flex items-center flex-1 min-w-0">
@@ -486,7 +486,7 @@ const CartPage: React.FC = () => {
                               <button
                                 onClick={() => {
                                   const newQuantity = item.quantity - 1
-                                  handleQuantityChange(item.product, item.shop_id, newQuantity)
+                                  handleQuantityChange(item.product_id, item.shop_id, newQuantity)
                                 }}
                                 className="p-2 hover:bg-gray-200 transition-colors rounded-l-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Decrease quantity"
@@ -500,7 +500,7 @@ const CartPage: React.FC = () => {
                               <button
                                 onClick={() => {
                                   const newQuantity = item.quantity + 1
-                                  handleQuantityChange(item.product, item.shop_id, newQuantity)
+                                  handleQuantityChange(item.product_id, item.shop_id, newQuantity)
                                 }}
                                 className="p-2 hover:bg-gray-200 transition-colors rounded-r-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Increase quantity"
@@ -516,7 +516,7 @@ const CartPage: React.FC = () => {
 
                             {/* Delete Button */}
                             <Button
-                              onClick={() => handleDirectDelete(item.product, item.shop_id, item.name)}
+                              onClick={() => handleDirectDelete(item.product_id, item.shop_id, item.name)}
                               variant="outline"
                               size="sm"
                               className="text-red-600 border-red-200 hover:bg-red-50 flex-shrink-0"

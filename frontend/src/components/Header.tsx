@@ -1,237 +1,155 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { useCart } from '../context/CartContext';
-import { ShoppingCart, User, Menu, X, LogOut, ChevronDown, Zap } from 'lucide-react';
-import Wallet from './Wallet';
+    "use client"
 
-const Header: React.FC = () => {
-  const { user, logout } = useAuth();
-  const { getTotalItems } = useCart();
-  const navigate = useNavigate();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+    import { useState } from "react"
+    import { Link, useNavigate } from "react-router-dom"
+    import { MenuIcon, X } from "lucide-react"
+    import { useAuth } from "../context/AuthContext"
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+    // Navbar Components
+interface HoveredLinkProps {
+  children: React.ReactNode;
+  href: string;
+  [key: string]: unknown;
+}
 
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
+const HoveredLink = ({ children, href, ...rest }: HoveredLinkProps) => {
+    return (
+        <Link
+        {...rest}
+        to={href}
+        className="text-neutral-700 dark:text-neutral-200 hover:text-purple-600 dark:hover:text-purple-400 transition-colors duration-200"
+        >
+        {children}
+        </Link>
+    )
+    }
 
-  const toggleProfileDropdown = () => {
-    setIsProfileDropdownOpen(!isProfileDropdownOpen);
-  };
 
-  const closeMenus = () => {
-    setIsMenuOpen(false);
-    setIsProfileDropdownOpen(false);
-  };
 
-  const getDashboardLink = () => {
-    if (user?.role === 'admin') return '/admin';
-    if (user?.role === 'shopAdmin') return '/shop-admin';
-    return '/profile';
-  };
+    interface NavbarProps {
+    className?: string
+    }
 
-  return (
-    <header className="bg-[var(--secondary-bg)]/95 backdrop-blur-md border-b border-[var(--border-color)] sticky top-0 z-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center py-4">
-          {/* Logo */}
-          <Link 
-            to="/" 
-            className="flex items-center space-x-2 text-2xl font-bold gradient-text hover:scale-105 transition-transform duration-200" 
-            onClick={closeMenus}
-          >
-            <Zap className="text-[var(--accent-purple)]" size={28} />
-            <span>Campus Kiosk</span>
-          </Link>
+    export default function Navbar({ className }: NavbarProps) {
+    const [active, setActive] = useState<string | null>(null)
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+    const { logout } = useAuth()
+    const navigate = useNavigate()
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            <Link 
-              to="/" 
-              className="text-[var(--secondary-text)] hover:text-[var(--accent-purple)] transition-colors duration-200 relative group"
-            >
-              Home
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[var(--accent-purple)] transition-all duration-200 group-hover:w-full"></span>
-            </Link>
-            {user && (
-              <>
-                <Link 
-                  to="/orders" 
-                  className="text-[var(--secondary-text)] hover:text-[var(--accent-purple)] transition-colors duration-200 relative group"
-                >
-                  My Orders
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[var(--accent-purple)] transition-all duration-200 group-hover:w-full"></span>
+    const handleLogout = () => {
+        logout()
+        navigate("/login")
+    }
+
+    return (
+        <>
+        {/* Desktop Navbar */}
+        <div
+            className={`fixed top-4 sm:top-6 md:top-8 lg:top-8 xl:top-10 inset-x-0 max-w-xs sm:max-w-sm md:max-w-2xl lg:max-w-6xl xl:max-w-7xl mx-auto z-50 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 hidden md:block ${className || ""}`}
+            onMouseLeave={() => setActive(null)}
+        >
+            <div className="relative rounded-full border border-gray-200 dark:border-white/[0.2] bg-white/90 dark:bg-black/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-between px-4 sm:px-6 lg:px-8 xl:px-10 py-1.5 sm:py-2 lg:py-2 xl:py-2.5">
+            {/* Logo Section */}
+            <div className="flex items-center flex-shrink-0">
+                <Link to="/" className="flex items-center">
+                <img
+                    src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/rec%20college-DNQmI7rcIxK8zqroLBTQwojwQlMG4x.png"
+                    alt="REC Logo"
+                    className="w-14 h-14 sm:w-16 sm:h-16 md:w-18 md:h-18 lg:w-16 lg:h-16 xl:w-18 xl:h-18 object-contain"
+                />
                 </Link>
-                <Wallet />
-              </>
-            )}
-            {!user && (
-              <>
-                <Link 
-                  to="/login" 
-                  className="text-[var(--secondary-text)] hover:text-[var(--accent-purple)] transition-colors duration-200"
-                >
-                  Login
-                </Link>
-                <Link 
-                  to="/register" 
-                  className="btn-primary px-6 py-2"
-                >
-                  Register
-                </Link>
-              </>
-            )}
-            
-            {/* Cart */}
-            <Link 
-              to="/cart" 
-              className="relative text-[var(--secondary-text)] hover:text-[var(--accent-purple)] transition-colors duration-200 p-2 rounded-lg hover:bg-[var(--hover-bg)]"
-            >
-              <ShoppingCart size={24} />
-              {getTotalItems() > 0 && (
-                <span className="absolute -top-1 -right-1 bg-gradient-to-r from-[var(--accent-purple)] to-[var(--accent-violet)] text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center animate-pulse">
-                  {getTotalItems()}
-                </span>
-              )}
-            </Link>
+            </div>
 
-            {/* User Profile */}
-            {user && (
-              <div className="relative">
-                <button
-                  onClick={toggleProfileDropdown}
-                  className="flex items-center text-[var(--secondary-text)] hover:text-[var(--accent-purple)] transition-colors duration-200 p-2 rounded-lg hover:bg-[var(--hover-bg)]"
-                >
-                  <User size={20} className="mr-2" />
-                  <span className="mr-1">{user.name}</span>
-                  <ChevronDown size={16} className={`transition-transform duration-200 ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {isProfileDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-[var(--card-bg)] rounded-xl shadow-2xl border border-[var(--border-color)] py-2 z-50 backdrop-blur-md">
-                    <Link
-                      to={getDashboardLink()}
-                      className="block px-4 py-3 text-sm text-[var(--secondary-text)] hover:bg-[var(--hover-bg)] hover:text-[var(--accent-purple)] transition-colors duration-200"
-                      onClick={closeMenus}
-                    >
-                      Dashboard
-                    </Link>
-                    <Link
-                      to="/profile"
-                      className="block px-4 py-3 text-sm text-[var(--secondary-text)] hover:bg-[var(--hover-bg)] hover:text-[var(--accent-purple)] transition-colors duration-200"
-                      onClick={closeMenus}
-                    >
-                      Settings
-                    </Link>
-                    <hr className="my-2 border-[var(--border-color)]" />
-                    <button
-                      onClick={handleLogout}
-                      className="block w-full text-left px-4 py-3 text-sm text-[var(--error)] hover:bg-[var(--hover-bg)] transition-colors duration-200"
-                    >
-                      <LogOut size={16} className="inline mr-2" />
-                      Logout
-                    </button>
-                  </div>
+            {/* Left spacer for balance */}
+            <div className="w-14 sm:w-16 md:w-18 lg:w-16 xl:w-18 flex-shrink-0"></div>
+
+            {/* Account Dropdown - Right Side */}
+            <div className="flex items-center">
+                <div onMouseEnter={() => setActive("Account")} className="relative">
+                <p className="cursor-pointer text-black hover:text-purple-600 dark:text-white dark:hover:text-purple-400 transition-colors duration-200 text-sm sm:text-base lg:text-base font-medium">
+                    Settings
+                </p>
+                {active === "Account" && (
+                    <div className="absolute top-[calc(100%_+_1.2rem)] right-0 pt-4 animate-in fade-in-0 slide-in-from-top-2 duration-200">
+                    <div className="bg-white dark:bg-black backdrop-blur-sm rounded-2xl overflow-hidden border border-gray-200 dark:border-white/[0.2] shadow-xl min-w-[200px] lg:min-w-[250px] xl:min-w-[280px]">
+                        <div className="p-4 lg:p-5">
+                        <div className="flex flex-col space-y-3 lg:space-y-4 text-sm lg:text-base">
+                            <HoveredLink href="/profile">My Profile</HoveredLink>
+                            <HoveredLink href="/orders">My Orders</HoveredLink>
+                            <HoveredLink href="/cart">Shopping Cart</HoveredLink>
+                            <button
+                            onClick={handleLogout}
+                            className="text-left text-red-600 hover:text-purple-600 dark:text-red-400 dark:hover:text-purple-400 transition-all duration-200 text-sm px-2 py-1 -mx-2 -my-1 rounded hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:translate-x-1"
+                            >
+                            Logout
+                            </button>
+                        </div>
+                        </div>
+                    </div>
+                    </div>
                 )}
-              </div>
-            )}
-          </nav>
-
-          {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center space-x-4">
-            {user && <Wallet />}
-            <Link 
-              to="/cart" 
-              className="relative text-[var(--secondary-text)] p-2"
-            >
-              <ShoppingCart size={24} />
-              {getTotalItems() > 0 && (
-                <span className="absolute -top-1 -right-1 bg-gradient-to-r from-[var(--accent-purple)] to-[var(--accent-violet)] text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
-                  {getTotalItems()}
-                </span>
-              )}
-            </Link>
-            <button 
-              onClick={toggleMenu} 
-              className="text-[var(--secondary-text)] hover:text-[var(--accent-purple)] p-2 rounded-lg hover:bg-[var(--hover-bg)] transition-colors duration-200"
-            >
-              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
+                </div>
+            </div>
+            </div>
         </div>
 
-        {/* Mobile Navigation */}
-        {isMenuOpen && (
-          <nav className="md:hidden py-4 border-t border-[var(--border-color)] bg-[var(--secondary-bg)]/95 backdrop-blur-md">
-            <div className="flex flex-col space-y-4">
-              <Link
-                to="/"
-                className="text-[var(--secondary-text)] hover:text-[var(--accent-purple)] transition-colors duration-200 py-2"
-                onClick={closeMenus}
-              >
-                Home
-              </Link>
-              {user && (
-                <>
-                  <Link
-                    to="/orders"
-                    className="text-[var(--secondary-text)] hover:text-[var(--accent-purple)] transition-colors duration-200 py-2"
-                    onClick={closeMenus}
-                  >
-                    My Orders
-                  </Link>
-                  <Link
-                    to={getDashboardLink()}
-                    className="text-[var(--secondary-text)] hover:text-[var(--accent-purple)] transition-colors duration-200 py-2"
-                    onClick={closeMenus}
-                  >
-                    Dashboard
-                  </Link>
-                  <Link
-                    to="/profile"
-                    className="text-[var(--secondary-text)] hover:text-[var(--accent-purple)] transition-colors duration-200 py-2"
-                    onClick={closeMenus}
-                  >
-                    Settings
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center text-[var(--error)] hover:text-red-400 transition-colors duration-200 py-2"
-                  >
-                    <LogOut size={18} className="mr-2" />
-                    Logout
-                  </button>
-                </>
-              )}
-              {!user && (
-                <>
-                  <Link
-                    to="/login"
-                    className="text-[var(--secondary-text)] hover:text-[var(--accent-purple)] transition-colors duration-200 py-2"
-                    onClick={closeMenus}
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    to="/register"
-                    className="btn-primary inline-block text-center py-3"
-                    onClick={closeMenus}
-                  >
-                    Register
-                  </Link>
-                </>
-              )}
-            </div>
-          </nav>
-        )}
-      </div>
-    </header>
-  );
-};
+        {/* Mobile Navbar */}
+        <div className="fixed top-4 left-4 right-4 z-50 md:hidden">
+            <div className="bg-white/90 dark:bg-black/90 backdrop-blur-md rounded-full border border-gray-200 dark:border-white/[0.2] shadow-lg px-4 py-3 flex items-center justify-between">
+            {/* Mobile Logo */}
+            <Link to="/" className="flex items-center">
+                <img
+                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/rec%20college-DNQmI7rcIxK8zqroLBTQwojwQlMG4x.png"
+                alt="REC Logo"
+                className="w-12 h-12 sm:w-14 sm:h-14 object-contain"
+                />
+            </Link>
 
-export default Header;
+            {/* Mobile Menu Button */}
+            <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
+            >
+                {isMobileMenuOpen ? (
+                <X size={20} className="text-gray-700 dark:text-gray-300" />
+                ) : (
+                <MenuIcon size={20} className="text-gray-700 dark:text-gray-300" />
+                )}
+            </button>
+            </div>
+
+            {/* Mobile Menu Dropdown */}
+            {isMobileMenuOpen && (
+            <div className="mt-2 bg-white/95 dark:bg-black/95 backdrop-blur-md rounded-2xl border border-gray-200 dark:border-white/[0.2] shadow-xl p-4 max-h-[80vh] overflow-y-auto animate-in fade-in-0 slide-in-from-top-2 duration-300">
+                <div className="space-y-6">
+                {/* Account Section */}
+                <div>
+                    <h3 className="font-semibold text-purple-600 mb-3 text-base">Settings</h3>
+                    <div className="space-y-2 pl-4">
+                    <div className="py-2">
+                        <HoveredLink href="/profile">My Profile</HoveredLink>
+                    </div>
+                    <div className="py-2">
+                        <HoveredLink href="/orders">My Orders</HoveredLink>
+                    </div>
+                    <div className="py-2">
+                        <HoveredLink href="/cart">Shopping Cart</HoveredLink>
+                    </div>
+
+                    <div className="py-2 border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                        <button
+                        onClick={handleLogout}
+                        className="text-left text-red-600 hover:text-purple-600 dark:text-red-400 dark:hover:text-purple-400 transition-all duration-200 text-sm w-full px-2 py-1 -mx-2 -my-1 rounded hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:translate-x-1"
+                        >
+                        Logout
+                        </button>
+                    </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+            )}
+        </div>
+        </>
+    )
+    }
