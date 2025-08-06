@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../api';
 import { useAuth } from '../../context/AuthContext';
-import { Package, ShoppingBag, TrendingUp, AlertCircle, Power, Clock, QrCode } from 'lucide-react';
+import { Package, ShoppingBag, TrendingUp, AlertCircle, Power, Clock, QrCode, ArrowLeft } from 'lucide-react';
 import { Line, Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -69,6 +69,7 @@ interface shop {
 }
 
 const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [shop, setshop] = useState<shop | null>(null);
@@ -266,7 +267,16 @@ const DashboardPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h1 className="text-2xl font-bold text-[var(--primary-text)]">Dashboard</h1>
+        <div className="flex items-center mb-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 mr-2"
+            title="Go back"
+          >
+            <ArrowLeft size={20} className="text-gray-700 dark:text-gray-300" />
+          </button>
+          <h1 className="text-2xl font-bold">Shop Admin Dashboard</h1>
+        </div>
         <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
           {/* Final Validity Time Control */}
           <div className="card p-4 flex items-center gap-3 min-w-[280px]">

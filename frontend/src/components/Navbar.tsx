@@ -1,4 +1,4 @@
-    "use client"
+"use client"
 
     import { useState } from "react"
     import { Link, useNavigate } from "react-router-dom"
@@ -33,7 +33,7 @@ const HoveredLink = ({ children, href, ...rest }: HoveredLinkProps) => {
     export default function Navbar({ className }: NavbarProps) {
     const [active, setActive] = useState<string | null>(null)
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-    const { logout } = useAuth()
+    const { user, logout } = useAuth()
     const navigate = useNavigate()
 
     const handleLogout = () => {
@@ -65,15 +65,21 @@ const HoveredLink = ({ children, href, ...rest }: HoveredLinkProps) => {
 
             {/* Account Dropdown - Right Side */}
             <div className="flex items-center">
-                <div onMouseEnter={() => setActive("Account")} className="relative">
-                <p className="cursor-pointer text-black hover:text-purple-600 dark:text-white dark:hover:text-purple-400 transition-colors duration-200 text-sm sm:text-base lg:text-base font-medium">
-                    Settings
-                </p>
+                <div className="relative">
+                <button
+                    onClick={() => setActive(active === "Account" ? null : "Account")}
+                    className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
+                >
+                    <MenuIcon size={20} className="text-gray-700 dark:text-gray-300" />
+                </button>
                 {active === "Account" && (
                     <div className="absolute top-[calc(100%_+_1.2rem)] right-0 pt-4 animate-in fade-in-0 slide-in-from-top-2 duration-200">
                     <div className="bg-white dark:bg-black backdrop-blur-sm rounded-2xl overflow-hidden border border-gray-200 dark:border-white/[0.2] shadow-xl min-w-[200px] lg:min-w-[250px] xl:min-w-[280px]">
                         <div className="p-4 lg:p-5">
                         <div className="flex flex-col space-y-3 lg:space-y-4 text-sm lg:text-base">
+                            {user && (user.role === 'admin' || user.role === 'shopAdmin') && (
+                                <HoveredLink href={user.role === 'admin' ? '/admin' : '/shop-admin'}>Dashboard</HoveredLink>
+                            )}
                             <HoveredLink href="/profile">My Profile</HoveredLink>
                             <HoveredLink href="/orders">My Orders</HoveredLink>
                             <HoveredLink href="/cart">Shopping Cart</HoveredLink>
@@ -94,7 +100,7 @@ const HoveredLink = ({ children, href, ...rest }: HoveredLinkProps) => {
         </div>
 
         {/* Mobile Navbar */}
-        <div className="fixed top-4 left-4 right-4 z-50 md:hidden">
+        <div className="fixed top-4 left-4 right-4 z-50 md:hidden" onMouseLeave={() => setActive(null)}>
             <div className="bg-white/90 dark:bg-black/90 backdrop-blur-md rounded-full border border-gray-200 dark:border-white/[0.2] shadow-lg px-4 py-3 flex items-center justify-between">
             {/* Mobile Logo */}
             <Link to="/" className="flex items-center">
@@ -126,6 +132,11 @@ const HoveredLink = ({ children, href, ...rest }: HoveredLinkProps) => {
                 <div>
                     <h3 className="font-semibold text-purple-600 mb-3 text-base">Settings</h3>
                     <div className="space-y-2 pl-4">
+                    {user && (user.role === 'admin' || user.role === 'shopAdmin') && (
+                        <div className="py-2">
+                            <HoveredLink href={user.role === 'admin' ? '/admin' : '/shop-admin'}>Dashboard</HoveredLink>
+                        </div>
+                    )}
                     <div className="py-2">
                         <HoveredLink href="/profile">My Profile</HoveredLink>
                     </div>

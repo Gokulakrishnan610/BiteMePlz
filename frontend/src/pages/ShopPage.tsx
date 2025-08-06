@@ -109,7 +109,7 @@ const ShopPage: React.FC = () => {
       return
     }
     addToCart({
-      product_id: product._id,
+      product: product._id,
       name: product.name,
       image: product.image,
       price: product.price,
@@ -389,7 +389,7 @@ const ShopPage: React.FC = () => {
               {filteredProducts
                 .map((product, index) => (
                 <Card
-                  key={`product-${product._id || index}`}
+                  key={`product-${product._id}`}
                   className="overflow-hidden hover:shadow-lg transition-all duration-300 group"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
