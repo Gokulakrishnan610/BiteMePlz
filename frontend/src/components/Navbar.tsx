@@ -80,7 +80,7 @@ const HoveredLink = ({ children, href, ...rest }: HoveredLinkProps) => {
                             {user && (user.role === 'admin' || user.role === 'shopAdmin') && (
                                 <HoveredLink href={user.role === 'admin' ? '/admin' : '/shop-admin'}>Dashboard</HoveredLink>
                             )}
-                            <HoveredLink href="/profile">My Profile</HoveredLink>
+                            <HoveredLink href="/profile">Profile</HoveredLink>
                             <HoveredLink href="/orders">My Orders</HoveredLink>
                             <HoveredLink href="/cart">Shopping Cart</HoveredLink>
                             <button
@@ -138,7 +138,7 @@ const HoveredLink = ({ children, href, ...rest }: HoveredLinkProps) => {
                         </div>
                     )}
                     <div className="py-2">
-                        <HoveredLink href="/profile">My Profile</HoveredLink>
+                        <HoveredLink href="/profile">Profile</HoveredLink>
                     </div>
                     <div className="py-2">
                         <HoveredLink href="/orders">My Orders</HoveredLink>

@@ -118,9 +118,7 @@ const AdminLayout: React.FC = () => {
               <h2 className="text-xl font-semibold text-[var(--primary-text)]">Admin Dashboard</h2>
               <p className="text-sm text-[var(--muted-text)]">Manage your campus kiosk system</p>
             </div>
-            <Link to="/" className="btn-secondary text-sm hover:text-[var(--accent-purple)]">
-              Go to Main Site
-            </Link>
+
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">

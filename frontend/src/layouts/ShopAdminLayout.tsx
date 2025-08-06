@@ -181,12 +181,7 @@ const ShopAdminLayout: React.FC = () => {
                 {user?.is_sub_admin ? 'Scan QR codes and manage orders' : 'Manage your shop and products'}
               </p>
             </div>
-            <Link 
-              to="/" 
-              className="btn-secondary text-sm hover:text-[var(--accent-purple)]"
-            >
-              Go to Main Site
-            </Link>
+
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">

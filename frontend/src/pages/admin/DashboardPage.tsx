@@ -303,7 +303,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setMaintenanceMode }) => 
           <div>
             <div className="flex items-center mb-4">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/')}
             className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 mr-2"
             title="Go back"
           >

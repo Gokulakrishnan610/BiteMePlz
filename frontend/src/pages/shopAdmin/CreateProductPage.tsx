@@ -63,7 +63,7 @@ const CreateProductPage: React.FC = () => {
         shop_id: user.shop
       };
       
-      console.log('Creating product with data:', createData);
+
       
       const response = await api.post('/api/products/', createData);
       

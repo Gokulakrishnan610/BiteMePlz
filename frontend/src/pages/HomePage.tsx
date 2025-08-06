@@ -347,8 +347,8 @@ const HomePage: React.FC = () => {
               return (
                 <Link
                   key={shop.id}
-                  to={`/shop/${shop.id}`}
-                  className={`group transition-opacity duration-500 h-full ${
+                  to={isOpen ? `/shop/${shop.id}` : '#'}
+                  className={`group transition-opacity duration-500 h-full ${isOpen ? '' : 'pointer-events-none opacity-60'} ${
                     componentsLoaded >= 4 + Math.floor(index / 4) ? "opacity-100" : "opacity-0"
                   }`}
                   style={{ transitionDelay: `${cardDelay}ms` }}
@@ -360,13 +360,7 @@ const HomePage: React.FC = () => {
                         alt={shop.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                       />
-                      {!isOpen && (
-                        <div className="absolute inset-0 bg-gray-900/60 flex items-center justify-center">
-                          <Badge variant="secondary" className="bg-white text-gray-900">
-                            Closed
-                          </Badge>
-                        </div>
-                      )}
+
                       {isOpen && (
                         <Badge className="absolute top-2 left-2 bg-green-600 hover:bg-green-600 text-white text-xs">
                           Open
@@ -417,14 +411,7 @@ const HomePage: React.FC = () => {
                           </span>
                         </div>
                       )}
-                      {!isOpen && shop.final_validity_time && (
-                        <div className="flex items-center text-xs text-gray-500">
-                          <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
-                          <span className="truncate">
-                            Closed
-                          </span>
-                        </div>
-                      )}
+
                     </CardContent>
                   </Card>
                 </Link>

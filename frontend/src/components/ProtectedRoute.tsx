@@ -24,10 +24,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Check role if required
   if (requiredRole) {
-    // Admin can access all routes
-    if (user.role === 'admin') {
-      return <>{children}</>;
-    }
+
 
     // Check specific roles
     if (user.role !== requiredRole) {

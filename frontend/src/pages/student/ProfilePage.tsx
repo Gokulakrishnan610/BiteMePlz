@@ -51,7 +51,7 @@ const ProfilePage: React.FC = () => {
       <Navbar />
 
       {/* Header skeleton */}
-      <div className="bg-white shadow-sm border-b pt-20 md:pt-24">
+      <div className="bg-white shadow-sm border-b pt-20 md:pt-32">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex items-center space-x-4">
             <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
@@ -175,7 +175,7 @@ const ProfilePage: React.FC = () => {
       <Navbar />
 
       {/* UberEats-style Header */}
-      <div className="bg-white shadow-sm border-b pt-20 md:pt-24">
+      <div className="bg-white shadow-sm border-b pt-20 md:pt-32">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">

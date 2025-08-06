@@ -188,7 +188,7 @@ const OrdersPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="pt-20 md:pt-24">
+        <div className="pt-20 md:pt-32">
           <div className="max-w-7xl mx-auto px-4 py-8">
             <div className="flex items-center mb-8">
               <button
