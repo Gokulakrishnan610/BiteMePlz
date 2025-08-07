@@ -1,5 +1,5 @@
-import uuid
 import qrcode
+import uuid
 import io
 import base64
 from datetime import timedelta
@@ -681,6 +681,10 @@ class OrderViewSet(viewsets.ModelViewSet):
         """Create a single shop order"""
         try:
 
+
+
+            from decimal import Decimal
+
             print(f"Incoming request data: {request.data}")
             serializer = self.get_serializer(data=request.data, context={'request': request})
             serializer.is_valid(raise_exception=True)
@@ -705,6 +709,7 @@ class OrderViewSet(viewsets.ModelViewSet):
                 order.is_paid = True
                 order.paid_at = timezone.now()
                 order.payment_result = {'method': 'balance', 'status': 'success'}
+
                 order.save()
                 
                 Transaction.objects.create(
@@ -718,7 +723,9 @@ class OrderViewSet(viewsets.ModelViewSet):
                 )
                 
                 order_data = self.get_serializer(order).data
-                order_data['_id'] = order_data['id']
+                order_data['_id'] = str(order_data['id'])
+                print(f"OrderViewSet create - razorpay - order_data before response: {order_data}")
+                print(f"OrderViewSet create - balance - order_data before response: {order_data}")
                 
                 return Response({
                     'message': 'Order created successfully',
@@ -736,9 +743,10 @@ class OrderViewSet(viewsets.ModelViewSet):
                     'receipt': f'order_{uuid.uuid4().hex[:8]}',
                     'payment_capture': 1
                 })
+
                 
                 order_data = self.get_serializer(order).data
-                order_data['_id'] = order_data['id']
+                order_data['_id'] = str(order_data['id'])
                 
                 return Response({
                     'message': 'Order created successfully',
@@ -787,6 +795,10 @@ class OrderViewSet(viewsets.ModelViewSet):
             if not order_items:
                 return Response({'error': 'Order items are required'}, status=status.HTTP_400_BAD_REQUEST)
             
+
+
+            from decimal import Decimal
+
             # Group items by shop
             items_by_shop = {}
             for item in order_items:
@@ -883,6 +895,10 @@ class OrderViewSet(viewsets.ModelViewSet):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def perform_create(self, serializer):
+
+
+        from decimal import Decimal
+
         # Generate order ID
         order_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
         

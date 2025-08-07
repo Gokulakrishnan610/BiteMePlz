@@ -9,7 +9,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--email',
             type=str,
-            default='admin@campuskiosk.com',
+            default='admin@kiosk.com',
             help='Email for the admin user'
         )
         parser.add_argument(

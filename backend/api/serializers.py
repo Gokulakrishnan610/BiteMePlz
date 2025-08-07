@@ -1,5 +1,10 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
+import uuid
+from django.utils import timezone
+from decimal import Decimal
+from datetime import timedelta
+
 from .models import User, Shop, Product, Order, Transaction, ShopLog, StudentAnalytics
 
 
@@ -112,17 +117,30 @@ class OrderSerializer(serializers.ModelSerializer):
             if order_items_data and isinstance(order_items_data, list) and len(order_items_data) > 0:
                 inferred_shop_id = order_items_data[0].get('shop_id')
                 if inferred_shop_id:
-                    data['shop_id'] = inferred_shop_id
+                    validated_data['shop_id'] = inferred_shop_id
                 else:
                     raise serializers.ValidationError("Shop ID is required either at top level or within order_items.")
             else:
                 raise serializers.ValidationError("Shop ID is required either at top level or within order_items.")
         
-        # Ensure total_price is a Decimal
-        total_price = validated_data.get('totalPrice', 0.0) # Use totalPrice from frontend
-        print(f"OrderSerializer create - raw totalPrice from frontend: {total_price}")
-        validated_data['total_price'] = Decimal(str(total_price))
-        print(f"OrderSerializer create - converted total_price: {validated_data['total_price']}")
+        # Calculate total price based on order items
+        calculated_total_price = Decimal('0.0')
+        for item_data in order_items_data:
+            product_id = item_data.get('product_id')
+            quantity = item_data.get('quantity')
+            
+            if not product_id or not quantity:
+                raise serializers.ValidationError("Product ID and quantity are required for each order item.")
+            
+            try:
+                product = Product.objects.get(id=product_id)
+            except Product.DoesNotExist:
+                raise serializers.ValidationError(f"Product with ID {product_id} does not exist.")
+            
+            calculated_total_price += product.price * quantity
+        
+        validated_data['total_price'] = calculated_total_price
+        print(f"OrderSerializer create - calculated total_price: {validated_data['total_price']}")
         
         # Set user and shop
         validated_data['user'] = user
@@ -138,7 +156,7 @@ class OrderSerializer(serializers.ModelSerializer):
         validated_data['expires_at'] = timezone.now() + timedelta(minutes=10) # Example: order expires in 10 minutes
 
         # Create the order
-        order = Order.objects.create(**validated_data)
+        order = Order.objects.create(order_items=order_items_data, **validated_data)
         print(f"OrderSerializer create - order created: {order}")
 
         # Process order items and calculate total price
