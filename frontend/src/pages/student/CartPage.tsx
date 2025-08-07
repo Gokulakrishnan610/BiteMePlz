@@ -53,7 +53,14 @@ function loadRazorpayScript() {
 }
 
 const CartPage: React.FC = () => {
-  const { cartItems, removeFromCart, updateQuantity, clearCart, getTotalPrice, getItemsByShop, getShopIds } = useCart()
+  const { cartItems, removeFromCart, updateQuantity, clearCart, getTotalPrice, getItemsByShop, addToCart } = useCart()
+
+  // Safe getShopIds: never return [undefined]
+  const getShopIds = () => {
+    const ids = Array.from(new Set((cartItems || []).map((item) => typeof item.shop_id === 'object' && item.shop_id !== null ? item.shop_id.id : item.shop_id).filter((id) => typeof id === 'string' && !!id)));
+    return ids;
+  };
+
   const { user } = useAuth()
   const navigate = useNavigate()
   const [paymentInitiated, setPaymentInitiated] = useState(false)
@@ -89,6 +96,20 @@ const CartPage: React.FC = () => {
     }
   }, [user, timer])
 
+  // Debug: Log all cart items and their IDs before payment
+  useEffect(() => {
+    if (Array.isArray(cartItems)) {
+      cartItems.forEach((item: any) => {
+        console.log('[CART ITEM]', {
+          name: item?.name,
+          product_id: typeof item?.product_id === 'object' ? item.product_id.id : item?.product_id,
+          shop_id: typeof item?.shop_id === 'object' ? item.shop_id.id : item?.shop_id,
+          shop_name: item?.shop_name,
+        });
+      });
+    }
+  }, [cartItems]);
+
   const isshopAcceptingOrders = () => {
     return true
   }
@@ -97,13 +118,15 @@ const CartPage: React.FC = () => {
     return null
   }
 
-  const handleQuantityChange = (productId: string, shop_id: string, newQuantity: number) => {
+  const handleQuantityChange = (productId: string | { id: string }, shop_id: string | { id: string }, newQuantity: number) => {
+    const pId = typeof productId === 'object' ? productId.id : productId;
+    const sId = typeof shop_id === 'object' ? shop_id.id : shop_id;
     if (newQuantity <= 0) {
-      removeFromCart(productId, shop_id)
+      removeFromCart(pId, sId)
       toast.success("Item removed from cart")
       return
     }
-    updateQuantity(productId, shop_id, newQuantity)
+    updateQuantity(pId, sId, newQuantity)
   }
 
   const startPaymentTimer = () => {
@@ -125,134 +148,180 @@ const CartPage: React.FC = () => {
 
   const handleBalancePayment = async () => {
     if (remainingBalance < getTotalPrice()) {
-      const shortfall = getTotalPrice() - remainingBalance
-      toast.error(`Insufficient balance. You need ₹${shortfall} more.`)
-      return
+      const shortfall = getTotalPrice() - remainingBalance;
+      toast.error(`Insufficient balance. You need ₹${shortfall} more.`);
+      return;
     }
-    const shopIds = getShopIds()
+    // Filter out invalid cart items
+    const validCartItems = cartItems.filter(
+      (item) => {
+        const productId = typeof item.product_id === 'object' && item.product_id !== null ? item.product_id.id : item.product_id;
+        const shopId = typeof item.shop_id === 'object' && item.shop_id !== null ? item.shop_id.id : item.shop_id;
+        return productId && shopId && /^[0-9a-fA-F-]{36}$/.test(productId) && /^[0-9a-fA-F-]{36}$/.test(shopId);
+      }
+    );
+    if (validCartItems.length !== cartItems.length) {
+      toast.error("Some cart items are invalid and will not be ordered. Please review your cart.");
+      return;
+    }
+    const shopIds = getShopIds();
     try {
-      setIsLoading(true)
-      setPaymentInitiated(true)
+      setIsLoading(true);
+      setPaymentInitiated(true);
 
-      const endpoint = shopIds.length > 1 ? "/api/orders/multi-shop/" : "/api/orders/"
+      const endpoint = shopIds.length > 1 ? "/api/orders/multi-shop/" : "/api/orders/";
       const requestData =
         shopIds.length > 1
           ? {
-              order_items: cartItems.map((item) => ({
-                product_id: item.product_id,
+              order_items: validCartItems.map((item) => ({
+                product_id: typeof item.product_id === 'object' && item.product_id !== null ? item.product_id.id : item.product_id,
                 quantity: item.quantity,
-                shop_id: item.shop_id,
+                shop_id: typeof item.shop_id === 'object' && item.shop_id !== null ? item.shop_id.id : item.shop_id,
                 shop_name: item.shop_name,
               })),
               total_price: getTotalPrice(),
               paymentMethod: "balance",
             }
           : {
-              order_items: cartItems.map((item) => ({
-                product_id: item.product_id,
+              order_items: validCartItems.map((item) => ({
+                product_id: typeof item.product_id === 'object' && item.product_id !== null ? item.product_id.id : item.product_id,
                 quantity: item.quantity,
-                shop_id: item.shop_id,
+                shop_id: typeof item.shop_id === 'object' && item.shop_id !== null ? item.shop_id.id : item.shop_id,
                 shop_name: item.shop_name,
               })),
               shop_id: shopIds[0],
               total_price: getTotalPrice(),
               paymentMethod: "balance",
-            }
+            };
 
-      console.log("Sending order creation data:", requestData)
-      const orderResponse = await api.post(endpoint, requestData)
-      clearCart()
-      toast.success("Payment successful! Your order has been placed.")
+      console.log("Sending order creation data:", requestData);
+      const orderResponse = await api.post(endpoint, requestData);
+      clearCart();
+      toast.success("Payment successful! Your order has been placed.");
 
       if (shopIds.length > 1) {
-        navigate(`/order/${orderResponse.data.orders[0]._id}`)
+        navigate(`/order/${orderResponse.data.orders[0]._id}`);
       } else {
-        navigate(`/order/${orderResponse.data.order._id}`)
+        navigate(`/order/${orderResponse.data.order._id}`);
       }
     } catch (error: any) {
-      console.error("Balance payment error:", error)
-      toast.error(error.response?.data?.message || error.message || "Payment failed")
-      setPaymentInitiated(false)
+      console.error("Balance payment error:", error);
+      toast.error(error.response?.data?.message || error.message || "Payment failed");
+      setPaymentInitiated(false);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
   const initiateRazorpayPayment = async () => {
-    const shopIds = getShopIds()
+    const shopIds = getShopIds();
+    console.log("[RZP] Button clicked. shopIds:", shopIds);
+    toast("Razorpay payment initiated");
+    // Filter out invalid cart items
+    const validCartItems = cartItems.filter(
+      (item) => {
+        const productId = typeof item.product_id === 'object' ? item.product_id.id : item.product_id;
+        const shopId = typeof item.shop_id === 'object' ? item.shop_id.id : item.shop_id;
+        return productId && shopId && /^[0-9a-fA-F-]{36}$/.test(productId) && /^[0-9a-fA-F-]{36}$/.test(shopId);
+      }
+    );
+    if (validCartItems.length !== cartItems.length) {
+      toast.error("Some cart items are invalid and will not be ordered. Please review your cart.");
+      console.warn("[RZP] Invalid cart items detected", cartItems, validCartItems);
+      return;
+    }
+    // Before payment, check for missing product_id/shop_id
+    const hasInvalidCartItems = cartItems.some(
+      (item: any) =>
+        !(typeof item.product_id === 'object' && item.product_id !== null ? item.product_id.id : item.product_id) ||
+        !(typeof item.shop_id === 'object' && item.shop_id !== null ? item.shop_id.id : item.shop_id)
+    );
+    if (hasInvalidCartItems) {
+      toast.error('Your cart contains items with missing product or shop IDs. Please remove them and try again.');
+      console.error('[CartPage] Invalid cart items:', cartItems);
+      return;
+    }
     try {
-      setIsLoading(true)
-      setPaymentInitiated(true)
-
-      const endpoint = shopIds.length > 1 ? "/api/orders/multi-shop/" : "/api/orders/"
+      setIsLoading(true);
+      setPaymentInitiated(true);
+      console.log("[RZP] Sending order creation request...");
+      const endpoint = shopIds.length > 1 ? "/api/orders/multi-shop/" : "/api/orders/";
+      // Always map validCartItems to required fields and ensure image is not blank
+      console.log("[RZP] cartItems before mapping:", validCartItems);
+      const mappedOrderItems = validCartItems.map((item) => ({
+        product_id: typeof item.product_id === 'object' && item.product_id !== null ? item.product_id.id : item.product_id,
+        quantity: item.quantity,
+        shop_id: typeof item.shop_id === 'object' && item.shop_id !== null ? item.shop_id.id : item.shop_id,
+        shop_name: item.shop_name,
+        image: item.image && item.image.trim() !== "" ? item.image : "https://via.placeholder.com/150", // fallback image
+      }));
+      console.log("[RZP] mappedOrderItems:", mappedOrderItems);
       const requestData =
         shopIds.length > 1
           ? {
-              order_items: cartItems.map((item) => ({
-                product_id: item.product_id,
-                quantity: item.quantity,
-                shop_id: item.shop_id,
-                shop_name: item.shop_name,
-              })),
+              order_items: mappedOrderItems,
               totalPrice: getTotalPrice(),
               paymentMethod: "razorpay",
             }
           : {
-              order_items: cartItems,
+              order_items: mappedOrderItems,
               shop_id: shopIds[0],
               totalPrice: getTotalPrice(),
               paymentMethod: "razorpay",
-            }
+            };
+      console.log("[RZP] requestData:", requestData);
+      const orderResponse = await api.post(endpoint, requestData);
+      console.log("[RZP] orderResponse:", orderResponse);
 
-      const orderResponse = await api.post(endpoint, requestData)
-      
       // Handle different response structures for single vs multi-shop orders
-      const orderId = shopIds.length > 1 ? orderResponse.data.orders[0]._id : orderResponse.data.order._id
-      setCurrentorder_id(orderId)
-      startPaymentTimer()
+      const orderId = shopIds.length > 1 ? orderResponse.data.orders[0]._id : orderResponse.data.order._id;
+      setCurrentorder_id(orderId);
+      startPaymentTimer();
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || orderResponse.data.razorpayKeyId,
+        key: 'rzp_test_RVKFS8WX756Anx', // Hardcoded test key
         amount: getTotalPrice() * 100,
         currency: "INR",
         name: "Campus Kiosk",
         description: "Payment for your order",
         order_id: orderResponse.data.razorpay_order_id,
         handler: async (response: any) => {
+          console.log("[RZP] Payment handler called", response);
           try {
             if (timer) {
-              clearInterval(timer)
+              clearInterval(timer);
             }
 
             await api.put(`/orders/${orderId}/pay`, {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_signature: response.razorpay_signature,
-            })
-            clearCart()
-            toast.success("Payment successful! Your order has been placed.")
-            navigate(`/order/${orderId}`)
+            });
+            clearCart();
+            toast.success("Payment successful! Your order has been placed.");
+            navigate(`/order/${orderId}`);
           } catch (error: any) {
-            toast.error(error.response?.data?.message || "Payment verification failed")
+            toast.error(error.response?.data?.message || "Payment verification failed");
           } finally {
-            setPaymentInitiated(false)
-            setCurrentorder_id(null)
+            setPaymentInitiated(false);
+            setCurrentorder_id(null);
           }
         },
         modal: {
           ondismiss: async () => {
+            console.log("[RZP] Razorpay modal dismissed");
             if (timer) {
-              clearInterval(timer)
+              clearInterval(timer);
             }
-            setPaymentInitiated(false)
+            setPaymentInitiated(false);
 
             if (currentorder_id) {
               try {
-                await api.put(`/orders/${currentorder_id}/cancel`)
-                toast.error("Payment cancelled")
+                await api.put(`/orders/${currentorder_id}/cancel`);
+                toast.error("Payment cancelled");
               } catch (error) {
-                console.error("Error cancelling order:", error)
+                console.error("Error cancelling order:", error);
               }
-              setCurrentorder_id(null)
+              setCurrentorder_id(null);
             }
           },
         },
@@ -263,46 +332,50 @@ const CartPage: React.FC = () => {
         theme: {
           color: "#6a1b9a",
         },
-      }
+      };
 
-      const loaded = await loadRazorpayScript()
+      console.log("[RZP] Loading Razorpay script...");
+      const loaded = await loadRazorpayScript();
       if (!loaded) {
-        toast.error("Failed to load Razorpay SDK. Please try again.")
-        setPaymentInitiated(false)
-        setCurrentorder_id(null)
-        return
+        toast.error("Failed to load Razorpay SDK. Please try again.");
+        setPaymentInitiated(false);
+        setCurrentorder_id(null);
+        console.error("[RZP] Razorpay SDK failed to load");
+        return;
       }
-      const razorpay = new window.Razorpay(options)
-      razorpay.open()
+      console.log("[RZP] Razorpay script loaded. Opening Razorpay window...");
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+      toast("Razorpay window opened (if no popup, check for blockers)");
 
       setTimeout(
         () => {
           if (razorpay && typeof razorpay.close === "function") {
-            razorpay.close()
+            razorpay.close();
             if (currentorder_id) {
               api
                 .put(`/orders/${currentorder_id}/cancel`)
                 .then(() => {
-                  toast.error("Payment time expired")
-                  setPaymentInitiated(false)
-                  setCurrentorder_id(null)
+                  toast.error("Payment time expired");
+                  setPaymentInitiated(false);
+                  setCurrentorder_id(null);
                 })
                 .catch((error) => {
-                  console.error("Error cancelling order:", error)
-                })
+                  console.error("Error cancelling order:", error);
+                });
             }
           }
         },
-        3 * 60 * 1000,
-      )
+        3 * 60 * 1000
+      );
     } catch (error: any) {
-      console.error("Payment error:", error)
-      console.log("Full error object:", error)
-      setPaymentInitiated(false)
-      setCurrentorder_id(null)
-      toast.error(error.response?.data?.message || error.message || "Payment failed")
+      console.error("[RZP] Payment error:", error);
+      console.log("[RZP] Full error object:", error);
+      setPaymentInitiated(false);
+      setCurrentorder_id(null);
+      toast.error(error.response?.data?.message || error.message || "Payment failed");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -315,23 +388,27 @@ const CartPage: React.FC = () => {
     toast.success("Cart cleared successfully")
   }
 
-  const handleDeleteItem = (product: string, shop_id: string, name: string) => {
-    setItemToDelete({ product, shop_id, name })
+  const handleDeleteItem = (product: string | { id: string }, shop_id: string | { id: string }, name: string) => {
+    const pId = typeof product === 'object' ? product.id : product;
+    const sId = typeof shop_id === 'object' ? shop_id.id : shop_id;
+    setItemToDelete({ product: pId, shop_id: sId, name });
     setShowDeleteConfirm(true)
   }
 
   const confirmDelete = () => {
     if (itemToDelete) {
-      removeFromCart(itemToDelete.product, itemToDelete.shop_id)
+      removeFromCart(itemToDelete.product, itemToDelete.shop_id);
       toast.success(`${itemToDelete.name} removed from cart`)
       setShowDeleteConfirm(false)
       setItemToDelete(null)
     }
   }
 
-  const handleDirectDelete = (product: string, shop_id: string, name: string) => {
+  const handleDirectDelete = (product: string | { id: string }, shop_id: string | { id: string }, name: string) => {
+    const pId = typeof product === 'object' ? product.id : product;
+    const sId = typeof shop_id === 'object' ? shop_id.id : shop_id;
     try {
-      removeFromCart(product, shop_id)
+       removeFromCart(pId, sId)
       toast.success(`${name} removed from cart`)
     } catch (error) {
       console.error("Error removing item:", error)
@@ -839,4 +916,4 @@ const CartPage: React.FC = () => {
   )
 }
 
-export default CartPage
+export default CartPage

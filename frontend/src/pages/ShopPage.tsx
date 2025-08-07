@@ -16,7 +16,7 @@ import Navbar from "../components/Navbar"
 import SimpleLoading from "../components/SimpleLoading"
 
 interface Product {
-  _id: string
+  id: string
   name: string
   description: string
   category: string
@@ -27,7 +27,7 @@ interface Product {
 }
 
 interface Shop {
-  _id: string
+  id: string
   name: string
   description: string
   location: string
@@ -108,17 +108,27 @@ const ShopPage: React.FC = () => {
       toast.error("Product is out of stock")
       return
     }
+    console.log("Product object before adding to cart:", product);
+    console.log("Shop object before adding to cart:", shop);
+    if (!product.id || !shop!.id) {
+      console.error("[ShopPage] Product ID or Shop ID is undefined.", product, shop);
+      toast.error("Product or shop information is incomplete. Please try again.");
+      return;
+    }
+    console.log("[ShopPage] Adding to cart - product:", product, "shop:", shop);
     addToCart({
-      product_id: product._id,
+      id: product.id + "-" + Date.now(), // Generate a unique ID for the cart item
+      product_id: product.id,
       name: product.name,
       image: product.image,
       price: product.price,
       quantity: 1,
       stock: product.stock,
-      shop_id: shop!._id,
+      shop_id: shop!.id,
       shop_name: shop!.name,
-    })
-    toast.success("Added to cart")
+    });
+    console.log("[ShopPage] Added to cart - product_id:", product.id, "shop_id:", shop!.id);
+    toast.success("Added to cart");
   }
 
   // Get unique categories from products that are available and have stock
@@ -389,7 +399,7 @@ const ShopPage: React.FC = () => {
               {filteredProducts
                 .map((product, index) => (
                 <Card
-                  key={`product-${product._id}`}
+                  key={`product-${product.id}`}
                   className="overflow-hidden hover:shadow-lg transition-all duration-300 group"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >

@@ -15,7 +15,7 @@ import { Input } from "../components/ui/input"
 import Navbar from "../components/Navbar"
 
 interface Product {
-  _id: string
+  id: string
   name: string
   description: string
   price: number
@@ -26,7 +26,7 @@ interface Product {
 }
 
 interface Shop {
-  _id: string
+  id: string
   name: string
   location: string
 }
@@ -82,23 +82,31 @@ const ProductPage: React.FC = () => {
       navigate("/login")
       return
     }
-    if (!product) return
+    if (!product || !product.id || !shop!.id) {
+      console.error("[ProductPage] Product or its ID/shop is undefined.", product);
+      toast.error("Product information is incomplete. Please try again.");
+      return;
+    }
     if (product.stock === 0) {
       toast.error("Product is out of stock")
       return
     }
 
+    console.log("[ProductPage] Adding to cart - product:", product);
+
     addToCart({
-      product_id: product._id,
+      id: product.id + "-" + Date.now(), // Generate a unique ID for the cart item
+      product_id: product.id,
       name: product.name,
       image: product.image,
       price: product.price,
       quantity,
       stock: product.stock,
-      shop_id: product.shop,
-      shop_name: shop?.name || "Unknown Shop",
-    })
-    toast.success("Added to cart")
+      shop_id: shop!.id,
+       shop_name: shop!.name,
+     });
+     console.log("[ProductPage] Added to cart - product_id:", product.id, "shop_id:", shop!.id);
+    toast.success("Added to cart");
   }
 
   if (loading) {

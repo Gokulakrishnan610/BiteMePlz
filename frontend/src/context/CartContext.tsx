@@ -2,13 +2,14 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useToast } from '../components/ToastContainer';
 
 export interface CartItem {
-  product_id: string;
+  id: string;
+  product_id: string | { id: string };
   name: string;
   image: string;
   price: number;
   quantity: number;
   stock: number;
-  shop_id: string;
+  shop_id: string | { id: string };
   shop_name: string;
 }
 
@@ -107,17 +108,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const itemsByShop: { [shop_id: string]: { items: CartItem[], shop_name: string } } = {};
     
     cartItems.forEach(item => {
-      if (!itemsByShop[item.shop_id]) {
-        itemsByShop[item.shop_id] = { items: [], shop_name: item.shop_name };
+      const shopId = typeof item.shop_id === 'object' ? item.shop_id.id : item.shop_id;
+      if (!itemsByShop[shopId]) {
+        itemsByShop[shopId] = { items: [], shop_name: item.shop_name };
       }
-      itemsByShop[item.shop_id].items.push(item);
+      itemsByShop[shopId].items.push(item);
     });
     
     return itemsByShop;
   };
 
   const getShopIds = () => {
-    return [...new Set(cartItems.map(item => item.shop_id))];
+    return [...new Set(cartItems.map(item => typeof item.shop_id === 'object' ? item.shop_id.id : item.shop_id))];
   };
 
   return (
