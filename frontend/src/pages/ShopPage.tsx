@@ -109,7 +109,7 @@ const ShopPage: React.FC = () => {
       return
     }
     addToCart({
-      product: product._id,
+      product_id: product._id,
       name: product.name,
       image: product.image,
       price: product.price,
@@ -167,7 +167,7 @@ const ShopPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="pt-32 md:pt-40">
+        <div className="pt-20 md:pt-32">
           <div className="max-w-7xl mx-auto px-4 py-8">
             <div className="flex items-center justify-center h-64">
               <Card className="max-w-md w-full">

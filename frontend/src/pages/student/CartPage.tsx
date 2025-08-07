@@ -189,7 +189,7 @@ const CartPage: React.FC = () => {
         shopIds.length > 1
           ? {
               order_items: cartItems.map((item) => ({
-                product_id: item.product,
+                product_id: item.product_id,
                 quantity: item.quantity,
                 shop_id: item.shop_id,
                 shop_name: item.shop_name,
@@ -343,7 +343,7 @@ const CartPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="pt-20 md:pt-24">
+        <div className="pt-20 md:pt-32">
           <div className="max-w-7xl mx-auto px-4 py-8">
             <div className="flex items-center mb-8">
               <button
@@ -453,7 +453,7 @@ const CartPage: React.FC = () => {
                     <div className="space-y-4">
                       {shopData.items.map((item, index) => (
                         <div
-                          key={`${item.product}-${item.shop_id}`}
+                          key={`${item.product_id}-${item.shop_id}`}
                           className={`flex items-center justify-between py-6 h-32 ${index !== shopData.items.length - 1 ? "border-b border-gray-200" : ""}`}
                         >
                           <div className="flex items-center flex-1 min-w-0">
@@ -486,7 +486,7 @@ const CartPage: React.FC = () => {
                               <button
                                 onClick={() => {
                                   const newQuantity = item.quantity - 1
-                                  handleQuantityChange(item.product, item.shop_id, newQuantity)
+                                  handleQuantityChange(item.product_id, item.shop_id, newQuantity)
                                 }}
                                 className="p-2 hover:bg-gray-200 transition-colors rounded-l-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Decrease quantity"
@@ -500,7 +500,7 @@ const CartPage: React.FC = () => {
                               <button
                                 onClick={() => {
                                   const newQuantity = item.quantity + 1
-                                  handleQuantityChange(item.product, item.shop_id, newQuantity)
+                                  handleQuantityChange(item.product_id, item.shop_id, newQuantity)
                                 }}
                                 className="p-2 hover:bg-gray-200 transition-colors rounded-r-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Increase quantity"
@@ -516,7 +516,7 @@ const CartPage: React.FC = () => {
 
                             {/* Delete Button */}
                             <Button
-                              onClick={() => handleDirectDelete(item.product, item.shop_id, item.name)}
+                              onClick={() => handleDirectDelete(item.product_id, item.shop_id, item.name)}
                               variant="outline"
                               size="sm"
                               className="text-red-600 border-red-200 hover:bg-red-50 flex-shrink-0"
@@ -628,7 +628,7 @@ const CartPage: React.FC = () => {
           {/* Payment Options Modal */}
           {showPaymentOptions && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <Card className="max-w-md w-full">
+              <Card className="max-w-md w-full bg-white">
                 <CardHeader>
                   <div className="flex justify-between items-center">
                     <CardTitle className="text-2xl">Choose Payment Method</CardTitle>
@@ -676,7 +676,7 @@ const CartPage: React.FC = () => {
                     onClick={initiateRazorpayPayment}
                     disabled={isLoading}
                     variant="outline"
-                    className="w-full p-6 h-auto border-purple-600 text-purple-600 hover:bg-purple-50 bg-transparent"
+                    className="w-full p-6 h-auto border-purple-600 text-purple-600 hover:bg-purple-50 bg-transparent flex items-center justify-between w-full"
                   >
                     <div className="flex items-center">
                       <div className="bg-purple-100 p-3 rounded-full mr-4">
@@ -696,14 +696,14 @@ const CartPage: React.FC = () => {
           {/* Disclaimer Modal */}
           {showDisclaimer && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <Card className="max-w-lg w-full">
+              <Card className="max-w-lg w-full bg-white">
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div className="flex items-center">
                       <div className="bg-purple-100 p-3 rounded-full mr-4">
-                        <AlertCircle className="text-purple-600" size={24} />
-                      </div>
-                      <CardTitle className="text-2xl">Important Information</CardTitle>
+                        <AlertCircle className="text-red-600" size={24} />
+                    </div>
+                    <CardTitle className="text-2xl text-red-600">Important Information</CardTitle>
                     </div>
                     <Button onClick={() => setShowDisclaimer(false)} variant="ghost" size="sm" className="p-2">
                       <X size={20} />
@@ -711,8 +711,12 @@ const CartPage: React.FC = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <p className="text-gray-600 text-lg">
+                  <p className="text-red-600 text-lg">
                     Please note the following important points before proceeding with your payment:
+                    1. All transactions are final and non-refundable. Please double-check your order before confirming.
+                    2. Ensure your internet connection is stable during the payment process to avoid interruptions.
+                    3. In case of any payment failures or discrepancies, please contact our support team immediately with your transaction details.
+                    4. By proceeding, you agree to our terms and conditions regarding digital purchases.
                   </p>
                   <div className="space-y-3">
                     {getShopIds().length > 1 ? (

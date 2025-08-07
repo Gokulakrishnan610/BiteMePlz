@@ -112,7 +112,7 @@ class OrderSerializer(serializers.ModelSerializer):
             if order_items_data and isinstance(order_items_data, list) and len(order_items_data) > 0:
                 inferred_shop_id = order_items_data[0].get('shop_id')
                 if inferred_shop_id:
-                    validated_data['shop_id'] = inferred_shop_id
+                    data['shop_id'] = inferred_shop_id
                 else:
                     raise serializers.ValidationError("Shop ID is required either at top level or within order_items.")
             else:
