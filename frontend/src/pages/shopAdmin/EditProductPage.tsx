@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../api';
 import { AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -14,6 +15,7 @@ interface ProductFormData {
   stock: number;
   image: string;
   is_available: boolean;
+
 }
 
 const EditProductPage: React.FC = () => {
@@ -59,7 +61,8 @@ const EditProductPage: React.FC = () => {
           price: data.price || 0,
           stock: data.stock || 0,
           image: data.image || '',
-          is_available: data.is_available !== undefined ? data.is_available : true
+          is_available: data.is_available !== undefined ? data.is_available : true,
+
         });
         
 
@@ -77,13 +80,19 @@ const EditProductPage: React.FC = () => {
     }
   }, [id]);
 
+  const { user } = useAuth();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
 
     try {
+      if (!user || !user.shop) {
+        toast.error('Shop ID not found. Please log in as a shop admin.');
+        setSaving(false);
+        return;
+      }
 
-      
       const updateData = {
         name: formData.name.trim(),
         description: formData.description.trim(),
@@ -91,7 +100,8 @@ const EditProductPage: React.FC = () => {
         price: Number(formData.price),
         stock: Number(formData.stock),
         image: formData.image,
-        is_available: formData.is_available
+        is_available: formData.is_available,
+        shop_id: user.shop // Include shop_id from authenticated user
       };
       
 
@@ -103,7 +113,8 @@ const EditProductPage: React.FC = () => {
       navigate('/shop-admin/products');
     } catch (error: any) {
       console.error('Error updating product:', error);
-      toast.error(error.response?.data?.message || 'Failed to update product');
+      console.error('Full error response:', error.response);
+      toast.error(error.response?.data?.message || error.response?.data?.detail || 'Failed to update product');
     } finally {
       setSaving(false);
     }
