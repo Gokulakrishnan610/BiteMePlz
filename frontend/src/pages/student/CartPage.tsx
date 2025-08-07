@@ -343,7 +343,7 @@ const CartPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="pt-20 md:pt-24">
+        <div className="pt-20 md:pt-32">
           <div className="max-w-7xl mx-auto px-4 py-8">
             <div className="flex items-center mb-8">
               <button
@@ -388,7 +388,7 @@ const CartPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <div className="pt-20 md:pt-24">
+      <div className="pt-20 md:pt-32">
         <div className="max-w-7xl mx-auto px-4 py-8">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
@@ -628,7 +628,7 @@ const CartPage: React.FC = () => {
           {/* Payment Options Modal */}
           {showPaymentOptions && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <Card className="max-w-md w-full">
+              <Card className="max-w-md w-full bg-white">
                 <CardHeader>
                   <div className="flex justify-between items-center">
                     <CardTitle className="text-2xl">Choose Payment Method</CardTitle>
@@ -676,7 +676,7 @@ const CartPage: React.FC = () => {
                     onClick={initiateRazorpayPayment}
                     disabled={isLoading}
                     variant="outline"
-                    className="w-full p-6 h-auto border-purple-600 text-purple-600 hover:bg-purple-50 bg-transparent"
+                    className="w-full p-6 h-auto border-purple-600 text-purple-600 hover:bg-purple-50 bg-transparent flex items-center justify-between w-full"
                   >
                     <div className="flex items-center">
                       <div className="bg-purple-100 p-3 rounded-full mr-4">
@@ -696,14 +696,14 @@ const CartPage: React.FC = () => {
           {/* Disclaimer Modal */}
           {showDisclaimer && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <Card className="max-w-lg w-full">
+              <Card className="max-w-lg w-full bg-white">
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div className="flex items-center">
                       <div className="bg-purple-100 p-3 rounded-full mr-4">
-                        <AlertCircle className="text-purple-600" size={24} />
-                      </div>
-                      <CardTitle className="text-2xl">Important Information</CardTitle>
+                        <AlertCircle className="text-red-600" size={24} />
+                    </div>
+                    <CardTitle className="text-2xl text-red-600">Important Information</CardTitle>
                     </div>
                     <Button onClick={() => setShowDisclaimer(false)} variant="ghost" size="sm" className="p-2">
                       <X size={20} />
@@ -711,8 +711,8 @@ const CartPage: React.FC = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <p className="text-gray-600 text-lg">
-                    Please note the following important points before proceeding with your payment:
+                  <p className="text-red-600 text-lg">
+                  All payments are final and non-refundable, so please review your order before confirming. Ensure a stable internet connection during payment. For any issues, contact support with your transaction details. By continuing, you agree to our digital purchase terms.
                   </p>
                   <div className="space-y-3">
                     {getShopIds().length > 1 ? (

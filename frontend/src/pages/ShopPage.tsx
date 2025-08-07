@@ -167,7 +167,7 @@ const ShopPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="pt-32 md:pt-40">
+        <div className="pt-20 md:pt-32">
           <div className="max-w-7xl mx-auto px-4 py-8">
             <div className="flex items-center justify-center h-64">
               <Card className="max-w-md w-full">
@@ -193,7 +193,7 @@ const ShopPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <div className="pt-20 md:pt-24">
+      <div className="pt-20 md:pt-32">
         <div className="max-w-7xl mx-auto px-4 py-8">
           {/* Back Button - Mobile */}
           <div className="flex items-center mb-8 md:hidden">
@@ -389,7 +389,7 @@ const ShopPage: React.FC = () => {
               {filteredProducts
                 .map((product, index) => (
                 <Card
-                  key={`product-${product._id || index}`}
+                  key={`product-${product._id}`}
                   className="overflow-hidden hover:shadow-lg transition-all duration-300 group"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >

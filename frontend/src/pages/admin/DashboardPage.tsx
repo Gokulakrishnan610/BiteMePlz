@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../api';
-import { Users, Store, RefreshCw, DollarSign, ShoppingBag } from 'lucide-react';
+import { Users, Store, RefreshCw, DollarSign, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { Line, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -69,6 +70,7 @@ interface DashboardPageProps {
 }
 
 const DashboardPage: React.FC<DashboardPageProps> = ({ setMaintenanceMode }) => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -299,7 +301,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setMaintenanceMode }) => 
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-2xl font-bold">Real-time Admin Dashboard</h1>
+            <div className="flex items-center mb-4">
+          <button
+            onClick={() => navigate('/')}
+            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 mr-2"
+            title="Go back"
+          >
+            <ArrowLeft size={20} className="text-gray-700 dark:text-gray-300" />
+          </button>
+          <h1 className="text-2xl font-bold">Real-time Admin Dashboard</h1>
+        </div>
             <p className="text-[var(--secondary-text)] mt-2">
               Monitor system performance and user activity
             </p>

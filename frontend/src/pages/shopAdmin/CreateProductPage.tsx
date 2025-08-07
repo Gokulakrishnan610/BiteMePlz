@@ -63,15 +63,14 @@ const CreateProductPage: React.FC = () => {
         shop_id: user.shop
       };
       
-      console.log('Creating product with data:', createData);
+
       
       const response = await api.post('/api/products/', createData);
       
       toast.success('Product created successfully');
       navigate('/shop-admin/products');
     } catch (error: any) {
-      console.error('Error creating product:', error); // Log the full error object for debugging
-      console.log(error);
+      console.error('Error creating product:', error);
       
       // Handle specific error cases
       if (error.response?.status === 400) {

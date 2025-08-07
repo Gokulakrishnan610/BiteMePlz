@@ -64,7 +64,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete }) => {
                 index <= currentLetter ? "opacity-100" : "opacity-0"
               } ${
                 recGrowing
-                  ? "text-[8rem] md:text-[12rem] lg:text-[15rem] scale-125"
+                  ? "text-[10rem] md:text-[14rem] lg:text-[18rem] scale-125"
                   : "text-6xl md:text-7xl lg:text-8xl scale-100"
               } ${showWhiteTransition ? "text-[#6a1b9a]" : "text-white"}`}
               style={{
@@ -81,4 +81,4 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete }) => {
   );
 };
 
-export default LoadingScreen; 
+export default LoadingScreen;

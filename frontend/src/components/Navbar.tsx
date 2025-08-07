@@ -1,4 +1,4 @@
-    "use client"
+"use client"
 
     import { useState } from "react"
     import { Link, useNavigate } from "react-router-dom"
@@ -33,7 +33,7 @@ const HoveredLink = ({ children, href, ...rest }: HoveredLinkProps) => {
     export default function Navbar({ className }: NavbarProps) {
     const [active, setActive] = useState<string | null>(null)
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-    const { logout } = useAuth()
+    const { user, logout } = useAuth()
     const navigate = useNavigate()
 
     const handleLogout = () => {
@@ -48,7 +48,7 @@ const HoveredLink = ({ children, href, ...rest }: HoveredLinkProps) => {
             className={`fixed top-4 sm:top-6 md:top-8 lg:top-8 xl:top-10 inset-x-0 max-w-xs sm:max-w-sm md:max-w-2xl lg:max-w-6xl xl:max-w-7xl mx-auto z-50 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 hidden md:block ${className || ""}`}
             onMouseLeave={() => setActive(null)}
         >
-            <div className="relative rounded-full border border-gray-200 dark:border-white/[0.2] bg-white/90 dark:bg-black/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-between px-4 sm:px-6 lg:px-8 xl:px-10 py-1.5 sm:py-2 lg:py-2 xl:py-2.5">
+            <div className="relative rounded-full border border-gray-200 dark:border-white/[0.2] bg-white/90 dark:bg-white/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-between px-4 sm:px-6 lg:px-8 xl:px-10 py-1.5 sm:py-2 lg:py-2 xl:py-2.5">
             {/* Logo Section */}
             <div className="flex items-center flex-shrink-0">
                 <Link to="/" className="flex items-center">
@@ -65,16 +65,22 @@ const HoveredLink = ({ children, href, ...rest }: HoveredLinkProps) => {
 
             {/* Account Dropdown - Right Side */}
             <div className="flex items-center">
-                <div onMouseEnter={() => setActive("Account")} className="relative">
-                <p className="cursor-pointer text-black hover:text-purple-600 dark:text-white dark:hover:text-purple-400 transition-colors duration-200 text-sm sm:text-base lg:text-base font-medium">
-                    Settings
-                </p>
+                <div className="relative">
+                <button
+                    onClick={() => setActive(active === "Account" ? null : "Account")}
+                    className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
+                >
+                   <MenuIcon size={20} className="text-gray-700 dark:text-gray-300" />
+                </button>
                 {active === "Account" && (
                     <div className="absolute top-[calc(100%_+_1.2rem)] right-0 pt-4 animate-in fade-in-0 slide-in-from-top-2 duration-200">
                     <div className="bg-white dark:bg-black backdrop-blur-sm rounded-2xl overflow-hidden border border-gray-200 dark:border-white/[0.2] shadow-xl min-w-[200px] lg:min-w-[250px] xl:min-w-[280px]">
                         <div className="p-4 lg:p-5">
                         <div className="flex flex-col space-y-3 lg:space-y-4 text-sm lg:text-base">
-                            <HoveredLink href="/profile">My Profile</HoveredLink>
+                            {user && (user.role === 'admin' || user.role === 'shopAdmin') && (
+                                <HoveredLink href={user.role === 'admin' ? '/admin' : '/shop-admin'}>Dashboard</HoveredLink>
+                            )}
+                            <HoveredLink href="/profile">Profile</HoveredLink>
                             <HoveredLink href="/orders">My Orders</HoveredLink>
                             <HoveredLink href="/cart">Shopping Cart</HoveredLink>
                             <button
@@ -94,8 +100,8 @@ const HoveredLink = ({ children, href, ...rest }: HoveredLinkProps) => {
         </div>
 
         {/* Mobile Navbar */}
-        <div className="fixed top-4 left-4 right-4 z-50 md:hidden">
-            <div className="bg-white/90 dark:bg-black/90 backdrop-blur-md rounded-full border border-gray-200 dark:border-white/[0.2] shadow-lg px-4 py-3 flex items-center justify-between">
+        <div className="fixed top-4 left-4 right-4 z-50 md:hidden" onMouseLeave={() => setActive(null)}>
+            <div className="bg-white/90 dark:bg-white/90 backdrop-blur-md rounded-full border border-gray-200 dark:border-white/[0.2] shadow-lg px-4 py-3 flex items-center justify-between">
             {/* Mobile Logo */}
             <Link to="/" className="flex items-center">
                 <img
@@ -113,21 +119,25 @@ const HoveredLink = ({ children, href, ...rest }: HoveredLinkProps) => {
                 {isMobileMenuOpen ? (
                 <X size={20} className="text-gray-700 dark:text-gray-300" />
                 ) : (
-                <MenuIcon size={20} className="text-gray-700 dark:text-gray-300" />
-                )}
+<MenuIcon size={20} className="text-gray-700 dark:text-gray-300" />                )}
             </button>
             </div>
 
             {/* Mobile Menu Dropdown */}
             {isMobileMenuOpen && (
-            <div className="mt-2 bg-white/95 dark:bg-black/95 backdrop-blur-md rounded-2xl border border-gray-200 dark:border-white/[0.2] shadow-xl p-4 max-h-[80vh] overflow-y-auto animate-in fade-in-0 slide-in-from-top-2 duration-300">
+            <div className="mt-2 bg-white/95 dark:bg-white  /95 backdrop-blur-md rounded-2xl border border-gray-200 dark:border-white/[0.2] shadow-xl p-4 max-h-[80vh] overflow-y-auto animate-in fade-in-0 slide-in-from-top-2 duration-300">
                 <div className="space-y-6">
                 {/* Account Section */}
                 <div>
                     <h3 className="font-semibold text-purple-600 mb-3 text-base">Settings</h3>
                     <div className="space-y-2 pl-4">
+                    {user && (user.role === 'admin' || user.role === 'shopAdmin') && (
+                        <div className="py-2">
+                            <HoveredLink href={user.role === 'admin' ? '/admin' : '/shop-admin'}>Dashboard</HoveredLink>
+                        </div>
+                    )}
                     <div className="py-2">
-                        <HoveredLink href="/profile">My Profile</HoveredLink>
+                        <HoveredLink href="/profile">Profile</HoveredLink>
                     </div>
                     <div className="py-2">
                         <HoveredLink href="/orders">My Orders</HoveredLink>

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useToast } from '../components/ToastContainer';
 
 export interface CartItem {
   product_id: string;
@@ -34,6 +35,7 @@ export const useCart = () => {
 };
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { showSuccess } = useToast();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
   // Initialize cart from localStorage
@@ -65,9 +67,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             : i
         )
       );
+      showSuccess('Cart Updated', `Updated quantity for ${item.name} in cart.`);
     } else {
       // Add new item
       setCartItems([...cartItems, item]);
+    showSuccess('Added to Cart', `${item.name} has been added to your cart.`);
     }
   };
 

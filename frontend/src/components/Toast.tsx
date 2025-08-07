@@ -62,27 +62,24 @@ const Toast: React.FC<ToastProps> = ({
     const baseStyles = "border-l-4 backdrop-blur-md";
     switch (type) {
       case 'success':
-        return `${baseStyles} bg-green-500/10 border-green-500 shadow-green-500/20`;
+        return `${baseStyles} bg-purple-500 border-purple-500 shadow-purple-500/20`;
       case 'error':
-        return `${baseStyles} bg-red-500/10 border-red-500 shadow-red-500/20`;
+        return `${baseStyles} bg-red-500 border-red-500 shadow-red-500/20`;
       case 'warning':
-        return `${baseStyles} bg-yellow-500/10 border-yellow-500 shadow-yellow-500/20`;
+        return `${baseStyles} bg-yellow-500 border-yellow-500 shadow-yellow-500/20`;
       case 'info':
-        return `${baseStyles} bg-blue-500/10 border-blue-500 shadow-blue-500/20`;
+        return `${baseStyles} bg-blue-500 border-blue-500 shadow-blue-500/20`;
       default:
-        return `${baseStyles} bg-gray-500/10 border-gray-500 shadow-gray-500/20`;
+        return `${baseStyles} bg-gray-500 border-gray-500 shadow-gray-500/20`;
     }
   };
 
   return (
     <div
       className={`
-        fixed top-4 right-4 z-50 max-w-sm w-full
+        fixed bottom-4 right-4 z-50 max-w-sm w-full rounded-xl
         transform transition-all duration-300 ease-in-out
-        ${isVisible && !isExiting 
-          ? 'translate-x-0 opacity-100 scale-100' 
-          : 'translate-x-full opacity-0 scale-95'
-        }
+        opacity-100 scale-100 translate-x-0
       `}
     >
       <div className={`
@@ -117,7 +114,7 @@ const Toast: React.FC<ToastProps> = ({
           <div className="mt-3 w-full bg-white/10 rounded-full h-1 overflow-hidden">
             <div 
               className={`h-full rounded-full transition-all ease-linear ${
-                type === 'success' ? 'bg-green-400' :
+                type === 'success' ? 'bg-purple-400' :
                 type === 'error' ? 'bg-red-400' :
                 type === 'warning' ? 'bg-yellow-400' :
                 'bg-blue-400'

@@ -1,23 +1,18 @@
-"use client"
+import React from "react";
+import Lottie from "lottie-react";
+import HeartAnimation from './heart.json'
+import Heart2Animation from './heart2.json'
 
-import type React from "react"
-import { Heart } from "lucide-react"
 
-const Footer: React.FC = () => {
-  return (
-    <footer className="bg-white border-t border-gray-200 mt-auto py-6">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-center items-center">
-          <div className="flex items-center space-x-2">
-            <span className="text-gray-500 text-sm">Made with</span>
-            <Heart size={14} className="text-red-500 animate-pulse" />
-            <span className="text-gray-500 text-sm">by</span>
-            <span className="text-purple-600 font-medium">DEVS Developers</span>
-          </div>
+const Footer = () => {
+    return (
+        <footer className="bg-white py-6 w-full border-0">
+            <div className="flex flex-col items-center justify-center w-full h-20 relative">
+            <div className="font-medium text-foreground/70 flex items-center -space-x-4">Made with <Lottie animationData={HeartAnimation} loop={true} className="w-14 p-0 m-0" /> by Devs Rec</div>
+            {/* <Lottie animationData={Heart2Animation} loop={true} className="absolute w-14 -top-20t-1/2 -translate-x-1/2"/>  */}
         </div>
-      </div>
-    </footer>
-  )
+        </footer>
+    )
 }
 
 export default Footer
