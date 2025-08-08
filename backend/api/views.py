@@ -184,7 +184,95 @@ class UserViewSet(viewsets.ModelViewSet):
         try:
             email = request.data.get('email')
             if not email:
-                return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({
+                    'message': 'Order created successfully',
+                    'order': convert_uuids_to_str_recursive(order_data)
+                }, status=status.HTTP_201_CREATED)
+            elif payment_method == 'razorpay':
+                import razorpay
+                from django.conf import settings
+                
+                client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+                
+                razorpay_order = client.order.create({
+                    'amount': int(total_price * 100),
+                    'currency': 'INR',
+                    'receipt': f'order_{uuid.uuid4().hex[:8]}',
+                    'payment_capture': 1
+                })
+
+                
+                order_data = self.get_serializer(order).data
+                order_data['_id'] = str(order_data['id'])
+                
+                return Response({
+                    'message': 'Order created successfully',
+                    'order': convert_uuids_to_str_recursive(order_data),
+                    'razorpay_order_id': razorpay_order['id'],
+                    'razorpayKeyId': settings.RAZORPAY_KEY_ID
+                }, status=status.HTTP_201_CREATED)
+            else:
+                return Response({'error': 'Invalid payment method'}, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['put'])
+
+    def pay(self, request, pk=None):
+        """Handle payment for an order"""
+        try:
+            order = self.get_object()
+            
+            if order.is_paid:
+                return Response({'error': 'Order already paid'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            payment_id = request.data.get('paymentId')
+            razorpay_order_id = request.data.get('razorpayOrderId')
+            signature = request.data.get('signature')
+            
+            if not all([payment_id, razorpay_order_id, signature]):
+                return Response({'error': 'Payment ID, Razorpay Order ID, and Signature are required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            import razorpay
+            from django.conf import settings
+            
+            client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+            
+            try:
+                client.utility.verify_payment_signature({
+                    'razorpay_order_id': razorpay_order_id,
+                    'razorpay_payment_id': payment_id,
+                    'razorpay_signature': signature
+                })
+            except Exception as e:
+                return Response({'error': f'Payment verification failed: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Update order status
+            order.is_paid = True
+            order.paid_at = timezone.now()
+            order.payment_result = {
+                'method': 'razorpay',
+                'status': 'success',
+                'payment_id': payment_id,
+                'razorpay_order_id': razorpay_order_id,
+                'signature': signature
+            }
+            order.status = 'paid'
+            order.save()
+            
+            # Create transaction
+            Transaction.objects.create(
+                user=order.user,
+                shop=order.shop,
+                order=order,
+                amount=order.total_price,
+                type='payment',
+                payment_method='razorpay',
+                description=f'Payment for order {order.order_id}'
+            )
+            
+            return Response({'message': 'Payment successful', 'order': convert_uuids_to_str_recursive(self.get_serializer(order).data)}, status=status.HTTP_200_OK)
             
             try:
                 user = User.objects.get(email=email)
@@ -471,7 +559,8 @@ class ShopViewSet(viewsets.ModelViewSet):
         
         return shop
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['put'])
+ 
     def toggle_open(self, request, pk=None):
         shop = self.get_object()
         shop.is_open = not shop.is_open
@@ -998,7 +1087,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         
         return order
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['put'])
     def verify(self, request, pk=None):
         order = self.get_object()
         
@@ -1026,7 +1115,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         
         return Response(OrderSerializer(order).data)
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['put'])
     def pay(self, request, pk=None):
         order = self.get_object()
         

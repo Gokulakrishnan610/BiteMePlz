@@ -28,6 +28,11 @@ router.register(r'upload', FileUploadViewSet, basename='upload')
 # Ensure the multi-shop endpoint is properly registered
 # The DefaultRouter will automatically register the multi_shop action as /api/orders/multi-shop/
 
+urlpatterns = router.urls
+urlpatterns += [
+    path('orders/<uuid:pk>/pay/', OrderViewSet.as_view({'put': 'pay'}), name='order-pay'),
+]
+
 class RegisterView(APIView):
     permission_classes = [AllowAny]
     

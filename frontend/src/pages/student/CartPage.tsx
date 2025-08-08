@@ -291,7 +291,7 @@ const CartPage: React.FC = () => {
               clearInterval(timer);
             }
 
-            await api.put(`/orders/${orderId}/pay`, {
+            await api.put(`/api/orders/${orderId}/pay/`, {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_signature: response.razorpay_signature,
