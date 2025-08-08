@@ -6,12 +6,12 @@ from decouple import config
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY')
+SECRET_KEY = 'django-insecure-your-secret-key-here'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 # Application definition
 INSTALLED_APPS = [
@@ -188,15 +188,19 @@ SIMPLE_JWT = {
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 
-# Email settings
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
-EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = config('EMAIL_HOST_USER')
+# Email settings - read from environment (use your noreply account creds)
+from decouple import config as _config  # reuse decouple under a local alias to avoid clashes
+
+EMAIL_BACKEND = _config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = _config('EMAIL_HOST', default='smtp.gmail.com')
+EMAIL_PORT = _config('EMAIL_PORT', cast=int, default=587)
+EMAIL_USE_TLS = _config('EMAIL_USE_TLS', cast=bool, default=True)
+EMAIL_USE_SSL = _config('EMAIL_USE_SSL', cast=bool, default=False)
+EMAIL_HOST_USER = _config('EMAIL_HOST_USER', default='')  # e.g. noreply@yourdomain.com
+EMAIL_HOST_PASSWORD = _config('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = _config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER or 'noreply@localhost')
+SERVER_EMAIL = _config('SERVER_EMAIL', default=DEFAULT_FROM_EMAIL)
 
 # Razorpay settings
-RAZORPAY_KEY_ID = config('RAZORPAY_KEY_ID', default='rzp_test_RVKFS8WX756Anx')
-RAZORPAY_KEY_SECRET = config('RAZORPAY_KEY_SECRET', default='kpUZ6zd9t5q7VRM2c76xnqdo')
+RAZORPAY_KEY_ID = config('RAZORPAY_KEY_ID')
+RAZORPAY_KEY_SECRET = config('RAZORPAY_KEY_SECRET')

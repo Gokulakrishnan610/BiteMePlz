@@ -20,7 +20,9 @@ interface OrderItem {
 
 interface Order {
   _id: string;
+  id?: string;
   createdAt: string;
+  created_at?: string;
   total_price: number;
   is_paid: boolean;
   is_verified: boolean;
@@ -37,7 +39,7 @@ interface Order {
   };
 }
 
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// All requests should go through the shared axios client `api` which is preconfigured
 
 function parseLocalDateTime(dateString: string | Date) {
   if (!dateString) return null;
@@ -70,20 +72,20 @@ const OrderDetailsPage: React.FC = () => {
         order.status !== 'expired'
       ) {
         try {
-          const expiryRes = await api.get(`${baseURL}/api/orders/check-expiry/${order._id}`);
+          const expiryRes = await api.get(`/api/orders/check-expiry/${order._id}/`);
           if (expiryRes.data.balance !== undefined) {
             await refreshBalance();
           } else {
             await refreshBalance();
           }
-          const { data } = await api.get(`${baseURL}/api/orders/${id}`);
+          const { data } = await api.get(`/api/orders/${id}/`);
           setOrder(data);
           if (data.status === 'expired') {
             toast.success('Order expired. Amount refunded to wallet.');
           }
         } catch (error: any) {
           if (error?.response?.status !== 404) {
-            console.error('Failed to check order expiry:', error);
+            // silent fail for background expiry check
           }
         }
       }
@@ -95,8 +97,14 @@ const OrderDetailsPage: React.FC = () => {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const { data } = await api.get(`/orders/${id}/`);
-        setOrder(data);
+        const { data } = await api.get(`/api/orders/${id}/`);
+        // Normalize fields to satisfy UI expectations
+        const normalized: Order = {
+          ...data,
+          _id: (data._id || data.id)?.toString?.() || '',
+          createdAt: data.createdAt || data.created_at || data.created_at?.toString?.() || '',
+        };
+        setOrder(normalized);
         setLoading(false);
       } catch (err) {
         setError('Failed to load order details');
@@ -140,7 +148,7 @@ const OrderDetailsPage: React.FC = () => {
     }
     try {
       setDeleting(true);
-      await api.delete(`/orders/${order._id}`);
+      await api.delete(`/api/orders/${(order._id || order.id)}/`);
       toast.success('Order deleted successfully');
       navigate('/orders');
     } catch (error: any) {
@@ -233,7 +241,7 @@ const OrderDetailsPage: React.FC = () => {
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle className="text-2xl font-bold text-gray-900 mb-4">
-                        Order #{order._id.slice(-8)}
+                        {`Order #${((order._id || order.id || '').toString()).slice(-8)}`}
                       </CardTitle>
                       <div className="flex flex-wrap gap-2 mb-4">
                         <Badge
@@ -274,7 +282,7 @@ const OrderDetailsPage: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2 text-sm text-gray-600">
-                    <p>Placed on {new Date(order.createdAt).toLocaleString()}</p>
+                    <p>Placed on {new Date(order.createdAt || (order as any).created_at).toLocaleString()}</p>
                     {order.payment_result?.razorpay_payment_id && (
                       <p>Payment ID: {order.payment_result.razorpay_payment_id}</p>
                     )}

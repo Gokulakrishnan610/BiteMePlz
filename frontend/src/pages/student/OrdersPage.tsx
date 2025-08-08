@@ -4,7 +4,8 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import api from "../../api"
-import { Package, AlertCircle, CreditCard, Trash2, ArrowLeft, Clock, CheckCircle, XCircle } from "lucide-react"
+import { Package, AlertCircle, Trash2, ArrowLeft, Clock, CheckCircle, XCircle } from "lucide-react"
+import QRCode from "react-qr-code"
 import toast from "react-hot-toast"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Badge } from "../../components/ui/badge"
@@ -25,6 +26,9 @@ interface Order {
     image: string
     price: number
   }>
+  qr_code?: string
+  qr_valid_until?: string
+  payment_result?: any
 }
 
 const OrdersPage: React.FC = () => {
@@ -32,7 +36,7 @@ const OrdersPage: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [processingOrder, setProcessingOrder] = useState<string | null>(null)
+  // cleaned up unused processing/payment states
 
   useEffect(() => {
     fetchOrders()
@@ -49,70 +53,14 @@ const OrdersPage: React.FC = () => {
     }
   }
 
-  const handlePayment = async (order_id: string, amount: number) => {
-    try {
-      setProcessingOrder(order_id)
-
-      const { data } = await api.post(`/orders/${order_id}/pay`)
-
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_RVKFS8WX756Anx",
-        amount: amount * 100,
-        currency: "INR",
-        name: "Campus Kiosk",
-        description: "Payment for your order",
-        order_id: data.razorpayorder_id,
-        handler: async (response: any) => {
-          try {
-            await api.put(`/orders/${order_id}/pay`, {
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_signature: response.razorpay_signature,
-            })
-
-            await fetchOrders()
-            toast.success("Payment successful")
-          } catch (error: any) {
-            toast.error(error.response?.data?.message || "Payment verification failed")
-          }
-        },
-        modal: {
-          ondismiss: () => {
-            setProcessingOrder(null)
-          },
-        },
-        theme: {
-          color: "#6a1b9a",
-        },
-      }
-      const razorpay = new (window as any).Razorpay(options)
-      razorpay.open()
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to initiate payment")
-      setProcessingOrder(null)
-    }
-  }
-
-  const handleCancel = async (order_id: string) => {
-    try {
-      setProcessingOrder(order_id)
-
-      await api.put(`/orders/${order_id}/cancel`)
-      await fetchOrders()
-      toast.success("Order cancelled successfully")
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to cancel order")
-    } finally {
-      setProcessingOrder(null)
-    }
-  }
+  // removed old Razorpay continue-payment/cancel handlers (handled during checkout)
 
   const handleDelete = async (order_id: string) => {
     if (!window.confirm("Are you sure you want to delete this order?")) {
       return
     }
     try {
-      await api.delete(`/orders/${order_id}`)
+      await api.delete(`/api/orders/${order_id}/`)
       toast.success("Order deleted successfully")
       setOrders(orders.filter((order) => order._id !== order_id))
     } catch (error: any) {
@@ -120,7 +68,7 @@ const OrdersPage: React.FC = () => {
     }
   }
 
-  const getStatusBadge = (status: string, isVerified: boolean) => {
+  const getStatusBadge = (status: string, isVerified: boolean, isPaid?: boolean) => {
     switch (status) {
       case "completed":
         return (
@@ -137,6 +85,14 @@ const OrdersPage: React.FC = () => {
           </Badge>
         )
       default:
+        if (isPaid && !isVerified) {
+          return (
+            <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">
+              <Clock size={12} className="mr-1" />
+              Awaiting Verification
+            </Badge>
+          )
+        }
         return (
           <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">
             <Clock size={12} className="mr-1" />
@@ -270,7 +226,7 @@ const OrdersPage: React.FC = () => {
                     <div className="text-right">
                       <p className="text-white font-bold text-xl">₹{order.total_price}</p>
                       <div className="flex gap-2 mt-2 justify-end">
-                        {getStatusBadge(order.status, order.is_verified)}
+                        {getStatusBadge(order.status, order.is_verified, order.is_paid)}
                         {order.is_verified && (
                           <Badge className="bg-green-600 hover:bg-green-700 text-white">
                             <CheckCircle size={12} className="mr-1" />
@@ -305,48 +261,23 @@ const OrdersPage: React.FC = () => {
                     ))}
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
-                    {order.status === "pending" && (
-                      <>
-                        <Button
-                          onClick={() => handlePayment(order._id, order.total_price)}
-                          disabled={processingOrder === order._id}
-                          className="bg-purple-600 hover:bg-purple-700 text-white flex-1"
-                        >
-                          {processingOrder === order._id ? (
-                            <div className="flex items-center justify-center">
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                              Processing...
-                            </div>
-                          ) : (
-                            <>
-                              <CreditCard size={16} className="mr-2" />
-                              Continue Payment
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          onClick={() => handleCancel(order._id)}
-                          disabled={processingOrder === order._id}
-                          variant="outline"
-                          className="border-red-200 text-red-600 hover:bg-red-50 flex-1 bg-transparent"
-                        >
-                          {processingOrder === order._id ? "Processing..." : "Cancel Order"}
-                        </Button>
-                      </>
-                    )}
+                  {/* Inline QR display for paid, unverified, active orders */}
+                  {order.is_paid && !order.is_verified && order.status !== "expired" && order.qr_code && (
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
+                      <h4 className="font-semibold text-gray-900 mb-2">Verification QR</h4>
+                      <div className="bg-white p-4 rounded-lg border flex justify-center">
+                        <QRCode value={order.qr_code} size={160} />
+                      </div>
+                      {order.qr_valid_until && (
+                        <p className="text-xs text-gray-500 mt-2 text-center">
+                          Valid until {new Date(order.qr_valid_until).toLocaleString("en-IN")}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
-                    {order.status === "completed" && !order.is_verified && (
-                      <Link to={`/order/${order._id}`} className="flex-1">
-                        <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white">
-                          <Package size={16} className="mr-2" />
-                          View QR Code
-                        </Button>
-                      </Link>
-                    )}
-
-                    {order.status === "completed" && order.is_verified && (
+                  {/* Link to details when verified */}
+                  {order.status === "completed" && order.is_verified && (
                       <Link to={`/order/${order._id}`} className="flex-1">
                         <Button
                           variant="outline"
@@ -368,7 +299,6 @@ const OrdersPage: React.FC = () => {
                         Delete Order
                       </Button>
                     )}
-                  </div>
                 </CardContent>
               </Card>
             ))}

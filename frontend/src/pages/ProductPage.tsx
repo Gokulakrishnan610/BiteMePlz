@@ -53,9 +53,9 @@ const ProductPage: React.FC = () => {
           try {
             const shopResponse = await api.get(`/api/shops/${data.shop}/`)
             setShop(shopResponse.data)
-          } catch (shopError) {
-            console.error("Failed to fetch shop details:", shopError)
-          }
+      } catch (shopError) {
+        // silent fail, product page continues without shop details
+      }
         }
 
         setLoading(false)

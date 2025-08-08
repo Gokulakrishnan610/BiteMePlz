@@ -19,6 +19,7 @@ from .serializers import (
     ShopSerializer, ProductSerializer, OrderSerializer, TransactionSerializer,
     ShopLogSerializer, StudentAnalyticsSerializer
 )
+from .utils import convert_uuids_to_str_recursive
 
 class UUIDEncoder(DjangoJSONEncoder):
     def default(self, obj):
@@ -217,91 +218,7 @@ class UserViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=True, methods=['put'])
 
-    def pay(self, request, pk=None):
-        """Handle payment for an order"""
-        try:
-            order = self.get_object()
-            
-            if order.is_paid:
-                return Response({'error': 'Order already paid'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            payment_id = request.data.get('paymentId')
-            razorpay_order_id = request.data.get('razorpayOrderId')
-            signature = request.data.get('signature')
-            
-            if not all([payment_id, razorpay_order_id, signature]):
-                return Response({'error': 'Payment ID, Razorpay Order ID, and Signature are required'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            import razorpay
-            from django.conf import settings
-            
-            client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-            
-            try:
-                client.utility.verify_payment_signature({
-                    'razorpay_order_id': razorpay_order_id,
-                    'razorpay_payment_id': payment_id,
-                    'razorpay_signature': signature
-                })
-            except Exception as e:
-                return Response({'error': f'Payment verification failed: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Update order status
-            order.is_paid = True
-            order.paid_at = timezone.now()
-            order.payment_result = {
-                'method': 'razorpay',
-                'status': 'success',
-                'payment_id': payment_id,
-                'razorpay_order_id': razorpay_order_id,
-                'signature': signature
-            }
-            order.status = 'paid'
-            order.save()
-            
-            # Create transaction
-            Transaction.objects.create(
-                user=order.user,
-                shop=order.shop,
-                order=order,
-                amount=order.total_price,
-                type='payment',
-                payment_method='razorpay',
-                description=f'Payment for order {order.order_id}'
-            )
-            
-            return Response({'message': 'Payment successful', 'order': convert_uuids_to_str_recursive(self.get_serializer(order).data)}, status=status.HTTP_200_OK)
-            
-            try:
-                user = User.objects.get(email=email)
-            except User.DoesNotExist:
-                return Response({'error': 'No user found with this email address'}, status=status.HTTP_404_NOT_FOUND)
-            
-            # Generate OTP
-            import random
-            otp = str(random.randint(100000, 999999))
-            otp_data = {
-                'otp': otp,
-                'created_at': timezone.now().isoformat(),
-                'expires_at': (timezone.now() + timedelta(minutes=10)).isoformat()
-            }
-            
-            user.password_reset_otp = otp_data
-            user.save()
-            
-            # Send OTP email (you can implement this later)
-            # For now, just return success
-            return Response({
-                'message': 'Password reset OTP sent to your email',
-                'userId': str(user.id)
-            }, status=status.HTTP_200_OK)
-            
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
     def verify_reset_otp(self, request):
@@ -560,7 +477,6 @@ class ShopViewSet(viewsets.ModelViewSet):
         return shop
 
     @action(detail=True, methods=['put'])
- 
     def toggle_open(self, request, pk=None):
         shop = self.get_object()
         shop.is_open = not shop.is_open
@@ -797,7 +713,8 @@ class OrderViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(data=request.data, context={'request': request})
             serializer.is_valid(raise_exception=True)
             try:
-                order = serializer.save()
+                # Use perform_create to ensure QR code and related fields are generated
+                order = self.perform_create(serializer)
             except Exception as e:
                 import traceback
                 traceback.print_exc()
@@ -852,6 +769,13 @@ class OrderViewSet(viewsets.ModelViewSet):
                     'payment_capture': 1
                 })
 
+                # Store the Razorpay order ID in the order's payment_result
+                order.payment_result = {
+                    'method': 'razorpay',
+                    'status': 'pending',
+                    'razorpay_order_id': razorpay_order['id']
+                }
+                order.save()
                 
                 order_data = self.get_serializer(order).data
                 order_data['_id'] = str(order_data['id'])
@@ -1064,24 +988,16 @@ class OrderViewSet(viewsets.ModelViewSet):
             expires_at=expires_at
         )
         
-        # Generate QR code
+        # Generate QR payload as JSON string for frontend to render and scanners to parse
         qr_data = {
             'order_id': order.order_id,
             'user_id': str(order.user.id),
             'shop_id': str(order.shop.id),
             'total_price': str(order.total_price)
         }
-        
-        qr = qrcode.QRCode(version=1, box_size=10, border=5)
-        qr.add_data(str(qr_data))
-        qr.make(fit=True)
-        
-        img = qr.make_image(fill_color="black", back_color="white")
-        buffer = io.BytesIO()
-        img.save(buffer, format='PNG')
-        qr_code = base64.b64encode(buffer.getvalue()).decode()
-        
-        order.qr_code = qr_code
+
+        # Store JSON string so the frontend can render a QR from this payload directly
+        order.qr_code = json.dumps(qr_data)
         order.qr_valid_until = expires_at
         order.save()
         
@@ -1117,12 +1033,27 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['put'])
     def pay(self, request, pk=None):
+        print(f"[DEBUG] Pay method called for order ID: {pk}")
+        print(f"[DEBUG] Request data: {request.data}")
+        print(f"[DEBUG] Request headers: {request.headers}")
+        print(f"[DEBUG] User authenticated: {request.user.is_authenticated}")
+        print(f"[DEBUG] User: {request.user}")
+        
+        # Check authentication
+        if not request.user.is_authenticated:
+            print("[DEBUG] User not authenticated!")
+            return Response({'error': 'Authentication credentials were not provided'}, status=status.HTTP_401_UNAUTHORIZED)
+        
         order = self.get_object()
+        print(f"[DEBUG] Found order: {order.order_id}, is_paid: {order.is_paid}")
         
         if order.is_paid:
             return Response({'error': 'Order already paid'}, status=status.HTTP_400_BAD_REQUEST)
         
         payment_method = request.data.get('payment_method', 'balance')
+        # If Razorpay identifiers are present, force razorpay flow regardless of provided/default method
+        if request.data.get('razorpay_payment_id') or request.data.get('razorpay_order_id'):
+            payment_method = 'razorpay'
         
         with transaction.atomic():
             if payment_method == 'balance':
@@ -1155,8 +1086,20 @@ class OrderViewSet(viewsets.ModelViewSet):
                 razorpay_order_id = request.data.get('razorpay_order_id')
                 razorpay_signature = request.data.get('razorpay_signature')
                 
+                print(f"[DEBUG] Razorpay payment verification - Payment ID: {razorpay_payment_id}, Order ID: {razorpay_order_id}")
+                print(f"[DEBUG] Signature length: {len(razorpay_signature) if razorpay_signature else 0}")
+                
                 if not all([razorpay_payment_id, razorpay_order_id, razorpay_signature]):
-                    return Response({'error': 'Missing Razorpay payment details'}, status=status.HTTP_400_BAD_REQUEST)
+                    missing_fields = []
+                    if not razorpay_payment_id:
+                        missing_fields.append('razorpay_payment_id')
+                    if not razorpay_order_id:
+                        missing_fields.append('razorpay_order_id')
+                    if not razorpay_signature:
+                        missing_fields.append('razorpay_signature')
+                    
+                    print(f"[DEBUG] Missing fields: {missing_fields}")
+                    return Response({'error': f'Missing Razorpay payment details: {missing_fields}'}, status=status.HTTP_400_BAD_REQUEST)
                 
                 # Import Razorpay if needed
                 import razorpay
@@ -1172,7 +1115,12 @@ class OrderViewSet(viewsets.ModelViewSet):
                         'razorpay_payment_id': razorpay_payment_id,
                         'razorpay_signature': razorpay_signature
                     }
+                    
+                    print(f"[DEBUG] Verifying signature with params: {params_dict}")
+                    print(f"[DEBUG] Using Razorpay keys - Key ID: {settings.RAZORPAY_KEY_ID}")
+                    
                     client.utility.verify_payment_signature(params_dict)
+                    print(f"[DEBUG] Signature verification successful")
                     
                     # Mark as paid
                     order.is_paid = True
@@ -1181,7 +1129,8 @@ class OrderViewSet(viewsets.ModelViewSet):
                         'method': 'razorpay',
                         'status': 'success',
                         'razorpay_payment_id': razorpay_payment_id,
-                        'razorpay_order_id': razorpay_order_id
+                        'razorpay_order_id': razorpay_order_id,
+                        'razorpay_signature': razorpay_signature
                     }
                     order.save()
                     
@@ -1195,10 +1144,46 @@ class OrderViewSet(viewsets.ModelViewSet):
                         payment_method='razorpay',
                         description=f'Razorpay payment for order {order.order_id}'
                     )
+                    
+                    print(f"[DEBUG] Payment processed successfully for order {order.order_id}")
+                    
+                    return Response({
+                        'message': 'Payment successful',
+                        'order': convert_uuids_to_str_recursive(self.get_serializer(order).data)
+                    }, status=status.HTTP_200_OK)
+                    
+                except razorpay.errors.SignatureVerificationError as e:
+                    print(f"[DEBUG] Signature verification failed: {str(e)}")
+                    return Response({'error': f'Payment signature verification failed: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+                except razorpay.errors.BadRequestError as e:
+                    print(f"[DEBUG] Razorpay bad request error: {str(e)}")
+                    return Response({'error': f'Invalid payment data: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+                except razorpay.errors.ServerError as e:
+                    print(f"[DEBUG] Razorpay server error: {str(e)}")
+                    return Response({'error': f'Razorpay server error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 except Exception as e:
+                    print(f"[DEBUG] Unexpected error during payment verification: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
                     return Response({'error': f'Payment verification failed: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
             
             return Response(OrderSerializer(order).data)
+
+    @action(detail=True, methods=['put'])
+    def cancel(self, request, pk=None):
+        """Cancel an order"""
+        order = self.get_object()
+        
+        if order.is_paid:
+            return Response({'error': 'Cannot cancel a paid order'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if order.status == 'cancelled':
+            return Response({'error': 'Order is already cancelled'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        order.status = 'cancelled'
+        order.save()
+        
+        return Response({'message': 'Order cancelled successfully'})
 
 
 class TransactionViewSet(viewsets.ModelViewSet):

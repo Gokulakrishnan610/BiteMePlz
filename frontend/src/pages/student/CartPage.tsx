@@ -53,7 +53,7 @@ function loadRazorpayScript() {
 }
 
 const CartPage: React.FC = () => {
-  const { cartItems, removeFromCart, updateQuantity, clearCart, getTotalPrice, getItemsByShop, addToCart } = useCart()
+  const { cartItems, removeFromCart, updateQuantity, clearCart, getTotalPrice, getItemsByShop } = useCart()
 
   // Safe getShopIds: never return [undefined]
   const getShopIds = () => {
@@ -70,7 +70,7 @@ const CartPage: React.FC = () => {
   const [showDisclaimer, setShowDisclaimer] = useState(false)
   const [showPaymentOptions, setShowPaymentOptions] = useState(false)
   const [remainingBalance, setRemainingBalance] = useState(0)
-  const [shopInfo, setshopInfo] = useState<any>(null)
+  // removed unused shopInfo state
   const [isLoading, setIsLoading] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<{ product: string; shop_id: string; name: string } | null>(null)
@@ -98,25 +98,12 @@ const CartPage: React.FC = () => {
 
   // Debug: Log all cart items and their IDs before payment
   useEffect(() => {
-    if (Array.isArray(cartItems)) {
-      cartItems.forEach((item: any) => {
-        console.log('[CART ITEM]', {
-          name: item?.name,
-          product_id: typeof item?.product_id === 'object' ? item.product_id.id : item?.product_id,
-          shop_id: typeof item?.shop_id === 'object' ? item.shop_id.id : item?.shop_id,
-          shop_name: item?.shop_name,
-        });
-      });
-    }
+    // no-op debug removed
   }, [cartItems]);
 
-  const isshopAcceptingOrders = () => {
-    return true
-  }
+  // removed unused isshopAcceptingOrders
 
-  const getTimeUntilClosure = () => {
-    return null
-  }
+  // removed unused getTimeUntilClosure
 
   const handleQuantityChange = (productId: string | { id: string }, shop_id: string | { id: string }, newQuantity: number) => {
     const pId = typeof productId === 'object' ? productId.id : productId;
@@ -194,7 +181,7 @@ const CartPage: React.FC = () => {
               paymentMethod: "balance",
             };
 
-      console.log("Sending order creation data:", requestData);
+    // debug removed
       const orderResponse = await api.post(endpoint, requestData);
       clearCart();
       toast.success("Payment successful! Your order has been placed.");
@@ -205,7 +192,7 @@ const CartPage: React.FC = () => {
         navigate(`/order/${orderResponse.data.order._id}`);
       }
     } catch (error: any) {
-      console.error("Balance payment error:", error);
+      // silent catch, user sees toast
       toast.error(error.response?.data?.message || error.message || "Payment failed");
       setPaymentInitiated(false);
     } finally {
@@ -215,7 +202,7 @@ const CartPage: React.FC = () => {
 
   const initiateRazorpayPayment = async () => {
     const shopIds = getShopIds();
-    console.log("[RZP] Button clicked. shopIds:", shopIds);
+    // debug removed
     toast("Razorpay payment initiated");
     // Filter out invalid cart items
     const validCartItems = cartItems.filter(
@@ -227,7 +214,7 @@ const CartPage: React.FC = () => {
     );
     if (validCartItems.length !== cartItems.length) {
       toast.error("Some cart items are invalid and will not be ordered. Please review your cart.");
-      console.warn("[RZP] Invalid cart items detected", cartItems, validCartItems);
+      // debug removed
       return;
     }
     // Before payment, check for missing product_id/shop_id
@@ -238,16 +225,16 @@ const CartPage: React.FC = () => {
     );
     if (hasInvalidCartItems) {
       toast.error('Your cart contains items with missing product or shop IDs. Please remove them and try again.');
-      console.error('[CartPage] Invalid cart items:', cartItems);
+      // debug removed
       return;
     }
     try {
       setIsLoading(true);
       setPaymentInitiated(true);
-      console.log("[RZP] Sending order creation request...");
+      // debug removed
       const endpoint = shopIds.length > 1 ? "/api/orders/multi-shop/" : "/api/orders/";
       // Always map validCartItems to required fields and ensure image is not blank
-      console.log("[RZP] cartItems before mapping:", validCartItems);
+      // debug removed
       const mappedOrderItems = validCartItems.map((item) => ({
         product_id: typeof item.product_id === 'object' && item.product_id !== null ? item.product_id.id : item.product_id,
         quantity: item.quantity,
@@ -255,7 +242,7 @@ const CartPage: React.FC = () => {
         shop_name: item.shop_name,
         image: item.image && item.image.trim() !== "" ? item.image : "https://via.placeholder.com/150", // fallback image
       }));
-      console.log("[RZP] mappedOrderItems:", mappedOrderItems);
+      // debug removed
       const requestData =
         shopIds.length > 1
           ? {
@@ -269,37 +256,50 @@ const CartPage: React.FC = () => {
               totalPrice: getTotalPrice(),
               paymentMethod: "razorpay",
             };
-      console.log("[RZP] requestData:", requestData);
+      // debug removed
       const orderResponse = await api.post(endpoint, requestData);
-      console.log("[RZP] orderResponse:", orderResponse);
 
       // Handle different response structures for single vs multi-shop orders
       const orderId = shopIds.length > 1 ? orderResponse.data.orders[0]._id : orderResponse.data.order._id;
       setCurrentorder_id(orderId);
       startPaymentTimer();
       const options = {
-        key: 'rzp_test_RVKFS8WX756Anx', // Hardcoded test key
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_RVKFS8WX756Anx',
         amount: getTotalPrice() * 100,
         currency: "INR",
         name: "Campus Kiosk",
         description: "Payment for your order",
         order_id: orderResponse.data.razorpay_order_id,
         handler: async (response: any) => {
-          console.log("[RZP] Payment handler called", response);
+          // debug removed
           try {
             if (timer) {
               clearInterval(timer);
             }
 
+            // Debug authentication
+            const token = localStorage.getItem('token');
+            
+            // Check if user is logged in
+            if (!token || !user) {
+              toast.error("Authentication required. Please log in again.");
+              return;
+            }
+
+            // debug removed
             await api.put(`/api/orders/${orderId}/pay/`, {
+              payment_method: 'razorpay',
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_signature: response.razorpay_signature,
             });
+            
+            // debug removed
             clearCart();
             toast.success("Payment successful! Your order has been placed.");
             navigate(`/order/${orderId}`);
           } catch (error: any) {
+            // silent catch, user sees toast
             toast.error(error.response?.data?.message || "Payment verification failed");
           } finally {
             setPaymentInitiated(false);
@@ -308,7 +308,7 @@ const CartPage: React.FC = () => {
         },
         modal: {
           ondismiss: async () => {
-            console.log("[RZP] Razorpay modal dismissed");
+            // debug removed
             if (timer) {
               clearInterval(timer);
             }
@@ -316,10 +316,10 @@ const CartPage: React.FC = () => {
 
             if (currentorder_id) {
               try {
-                await api.put(`/orders/${currentorder_id}/cancel`);
+                await api.put(`/api/orders/${currentorder_id}/cancel/`);
                 toast.error("Payment cancelled");
               } catch (error) {
-                console.error("Error cancelling order:", error);
+                // silent catch
               }
               setCurrentorder_id(null);
             }
@@ -334,16 +334,15 @@ const CartPage: React.FC = () => {
         },
       };
 
-      console.log("[RZP] Loading Razorpay script...");
+      // debug removed
       const loaded = await loadRazorpayScript();
       if (!loaded) {
         toast.error("Failed to load Razorpay SDK. Please try again.");
         setPaymentInitiated(false);
         setCurrentorder_id(null);
-        console.error("[RZP] Razorpay SDK failed to load");
         return;
       }
-      console.log("[RZP] Razorpay script loaded. Opening Razorpay window...");
+      // debug removed
       const razorpay = new window.Razorpay(options);
       razorpay.open();
       toast("Razorpay window opened (if no popup, check for blockers)");
@@ -354,23 +353,19 @@ const CartPage: React.FC = () => {
             razorpay.close();
             if (currentorder_id) {
               api
-                .put(`/orders/${currentorder_id}/cancel`)
+                .put(`/api/orders/${currentorder_id}/cancel/`)
                 .then(() => {
                   toast.error("Payment time expired");
                   setPaymentInitiated(false);
                   setCurrentorder_id(null);
                 })
-                .catch((error) => {
-                  console.error("Error cancelling order:", error);
-                });
+                .catch(() => {});
             }
           }
         },
         3 * 60 * 1000
       );
     } catch (error: any) {
-      console.error("[RZP] Payment error:", error);
-      console.log("[RZP] Full error object:", error);
       setPaymentInitiated(false);
       setCurrentorder_id(null);
       toast.error(error.response?.data?.message || error.message || "Payment failed");
@@ -388,12 +383,7 @@ const CartPage: React.FC = () => {
     toast.success("Cart cleared successfully")
   }
 
-  const handleDeleteItem = (product: string | { id: string }, shop_id: string | { id: string }, name: string) => {
-    const pId = typeof product === 'object' ? product.id : product;
-    const sId = typeof shop_id === 'object' ? shop_id.id : shop_id;
-    setItemToDelete({ product: pId, shop_id: sId, name });
-    setShowDeleteConfirm(true)
-  }
+  // removed unused handleDeleteItem – using direct delete instead
 
   const confirmDelete = () => {
     if (itemToDelete) {

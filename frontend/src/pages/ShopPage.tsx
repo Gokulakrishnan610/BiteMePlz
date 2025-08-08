@@ -108,14 +108,12 @@ const ShopPage: React.FC = () => {
       toast.error("Product is out of stock")
       return
     }
-    console.log("Product object before adding to cart:", product);
-    console.log("Shop object before adding to cart:", shop);
-    if (!product.id || !shop!.id) {
-      console.error("[ShopPage] Product ID or Shop ID is undefined.", product, shop);
+    // debug removed
+    if (!product.id || !shop?.id) {
       toast.error("Product or shop information is incomplete. Please try again.");
       return;
     }
-    console.log("[ShopPage] Adding to cart - product:", product, "shop:", shop);
+    // debug removed
     addToCart({
       id: product.id + "-" + Date.now(), // Generate a unique ID for the cart item
       product_id: product.id,
@@ -124,10 +122,10 @@ const ShopPage: React.FC = () => {
       price: product.price,
       quantity: 1,
       stock: product.stock,
-      shop_id: shop!.id,
-      shop_name: shop!.name,
+      shop_id: shop.id,
+      shop_name: shop.name,
     });
-    console.log("[ShopPage] Added to cart - product_id:", product.id, "shop_id:", shop!.id);
+    // debug removed
     toast.success("Added to cart");
   }
 
