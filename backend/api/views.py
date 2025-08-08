@@ -476,8 +476,8 @@ class ShopViewSet(viewsets.ModelViewSet):
         
         return shop
 
-    @action(detail=True, methods=['put'])
-    def toggle_open(self, request, pk=None):
+    @action(detail=True, methods=['put', 'post'])
+    def toggle(self, request, pk=None):
         shop = self.get_object()
         shop.is_open = not shop.is_open
         shop.save()
