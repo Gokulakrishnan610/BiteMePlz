@@ -176,23 +176,25 @@ const ProfilePage: React.FC = () => {
 
       {/* UberEats-style Header */}
       <div className="bg-white shadow-sm border-b pt-20 md:pt-32">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => navigate(-1)}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-              >
-                <ArrowLeft size={20} className="text-gray-600" />
-              </button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-                <p className="text-gray-500 text-sm">Manage your profile and preferences</p>
-              </div>
-            </div>
-          </div>
-        </div>
+  <div className="px-52 py-6">
+    <div className="flex items-center mb-8">
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center text-purple-600 hover:text-purple-700 transition-colors mr-4"
+      >
+        <ArrowLeft size={20} className="mr-2" />
+        <span className="font-medium">Back</span>
+      </button>
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+        <p className="text-gray-500 text-sm">
+          Manage your profile and preferences
+        </p>
       </div>
+    </div>
+  </div>
+</div>
+
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
