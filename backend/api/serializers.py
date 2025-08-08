@@ -3,12 +3,17 @@ from django.contrib.auth import authenticate
 import uuid
 from django.utils import timezone
 from decimal import Decimal
+
+from .utils import convert_uuids_to_str_recursive
 from datetime import timedelta
 
 from .models import User, Shop, Product, Order, Transaction, ShopLog, StudentAnalytics
 
 
 class UserSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
+    shop = serializers.CharField(read_only=True)
+    
     class Meta:
         model = User
         fields = ['id', 'name', 'roll_no', 'email', 'role', 'shop', 'is_verified', 'balance', 'created_at', 'updated_at']
@@ -55,6 +60,7 @@ class UserLoginSerializer(serializers.Serializer):
 
 
 class ShopSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
     shop_admin = UserSerializer(read_only=True)
     shop_admin_id = serializers.UUIDField(write_only=True)
     image = serializers.CharField(required=False, allow_blank=True)
@@ -68,6 +74,7 @@ class ShopSerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
     shop = ShopSerializer(read_only=True)
     shop_id = serializers.UUIDField(write_only=True)
 
@@ -90,6 +97,7 @@ class OrderItemSerializer(serializers.Serializer):
     stock = serializers.IntegerField(required=False)
 
 class OrderSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
     user = UserSerializer(read_only=True)
     shop = ShopSerializer(read_only=True)
     user_id = serializers.UUIDField(write_only=True, required=False)
@@ -156,7 +164,9 @@ class OrderSerializer(serializers.ModelSerializer):
         validated_data['expires_at'] = timezone.now() + timedelta(minutes=10) # Example: order expires in 10 minutes
 
         # Create the order
-        order = Order.objects.create(order_items=order_items_data, **validated_data)
+        # Ensure order_items_data is fully JSON serializable before saving
+        serializable_order_items_data = convert_uuids_to_str_recursive(order_items_data)
+        order = Order.objects.create(order_items=serializable_order_items_data, **validated_data)
         print(f"OrderSerializer create - order created: {order}")
 
         # Process order items and calculate total price
@@ -202,6 +212,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class TransactionSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
     user = UserSerializer(read_only=True)
     shop = ShopSerializer(read_only=True)
     order = OrderSerializer(read_only=True)
@@ -217,6 +228,7 @@ class TransactionSerializer(serializers.ModelSerializer):
 
 
 class ShopLogSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
     shop = ShopSerializer(read_only=True)
     performed_by = UserSerializer(read_only=True)
     shop_id = serializers.UUIDField(write_only=True)
@@ -230,6 +242,7 @@ class ShopLogSerializer(serializers.ModelSerializer):
 
 
 class StudentAnalyticsSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
     user = UserSerializer(read_only=True)
     shop = ShopSerializer(read_only=True)
     user_id = serializers.UUIDField(write_only=True)

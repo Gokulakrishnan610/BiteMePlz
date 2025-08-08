@@ -1,6 +1,24 @@
 from django.core.mail import send_mail
+import json
+import uuid
 from django.conf import settings
 from django.utils.html import strip_tags
+
+
+class UUIDEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, uuid.UUID):
+            return str(obj)
+        return json.JSONEncoder.default(self, obj)
+
+def convert_uuids_to_str_recursive(data):
+    if isinstance(data, dict):
+        return {k: convert_uuids_to_str_recursive(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [convert_uuids_to_str_recursive(elem) for elem in data]
+    elif isinstance(data, uuid.UUID):
+        return str(data)
+    return data
 
 def send_otp_email(email, otp, user_name):
     """Send OTP email to user"""
@@ -156,4 +174,4 @@ def send_resend_otp_email(email, otp, user_name):
         return True
     except Exception as e:
         print(f"Error sending email: {e}")
-        return False 
+        return False

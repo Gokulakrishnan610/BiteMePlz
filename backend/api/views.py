@@ -11,12 +11,20 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db import transaction
 from django.core.files.storage import default_storage
+from django.core.serializers.json import DjangoJSONEncoder
+import json
 from .models import User, Shop, Product, Order, Transaction, ShopLog, StudentAnalytics
 from .serializers import (
     UserSerializer, UserRegistrationSerializer, UserLoginSerializer,
     ShopSerializer, ProductSerializer, OrderSerializer, TransactionSerializer,
     ShopLogSerializer, StudentAnalyticsSerializer
 )
+
+class UUIDEncoder(DjangoJSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, uuid.UUID):
+            return str(obj)
+        return super().default(obj)
 
 
 class FileUploadViewSet(viewsets.ViewSet):
@@ -89,14 +97,25 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def profile(self, request):
-        return Response(UserSerializer(request.user).data)
+        serializer = UserSerializer(request.user)
+        data = serializer.data
+        # Ensure UUIDs are converted to strings
+        data['id'] = str(request.user.id)
+        if request.user.shop:
+            data['shop'] = str(request.user.shop.id)
+        return Response(data)
 
     @action(detail=False, methods=['put'])
     def update_profile(self, request):
         serializer = UserSerializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            data = serializer.data
+            # Ensure UUIDs are converted to strings
+            data['id'] = str(request.user.id)
+            if request.user.shop:
+                data['shop'] = str(request.user.shop.id)
+            return Response(data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['get'])
@@ -765,8 +784,26 @@ class OrderViewSet(viewsets.ModelViewSet):
         """Get orders for the current user"""
         try:
             orders = Order.objects.filter(user=request.user).order_by('-created_at')
-            serializer = self.get_serializer(orders, many=True)
-            return Response(serializer.data)
+            # Convert orders to dictionaries with proper UUID handling
+            orders_data = []
+            for order in orders:
+                order_dict = {
+                    '_id': str(order.id),
+                    'order_id': order.order_id,
+                    'total_price': float(order.total_price),
+                    'is_paid': order.is_paid,
+                    'is_verified': order.is_verified,
+                    'status': order.status,
+                    'order_items': order.order_items,
+                    'qr_code': order.qr_code,
+                    'qr_valid_until': order.qr_valid_until.isoformat() if order.qr_valid_until else None,
+                    'balance_amount': float(order.balance_amount),
+                    'final_validity': order.final_validity.isoformat() if order.final_validity else None,
+                    'createdAt': order.created_at.isoformat() if order.created_at else None,
+                    'payment_result': order.payment_result,
+                }
+                orders_data.append(order_dict)
+            return Response(orders_data)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -779,8 +816,26 @@ class OrderViewSet(viewsets.ModelViewSet):
         
         try:
             orders = Order.objects.filter(shop=shop_id)
-            serializer = self.get_serializer(orders, many=True)
-            return Response(serializer.data)
+            # Convert orders to dictionaries with proper UUID handling
+            orders_data = []
+            for order in orders:
+                order_dict = {
+                    '_id': str(order.id),
+                    'order_id': order.order_id,
+                    'user': {
+                        'name': order.user.name,
+                        'email': order.user.email,
+                        'rollNo': order.user.roll_no,
+                    },
+                    'total_price': float(order.total_price),
+                    'is_paid': order.is_paid,
+                    'is_verified': order.is_verified,
+                    'status': order.status,
+                    'order_items': order.order_items,
+                    'createdAt': order.created_at.isoformat() if order.created_at else None,
+                }
+                orders_data.append(order_dict)
+            return Response(orders_data)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             

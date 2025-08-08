@@ -41,6 +41,21 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.name} ({self.email})"
+    
+    def to_dict(self):
+        """Convert model instance to dictionary with string UUIDs"""
+        return {
+            'id': str(self.id),
+            'name': self.name,
+            'roll_no': self.roll_no,
+            'email': self.email,
+            'role': self.role,
+            'shop': str(self.shop.id) if self.shop else None,
+            'is_verified': self.is_verified,
+            'balance': float(self.balance),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
 
 
 class Shop(models.Model):
@@ -66,6 +81,24 @@ class Shop(models.Model):
 
     def __str__(self):
         return self.name
+    
+    def to_dict(self):
+        """Convert model instance to dictionary with string UUIDs"""
+        return {
+            'id': str(self.id),
+            'name': self.name,
+            'description': self.description,
+            'location': self.location,
+            'image': self.image.url if self.image else None,
+            'shop_admin': str(self.shop_admin.id),
+            'is_active': self.is_active,
+            'is_open': self.is_open,
+            'final_validity_time': self.final_validity_time.isoformat() if self.final_validity_time else None,
+            'next_opening_time': self.next_opening_time.isoformat() if self.next_opening_time else None,
+            'qr_validity_minutes': self.qr_validity_minutes,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
 
 
 class Product(models.Model):
@@ -95,6 +128,22 @@ class Product(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.shop.name}"
+    
+    def to_dict(self):
+        """Convert model instance to dictionary with string UUIDs"""
+        return {
+            'id': str(self.id),
+            'name': self.name,
+            'description': self.description,
+            'price': float(self.price),
+            'stock': self.stock,
+            'image': self.image,
+            'category': self.category,
+            'shop': str(self.shop.id),
+            'is_available': self.is_available,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
 
 
 class Order(models.Model):
@@ -130,6 +179,31 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order {self.order_id} - {self.user.name}"
+    
+    def to_dict(self):
+        """Convert model instance to dictionary with string UUIDs"""
+        return {
+            'id': str(self.id),
+            'order_id': self.order_id,
+            'user': str(self.user.id),
+            'shop': str(self.shop.id),
+            'order_items': self.order_items,
+            'total_price': float(self.total_price),
+            'payment_result': self.payment_result,
+            'is_paid': self.is_paid,
+            'paid_at': self.paid_at.isoformat() if self.paid_at else None,
+            'qr_code': self.qr_code,
+            'qr_valid_until': self.qr_valid_until.isoformat() if self.qr_valid_until else None,
+            'balance_amount': float(self.balance_amount),
+            'held_amount': float(self.held_amount),
+            'final_validity': self.final_validity.isoformat() if self.final_validity else None,
+            'is_verified': self.is_verified,
+            'verified_at': self.verified_at.isoformat() if self.verified_at else None,
+            'status': self.status,
+            'expires_at': self.expires_at.isoformat() if self.expires_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
 
 
 class Transaction(models.Model):
