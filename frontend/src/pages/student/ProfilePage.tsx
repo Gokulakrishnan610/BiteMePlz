@@ -4,8 +4,8 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import api from "../../api"
-import { User, AlertCircle, ArrowLeft, Mail, Shield, Wallet, Calendar, Settings, CreditCard, MapPin, Clock, Star } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
+import { User, AlertCircle, ArrowLeft, Mail, Shield, Wallet, Calendar, CreditCard, MapPin, Clock } from "lucide-react"
+import { Card, CardContent } from "../../components/ui/card"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import Navbar from "../../components/Navbar"
@@ -28,10 +28,8 @@ const ProfilePage: React.FC = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        // Add a small delay to prevent flash loading for fast connections
         const timeoutPromise = new Promise(resolve => setTimeout(resolve, 300))
         const profilePromise = api.get("/api/users/profile")
-        
         const [_, { data }] = await Promise.all([timeoutPromise, profilePromise])
         setProfile(data)
         setLoading(false)
@@ -45,12 +43,9 @@ const ProfilePage: React.FC = () => {
     fetchProfile()
   }, [])
 
-  // Skeleton loader component
   const SkeletonLoader = () => (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-
-      {/* Header skeleton */}
       <div className="bg-white shadow-sm border-b pt-20 md:pt-32">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex items-center space-x-4">
@@ -62,90 +57,10 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
       </div>
-
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Profile section skeleton */}
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border overflow-hidden">
-            <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-8">
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-white/20 rounded-full animate-pulse"></div>
-                <div className="flex-1">
-                  <div className="w-32 h-6 bg-white/20 rounded animate-pulse mb-2"></div>
-                  <div className="w-48 h-4 bg-white/20 rounded animate-pulse mb-2"></div>
-                  <div className="w-20 h-6 bg-white/20 rounded animate-pulse"></div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  {[1, 2].map((i) => (
-                    <div key={i} className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl">
-                      <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
-                      <div className="flex-1">
-                        <div className="w-20 h-3 bg-gray-200 rounded animate-pulse mb-2"></div>
-                        <div className="w-32 h-4 bg-gray-200 rounded animate-pulse"></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="space-y-4">
-                  {[1, 2].map((i) => (
-                    <div key={i} className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl">
-                      <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
-                      <div className="flex-1">
-                        <div className="w-24 h-3 bg-gray-200 rounded animate-pulse mb-2"></div>
-                        <div className="w-28 h-4 bg-gray-200 rounded animate-pulse"></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Wallet skeleton */}
-          <div className="bg-white rounded-2xl shadow-sm border">
-            <div className="p-6">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="w-12 h-12 bg-gray-200 rounded-full animate-pulse"></div>
-                <div>
-                  <div className="w-32 h-5 bg-gray-200 rounded animate-pulse mb-2"></div>
-                  <div className="w-40 h-3 bg-gray-200 rounded animate-pulse"></div>
-                </div>
-              </div>
-              <div className="bg-gray-200 rounded-xl p-6 animate-pulse">
-                <div className="text-center">
-                  <div className="w-24 h-3 bg-gray-300 rounded animate-pulse mb-2 mx-auto"></div>
-                  <div className="w-32 h-8 bg-gray-300 rounded animate-pulse mb-2 mx-auto"></div>
-                  <div className="w-48 h-3 bg-gray-300 rounded animate-pulse mx-auto"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick actions skeleton */}
-          <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm border">
-            <div className="p-6">
-              <div className="w-32 h-5 bg-gray-200 rounded animate-pulse mb-4"></div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-16 bg-gray-100 rounded-lg animate-pulse"></div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   )
 
-  if (loading) {
-    return <SkeletonLoader />
-  }
+  if (loading) return <SkeletonLoader />
 
   if (error || !profile) {
     return (
@@ -174,22 +89,21 @@ const ProfilePage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      {/* UberEats-style Header */}
-      <div className="bg-white shadow-sm border-b pt-20 md:pt-32">
-  <div className="px-52 py-6">
-    <div className="flex items-center mb-8">
+      {/* Header */}
+      <div className="bg-white shadow-sm  pt-20 md:pt-32">
+  <div className="px-4 sm:px-8 md:px-20 lg:px-52 py-5">
+    <div className="flex flex-row items-center gap-3 mb-8 flex-wrap">
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center text-purple-600 hover:text-purple-700 transition-colors mr-4"
+        className="flex items-center text-purple-600 hover:text-purple-700 transition-colors"
       >
         <ArrowLeft size={20} className="mr-2" />
         <span className="font-medium">Back</span>
       </button>
+
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-500 text-sm">
-          Manage your profile and preferences
-        </p>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Settings</h1>
+        <p className="text-gray-500 text-sm">Manage your profile and preferences</p>
       </div>
     </div>
   </div>
@@ -198,27 +112,26 @@ const ProfilePage: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
           {/* Profile Section */}
           <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border overflow-hidden">
             <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-8">
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-3 sm:space-y-0">
+                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm mx-auto sm:mx-0">
                   <User size={28} className="text-white" />
                 </div>
-                <div>
+                <div className="text-center sm:text-left">
                   <h2 className="text-2xl font-bold text-white">{profile.name}</h2>
                   <p className="text-purple-100">{profile.email}</p>
                   <div className="mt-2">
-                    <Badge className="bg-white/20 text-white border-0 capitalize">
-                      {profile.role}
-                    </Badge>
+                    <Badge className="bg-white/20 text-white border-0 capitalize">{profile.role}</Badge>
                   </div>
                 </div>
               </div>
             </div>
             
             <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl">
                     <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
@@ -229,7 +142,7 @@ const ProfilePage: React.FC = () => {
                       <p className="font-medium text-gray-900">{profile.email}</p>
                     </div>
                   </div>
-                  
+
                   {profile.createdAt && (
                     <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl">
                       <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
@@ -248,7 +161,7 @@ const ProfilePage: React.FC = () => {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="space-y-4">
                   <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl">
                     <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
@@ -276,16 +189,14 @@ const ProfilePage: React.FC = () => {
 
           {/* Wallet Balance Card */}
           <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                    <Wallet size={24} className="text-purple-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Wallet Balance</h3>
-                    <p className="text-gray-500 text-sm">Available for payments</p>
-                  </div>
+            <div className="p-6 text-center sm:text-left">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start sm:space-x-3 mb-4">
+                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                  <Wallet size={24} className="text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Wallet Balance</h3>
+                  <p className="text-gray-500 text-sm">Available for payments</p>
                 </div>
               </div>
               
@@ -303,7 +214,7 @@ const ProfilePage: React.FC = () => {
           <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm border">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Button
                   onClick={() => navigate("/orders")}
                   variant="outline"
@@ -335,10 +246,10 @@ const ProfilePage: React.FC = () => {
                     </div>
                   </div>
                 </Button>
-                
+
                 <Button
                   onClick={() => navigate("/")}
-                  className="h-16 bg-purple-600 hover:bg-purple-700 text-white transition-all duration-200 md:col-span-2"
+                  className="h-16 bg-purple-600 hover:bg-purple-700 text-white transition-all duration-200 sm:col-span-2"
                 >
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
@@ -353,6 +264,7 @@ const ProfilePage: React.FC = () => {
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>
