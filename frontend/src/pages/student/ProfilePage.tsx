@@ -5,6 +5,22 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import api from "../../api"
 import { User, AlertCircle, ArrowLeft, Mail, Shield, Wallet, Calendar, CreditCard, MapPin, Clock } from "lucide-react"
+// Charts
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts"
 import { Card, CardContent } from "../../components/ui/card"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
@@ -19,11 +35,63 @@ interface UserProfile {
   createdAt?: string
 }
 
+// Minimal order shape for spending analytics
+interface MinimalOrderForSpending {
+  _id: string
+  createdAt?: string
+  created_at?: string
+  total_price?: number
+  totalPrice?: number
+  is_paid?: boolean
+  isPaid?: boolean
+  shop?: { name?: string }
+  order_items?: Array<{
+    name?: string
+    price?: number | string
+    quantity?: number
+    shop_name?: string
+  }>
+}
+
+interface SpendingDetails {
+  totalSpent: number
+  ordersCount: number
+  averageOrderValue: number
+  last7Days: number
+  last30Days: number
+  byShop: Array<{ shop: string; amount: number }>
+  topItems: Array<{ item: string; qty: number; amount: number }>
+  perDay?: Array<{ date: string; amount: number; orders: number }>
+  medianOrderValue?: number
+  minOrderValue?: number
+  maxOrderValue?: number
+  hourOfDay?: Array<{ hour: number; count: number; amount: number }>
+  dayOfWeek?: Array<{ day: number; count: number; amount: number }>
+}
+
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [spending, setSpending] = useState<{ total: number; thisMonth: number }>({ total: 0, thisMonth: 0 })
+  const [spendingDetails, setSpendingDetails] = useState<SpendingDetails>({
+    totalSpent: 0,
+    ordersCount: 0,
+    averageOrderValue: 0,
+    last7Days: 0,
+    last30Days: 0,
+    byShop: [],
+    topItems: [],
+    perDay: [],
+    medianOrderValue: 0,
+    minOrderValue: 0,
+    maxOrderValue: 0,
+    hourOfDay: [],
+    dayOfWeek: [],
+  })
+  const [paidOrders, setPaidOrders] = useState<MinimalOrderForSpending[]>([])
+  const [timeFilter, setTimeFilter] = useState<'all' | 'lastMonth'>('all')
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -42,6 +110,176 @@ const ProfilePage: React.FC = () => {
 
     fetchProfile()
   }, [])
+
+  useEffect(() => {
+    const fetchSpending = async () => {
+      try {
+        const { data } = await api.get<MinimalOrderForSpending[]>("/api/orders/myorders")
+        const orders = Array.isArray(data) ? data : []
+
+        const getPaid = (o: MinimalOrderForSpending) => Boolean(o.is_paid ?? o.isPaid)
+        const getAmount = (o: MinimalOrderForSpending) => Number(o.total_price ?? o.totalPrice ?? 0)
+        const getDate = (o: MinimalOrderForSpending) => new Date((o.createdAt ?? o.created_at) as string)
+
+        const paid = orders.filter(getPaid)
+        setPaidOrders(paid)
+
+        // Also compute headline summary (Total + This Month) independent of filter
+        const totalAll = paid.reduce((sum, o) => sum + getAmount(o), 0)
+        const now = new Date()
+        const currentMonth = now.getMonth()
+        const currentYear = now.getFullYear()
+        const thisMonthTotal = paid.reduce((sum, o) => {
+          const d = getDate(o)
+          if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+            return sum + getAmount(o)
+          }
+          return sum
+        }, 0)
+        setSpending({ total: totalAll, thisMonth: thisMonthTotal })
+      } catch (err) {
+        console.warn("Failed to load spending analytics", err)
+        setPaidOrders([])
+        setSpending({ total: 0, thisMonth: 0 })
+        setSpendingDetails({
+          totalSpent: 0,
+          ordersCount: 0,
+          averageOrderValue: 0,
+          last7Days: 0,
+          last30Days: 0,
+          byShop: [],
+          topItems: [],
+          perDay: [],
+          medianOrderValue: 0,
+          minOrderValue: 0,
+          maxOrderValue: 0,
+          hourOfDay: [],
+          dayOfWeek: [],
+        })
+      }
+    }
+
+    fetchSpending()
+  }, [])
+
+  // Recompute analytics whenever the filter or source orders change
+  useEffect(() => {
+    const computeAnalytics = (source: MinimalOrderForSpending[], range: 'all' | 'lastMonth') => {
+      const getAmount = (o: MinimalOrderForSpending) => Number(o.total_price ?? o.totalPrice ?? 0)
+      const getDate = (o: MinimalOrderForSpending) => new Date((o.createdAt ?? o.created_at) as string)
+
+      let filtered = source
+      if (range === 'lastMonth') {
+        const now = new Date()
+        const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+        const lastOfPrevMonth = new Date(firstOfThisMonth.getTime() - 1)
+        const firstOfPrevMonth = new Date(lastOfPrevMonth.getFullYear(), lastOfPrevMonth.getMonth(), 1)
+        filtered = source.filter((o) => {
+          const d = getDate(o)
+          return d >= firstOfPrevMonth && d <= lastOfPrevMonth
+        })
+      }
+
+      const total = filtered.reduce((sum, o) => sum + getAmount(o), 0)
+      const ordersCount = filtered.length
+      const averageOrderValue = ordersCount > 0 ? total / ordersCount : 0
+
+      const now = new Date()
+      const msInDay = 24 * 60 * 60 * 1000
+      const last7DaysThreshold = new Date(now.getTime() - 7 * msInDay)
+      const last30DaysThreshold = new Date(now.getTime() - 30 * msInDay)
+
+      const last7Days = filtered
+        .filter((o) => getDate(o) >= last7DaysThreshold)
+        .reduce((sum, o) => sum + getAmount(o), 0)
+
+      const last30Days = filtered
+        .filter((o) => getDate(o) >= last30DaysThreshold)
+        .reduce((sum, o) => sum + getAmount(o), 0)
+
+      const byShopMap = new Map<string, number>()
+      for (const o of filtered) {
+        const shopName = o.shop?.name || o.order_items?.[0]?.shop_name || "Unknown"
+        const prev = byShopMap.get(shopName) || 0
+        byShopMap.set(shopName, prev + getAmount(o))
+      }
+      const byShop = Array.from(byShopMap.entries())
+        .map(([shop, amount]) => ({ shop, amount }))
+        .sort((a, b) => b.amount - a.amount)
+
+      const itemAgg = new Map<string, { qty: number; amount: number }>()
+      const values: number[] = []
+      for (const o of filtered) {
+        const amount = getAmount(o)
+        values.push(amount)
+        for (const it of o.order_items || []) {
+          const key = it.name || "Unknown"
+          const priceNum = Number(it.price ?? 0)
+          const qtyNum = Number(it.quantity ?? 0)
+          const prev = itemAgg.get(key) || { qty: 0, amount: 0 }
+          itemAgg.set(key, { qty: prev.qty + qtyNum, amount: prev.amount + priceNum * qtyNum })
+        }
+      }
+      const topItems = Array.from(itemAgg.entries())
+        .map(([item, v]) => ({ item, qty: v.qty, amount: v.amount }))
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 5)
+
+      const perDayMap = new Map<string, { amount: number; orders: number }>()
+      const cutoff30 = new Date(now.getTime() - 30 * msInDay)
+      for (const o of filtered) {
+        const d = getDate(o)
+        if (isNaN(d.getTime()) || d < cutoff30) continue
+        const key = d.toISOString().slice(0, 10)
+        const prev = perDayMap.get(key) || { amount: 0, orders: 0 }
+        perDayMap.set(key, { amount: prev.amount + getAmount(o), orders: prev.orders + 1 })
+      }
+      const perDay = Array.from(perDayMap.entries())
+        .map(([date, v]) => ({ date, amount: v.amount, orders: v.orders }))
+        .sort((a, b) => (a.date < b.date ? 1 : -1))
+
+      // Median / min / max order value
+      let medianOrderValue = 0, minOrderValue = 0, maxOrderValue = 0
+      if (values.length > 0) {
+        const sorted = [...values].sort((a, b) => a - b)
+        const mid = Math.floor(sorted.length / 2)
+        medianOrderValue = sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
+        minOrderValue = sorted[0]
+        maxOrderValue = sorted[sorted.length - 1]
+      }
+
+      // Hour of day and Day of week distributions
+      const hourAgg = Array.from({ length: 24 }, (_, h) => ({ hour: h, count: 0, amount: 0 }))
+      const dayAgg = Array.from({ length: 7 }, (_, d) => ({ day: d, count: 0, amount: 0 }))
+      for (const o of filtered) {
+        const d = getDate(o)
+        const h = d.getHours()
+        const wd = d.getDay()
+        hourAgg[h].count += 1
+        hourAgg[h].amount += getAmount(o)
+        dayAgg[wd].count += 1
+        dayAgg[wd].amount += getAmount(o)
+      }
+
+      setSpendingDetails({
+        totalSpent: total,
+        ordersCount,
+        averageOrderValue,
+        last7Days,
+        last30Days,
+        byShop,
+        topItems,
+        perDay,
+        medianOrderValue,
+        minOrderValue,
+        maxOrderValue,
+        hourOfDay: hourAgg,
+        dayOfWeek: dayAgg,
+      })
+    }
+
+    computeAnalytics(paidOrders, timeFilter)
+  }, [paidOrders, timeFilter])
 
   const SkeletonLoader = () => (
     <div className="min-h-screen bg-gray-50">
@@ -206,6 +444,145 @@ const ProfilePage: React.FC = () => {
                   <p className="text-4xl font-bold">₹{profile.balance || 0}</p>
                   <p className="text-purple-100 text-sm mt-2">Use for quick payments</p>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Spending Summary Card */}
+          <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Spending</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl bg-gray-50">
+                  <p className="text-sm text-gray-500 mb-1">Total Spent</p>
+                  <p className="text-2xl font-bold text-gray-900">₹{spending.total.toFixed(2)}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-gray-50">
+                  <p className="text-sm text-gray-500 mb-1">This Month</p>
+                  <p className="text-2xl font-bold text-gray-900">₹{spending.thisMonth.toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Detailed Spending Card */}
+          <div className="bg-white rounded-2xl shadow-sm border overflow-hidden lg:col-span-3">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Detailed Spending</h3>
+              <div className="mb-4">
+                <label className="text-sm text-gray-600 mr-2">Time range:</label>
+                <select
+                  value={timeFilter}
+                  onChange={(e) => setTimeFilter(e.target.value as 'all' | 'lastMonth')}
+                  className="border rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="all">All time</option>
+                  <option value="lastMonth">Last month</option>
+                </select>
+              </div>
+              {/* Key stats */}
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
+                <div className="p-4 rounded-xl bg-gray-50">
+                  <p className="text-sm text-gray-500 mb-1">Orders</p>
+                  <p className="text-2xl font-bold text-gray-900">{spendingDetails.ordersCount}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-gray-50">
+                  <p className="text-sm text-gray-500 mb-1">Avg Order</p>
+                  <p className="text-2xl font-bold text-gray-900">₹{spendingDetails.averageOrderValue.toFixed(2)}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-gray-50">
+                  <p className="text-sm text-gray-500 mb-1">Median</p>
+                  <p className="text-2xl font-bold text-gray-900">₹{(spendingDetails.medianOrderValue || 0).toFixed(2)}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-gray-50">
+                  <p className="text-sm text-gray-500 mb-1">Max</p>
+                  <p className="text-2xl font-bold text-gray-900">₹{(spendingDetails.maxOrderValue || 0).toFixed(2)}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-gray-50">
+                  <p className="text-sm text-gray-500 mb-1">Last 7 Days</p>
+                  <p className="text-2xl font-bold text-gray-900">₹{spendingDetails.last7Days.toFixed(2)}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-gray-50">
+                  <p className="text-sm text-gray-500 mb-1">Last 30 Days</p>
+                  <p className="text-2xl font-bold text-gray-900">₹{spendingDetails.last30Days.toFixed(2)}</p>
+                </div>
+              </div>
+
+              {/* Charts */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div className="h-64 border rounded-xl p-3">
+                  <p className="text-sm text-gray-600 mb-2">Daily spend (last 30 days)</p>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={[...(spendingDetails.perDay || [])].slice().reverse()}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" tickFormatter={(d) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} />
+                      <YAxis />
+                      <Tooltip formatter={(v: any) => [`₹${Number(v).toFixed(2)}`, 'Amount']} labelFormatter={(d) => new Date(d).toLocaleDateString()} />
+                      <Line type="monotone" dataKey="amount" stroke="#7c3aed" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="h-64 border rounded-xl p-3">
+                  <p className="text-sm text-gray-600 mb-2">Spend by shop</p>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={spendingDetails.byShop.slice(0, 6)}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="shop" />
+                      <YAxis />
+                      <Tooltip formatter={(v: any) => [`₹${Number(v).toFixed(2)}`, 'Amount']} />
+                      <Bar dataKey="amount" fill="#7c3aed" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="h-64 border rounded-xl p-3">
+                  <p className="text-sm text-gray-600 mb-2">Top items share</p>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={spendingDetails.topItems} dataKey="amount" nameKey="item" outerRadius={80} label>
+                        {spendingDetails.topItems.map((_, idx) => (
+                          <Cell key={`cell-${idx}`} fill={["#7c3aed", "#6366f1", "#22c55e", "#f59e0b", "#ef4444"][idx % 5]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v: any, _n: any, e: any) => [`₹${Number(v).toFixed(2)}`, (e && e.payload && e.payload.item) || 'Item']} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="h-64 border rounded-xl p-3">
+                  <p className="text-sm text-gray-600 mb-2">Orders by hour of day</p>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={(spendingDetails.hourOfDay || []).map(h => ({ ...h, label: `${h.hour}:00` }))}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="label" />
+                      <YAxis />
+                      <Tooltip formatter={(v: any) => [Number(v).toFixed(0), 'Orders']} />
+                      <Bar dataKey="count" fill="#6366f1" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Per day (last 30 days) */}
+              <div className="mt-6">
+                <h4 className="text-md font-semibold text-gray-900 mb-2">Per day (last 30 days)</h4>
+                {spendingDetails.perDay && spendingDetails.perDay.length > 0 ? (
+                  <ul className="divide-y divide-gray-100 border rounded-xl">
+                    {spendingDetails.perDay.slice(0, 14).map((d) => (
+                      <li key={d.date} className="flex items-center justify-between p-3">
+                        <div className="text-gray-700">
+                          <p className="font-medium">{new Date(d.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>
+                          <p className="text-xs text-gray-500">Orders: {d.orders}</p>
+                        </div>
+                        <span className="font-medium text-gray-900">₹{d.amount.toFixed(2)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-500">No data yet</p>
+                )}
               </div>
             </div>
           </div>
