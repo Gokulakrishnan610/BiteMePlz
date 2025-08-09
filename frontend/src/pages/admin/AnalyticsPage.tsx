@@ -46,6 +46,27 @@ interface shop {
   name: string;
 }
 
+// Normalizers
+const toNumber = (v: any) => {
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const normalizeOrder = (o: any) => ({
+  ...o,
+  totalPrice: toNumber(o.totalPrice ?? o.total_price),
+  isPaid: o.isPaid ?? o.is_paid,
+  isVerified: o.isVerified ?? o.is_verified,
+  createdAt: o.createdAt ?? o.created_at,
+});
+
+const normalizeTransaction = (t: any) => ({
+  ...t,
+  amount: toNumber(t.amount),
+  paymentMethod: t.paymentMethod ?? t.payment_method ?? '',
+  createdAt: t.createdAt ?? t.created_at,
+});
+
 interface RealTimeAnalytics {
   totalRevenue: number;
   totalTransactions: number;
@@ -179,11 +200,13 @@ const AnalyticsPage: React.FC = () => {
             continue;
           }
           const { data } = await api.get(`/api/orders/shop/?shop_id=${shop.id}`);
-          allOrders.push(...data.map((order: any) => ({
-            ...order,
-            shop_id: shop.id,
-            shopName: shop.name
-          })));
+          allOrders.push(
+            ...data.map((order: any) => normalizeOrder({
+              ...order,
+              shop_id: shop.id,
+              shopName: shop.name,
+            }))
+          );
         } catch (error) {
           console.error(`Failed to fetch orders for shop ${shop.name}:`, error);
         }
@@ -207,19 +230,13 @@ const AnalyticsPage: React.FC = () => {
             continue;
           }
           const { data } = await api.get(`/api/transactions/shop/?shop_id=${shop.id}`);
-          if (data.transactions) {
-            allTransactions.push(...data.transactions.map((t: any) => ({
+          const list = (Array.isArray(data) ? data : data?.results || data?.transactions || [])
+            .map((t: any) => normalizeTransaction({
               ...t,
               shop_id: shop.id,
-              shopName: shop.name
-            })));
-          } else {
-            allTransactions.push(...data.map((t: any) => ({
-              ...t,
-              shop_id: shop.id,
-              shopName: shop.name
-            })));
-          }
+              shopName: shop.name,
+            }));
+          allTransactions.push(...list);
         } catch (error) {
           console.error(`Failed to fetch transactions for shop ${shop.name}:`, error);
         }
@@ -259,11 +276,11 @@ const AnalyticsPage: React.FC = () => {
   };
 
   const calculateRealTimeAnalytics = (orders: any[], transactions: any[]): RealTimeAnalytics => {
-    const paidOrders = orders.filter(order => order.isPaid);
-    const verifiedOrders = orders.filter(order => order.isVerified);
+    const paidOrders = orders.filter(order => !!order.isPaid);
+    const verifiedOrders = orders.filter(order => !!order.isVerified);
     const successfulTransactions = transactions.filter(t => t.status === 'success');
     
-    const totalRevenue = paidOrders.reduce((sum, order) => sum + order.totalPrice, 0);
+    const totalRevenue = paidOrders.reduce((sum, order) => sum + toNumber(order.totalPrice), 0);
     const totalTransactions = transactions.length;
     const averageOrderValue = paidOrders.length > 0 ? totalRevenue / paidOrders.length : 0;
     const successRate = orders.length > 0 ? (verifiedOrders.length / orders.length) * 100 : 0;
@@ -274,7 +291,7 @@ const AnalyticsPage: React.FC = () => {
       if (!acc[shopName]) {
         acc[shopName] = { revenue: 0, orders: 0 };
       }
-      acc[shopName].revenue += order.totalPrice;
+      acc[shopName].revenue += toNumber(order.totalPrice);
       acc[shopName].orders++;
       return acc;
     }, {});
@@ -282,9 +299,9 @@ const AnalyticsPage: React.FC = () => {
     const topshops = Object.entries(shopGroups)
       .map(([shopName, data]: [string, any]) => ({
         shopName,
-        revenue: data.revenue,
+        revenue: toNumber(data.revenue),
         orders: data.orders,
-        avgOrderValue: data.orders > 0 ? data.revenue / data.orders : 0
+        avgOrderValue: data.orders > 0 ? toNumber(data.revenue) / data.orders : 0,
       }))
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10);
@@ -297,13 +314,13 @@ const AnalyticsPage: React.FC = () => {
       });
       
       const hourRevenue = hourOrders
-        .filter(order => order.isPaid)
-        .reduce((sum, order) => sum + order.totalPrice, 0);
+        .filter(order => !!order.isPaid)
+        .reduce((sum, order) => sum + toNumber(order.totalPrice), 0);
       
       return {
         hour,
         orders: hourOrders.length,
-        revenue: hourRevenue
+        revenue: hourRevenue,
       };
     });
 
@@ -325,18 +342,18 @@ const AnalyticsPage: React.FC = () => {
       });
       
       const weekRevenue = weekOrders
-        .filter(order => order.isPaid)
-        .reduce((sum, order) => sum + order.totalPrice, 0);
+        .filter(order => !!order.isPaid)
+        .reduce((sum, order) => sum + toNumber(order.totalPrice), 0);
       
       const weekRefunds = weekTransactions
         .filter(t => t.type === 'refund')
-        .reduce((sum, t) => sum + t.amount, 0);
+        .reduce((sum, t) => sum + toNumber(t.amount), 0);
       
       return {
         week: `Week ${8 - i}`,
         orders: weekOrders.length,
         revenue: weekRevenue,
-        refunds: weekRefunds
+        refunds: weekRefunds,
       };
     }).reverse();
 
@@ -347,22 +364,22 @@ const AnalyticsPage: React.FC = () => {
         acc[method] = { count: 0, amount: 0 };
       }
       acc[method].count++;
-      acc[method].amount += t.amount;
+      acc[method].amount += toNumber(t.amount);
       return acc;
     }, {});
 
     const paymentMethodStats = Object.entries(paymentMethodGroups).map(([method, data]: [string, any]) => ({
       method,
       count: data.count,
-      amount: data.amount,
-      percentage: totalTransactions > 0 ? Math.round((data.count / totalTransactions) * 100) : 0
+      amount: toNumber(data.amount),
+      percentage: totalTransactions > 0 ? Math.round((data.count / totalTransactions) * 100) : 0,
     }));
 
     // Calculate customer segmentation (mock data based on order patterns)
     const customerSegmentation = [
       { segment: 'High Value', count: Math.floor(verifiedOrders.length * 0.2), revenue: totalRevenue * 0.6 },
       { segment: 'Regular', count: Math.floor(verifiedOrders.length * 0.5), revenue: totalRevenue * 0.3 },
-      { segment: 'New', count: Math.floor(verifiedOrders.length * 0.3), revenue: totalRevenue * 0.1 }
+      { segment: 'New', count: Math.floor(verifiedOrders.length * 0.3), revenue: totalRevenue * 0.1 },
     ];
 
     // Calculate conversion funnel
@@ -370,7 +387,7 @@ const AnalyticsPage: React.FC = () => {
       totalVisits: orders.length * 3, // Estimate visits
       ordersCreated: orders.length,
       ordersPaid: paidOrders.length,
-      ordersVerified: verifiedOrders.length
+      ordersVerified: verifiedOrders.length,
     };
 
     // Calculate daily stats for the selected period
@@ -390,14 +407,14 @@ const AnalyticsPage: React.FC = () => {
       });
       
       const dayRevenue = dayOrders
-        .filter(order => order.isPaid)
-        .reduce((sum, order) => sum + order.totalPrice, 0);
+        .filter(order => !!order.isPaid)
+        .reduce((sum, order) => sum + toNumber(order.totalPrice), 0);
       
       return {
         date: dateString,
         orders: dayOrders.length,
         revenue: dayRevenue,
-        transactions: dayTransactions.length
+        transactions: dayTransactions.length,
       };
     }).reverse();
 
@@ -407,15 +424,15 @@ const AnalyticsPage: React.FC = () => {
         acc[t.type] = { count: 0, amount: 0 };
       }
       acc[t.type].count++;
-      acc[t.type].amount += t.amount;
+      acc[t.type].amount += toNumber(t.amount);
       return acc;
     }, {});
 
     const transactionTypes = Object.entries(transactionTypeGroups).map(([type, data]: [string, any]) => ({
       type,
       count: data.count,
-      amount: data.amount,
-      percentage: totalTransactions > 0 ? Math.round((data.count / totalTransactions) * 100) : 0
+      amount: toNumber(data.amount),
+      percentage: totalTransactions > 0 ? Math.round((data.count / totalTransactions) * 100) : 0,
     }));
 
     return {
@@ -430,7 +447,7 @@ const AnalyticsPage: React.FC = () => {
       customerSegmentation,
       conversionFunnel,
       dailyStats,
-      transactionTypes
+      transactionTypes,
     };
   };
 

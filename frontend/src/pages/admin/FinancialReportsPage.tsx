@@ -26,6 +26,24 @@ interface FinancialData {
   averageOrderValue: number;
 }
 
+// Helpers to normalize API responses
+const toNumber = (v: any): number => {
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const normalizeTransaction = (t: any) => ({
+  ...t,
+  amount: toNumber(t?.amount),
+  paymentMethod: t?.paymentMethod ?? t?.payment_method ?? '',
+  createdAt: t?.createdAt ?? t?.created_at,
+});
+
+const extractTransactions = (data: any) => {
+  const list = Array.isArray(data) ? data : data?.results || data?.transactions || [];
+  return (list as any[]).map(normalizeTransaction);
+};
+
 const FinancialReportsPage: React.FC = () => {
   const [shops, setshops] = useState<shop[]>([]);
   const [financialData, setFinancialData] = useState<FinancialData[]>([]);
@@ -79,18 +97,18 @@ const FinancialReportsPage: React.FC = () => {
           const params = new URLSearchParams({
             startDate: dateRange.startDate,
             endDate: dateRange.endDate,
-            shop_id: shop.id
+            shop_id: shop.id,
           });
 
           const { data } = await api.get(`/api/transactions/shop/?${params}`);
-          const transactions = data.transactions || data || [];
+          const transactions = extractTransactions(data);
 
           // Calculate financial metrics
           const payments = transactions.filter((t: any) => t.type === 'payment' && t.status === 'success');
           const refunds = transactions.filter((t: any) => t.type === 'refund');
           
-          const shopRevenue = payments.reduce((sum: number, t: any) => sum + t.amount, 0);
-          const shopRefunds = refunds.reduce((sum: number, t: any) => sum + t.amount, 0);
+          const shopRevenue = payments.reduce((sum: number, t: any) => sum + toNumber(t.amount), 0);
+          const shopRefunds = refunds.reduce((sum: number, t: any) => sum + toNumber(t.amount), 0);
           const netRevenue = shopRevenue - shopRefunds;
           const averageOrderValue = payments.length > 0 ? shopRevenue / payments.length : 0;
 
@@ -101,7 +119,7 @@ const FinancialReportsPage: React.FC = () => {
             successfulPayments: payments.length,
             refunds: shopRefunds,
             netRevenue,
-            averageOrderValue
+            averageOrderValue,
           });
 
           totalRevenue += shopRevenue;
@@ -117,7 +135,7 @@ const FinancialReportsPage: React.FC = () => {
         totalRevenue,
         totalRefunds,
         netRevenue: totalRevenue - totalRefunds,
-        totalTransactions
+        totalTransactions,
       });
       setLoading(false);
     } catch (error) {

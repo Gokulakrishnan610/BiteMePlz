@@ -47,6 +47,45 @@ interface shop {
   name: string;
 }
 
+// Normalize API responses for transactions
+const toNumber = (v: any): number => {
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const normalizeTransaction = (t: any): Transaction => ({
+  _id: t._id || t.id,
+  type: t.type,
+  amount: toNumber(t.amount),
+  status: t.status,
+  paymentMethod: t.paymentMethod ?? t.payment_method ?? '',
+  description: t.description,
+  createdAt: t.createdAt ?? t.created_at,
+  user: {
+    name: t.user?.name,
+    email: t.user?.email,
+    rollNo: t.user?.rollNo ?? t.user?.roll_no,
+  },
+  order: t.order
+    ? {
+        order_id: t.order.order_id,
+        totalPrice: toNumber(t.order.totalPrice ?? t.order.total_price),
+      }
+    : (undefined as any),
+  shop: t.shop
+    ? {
+        _id: t.shop._id || t.shop.id || '',
+        name: t.shop.name || '',
+      }
+    : (undefined as any),
+  metadata: t.metadata,
+});
+
+const extractTransactions = (data: any): Transaction[] => {
+  const list = Array.isArray(data) ? data : data?.results || data?.transactions || [];
+  return (list as any[]).map(normalizeTransaction);
+};
+
 const TransactionsPage: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [shops, setshops] = useState<shop[]>([]);
@@ -100,13 +139,14 @@ const TransactionsPage: React.FC = () => {
         });
 
         const { data } = await api.get(`/api/transactions/shop/?shop_id=${filters.shop}&${params}`); // Fixed API call
-        setTransactions(data.transactions || []);
+        const list = extractTransactions(data);
+        setTransactions(list);
         
         // Calculate stats
-        const totalTransactions = data.transactions?.length || 0;
-        const totalAmount = data.transactions?.reduce((sum: number, t: Transaction) => sum + t.amount, 0) || 0;
-        const successfulTransactions = data.transactions?.filter((t: Transaction) => t.status === 'success').length || 0;
-        const failedTransactions = data.transactions?.filter((t: Transaction) => t.status === 'failed').length || 0;
+        const totalTransactions = list.length || 0;
+        const totalAmount = list.reduce((sum: number, t: Transaction) => sum + toNumber(t.amount), 0) || 0;
+        const successfulTransactions = list.filter((t: Transaction) => t.status === 'success').length || 0;
+        const failedTransactions = list.filter((t: Transaction) => t.status === 'failed').length || 0;
         
         setStats({
           totalTransactions,
@@ -130,25 +170,24 @@ const TransactionsPage: React.FC = () => {
             });
 
             const { data } = await api.get(`/api/transactions/shop/?shop_id=${shop.id}&${params}`); // Changed to shop.id
-            if (data.transactions) {
-              allTransactions.push(...data.transactions.map((t: any) => ({
-                ...t,
-                shop: { _id: shop.id, name: shop.name } // Changed to shop.id
-              })));
-            }
+            const list = extractTransactions(data).map((t: any) => ({
+              ...t,
+              shop: { _id: shop.id, name: shop.name },
+            }));
+            allTransactions.push(...list);
           } catch (error) {
             console.error(`Failed to fetch transactions for shop ${shop.name}:`, error);
           }
         }
         
         // Sort by date (newest first)
-        allTransactions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        allTransactions.sort((a, b) => new Date(a.createdAt).getTime() < new Date(b.createdAt).getTime() ? 1 : -1);
         
         setTransactions(allTransactions);
         
         // Calculate stats
         const totalTransactions = allTransactions.length;
-        const totalAmount = allTransactions.reduce((sum, t) => sum + t.amount, 0);
+        const totalAmount = allTransactions.reduce((sum, t) => sum + toNumber(t.amount), 0);
         const successfulTransactions = allTransactions.filter(t => t.status === 'success').length;
         const failedTransactions = allTransactions.filter(t => t.status === 'failed').length;
         
@@ -180,7 +219,7 @@ const TransactionsPage: React.FC = () => {
           new Date(t.createdAt).toLocaleString(),
           t.shop?.name || 'Unknown',
           t.type,
-          t.amount,
+          toNumber(t.amount).toFixed(2),
           t.status,
           t.paymentMethod || '',
           t.user.name,
