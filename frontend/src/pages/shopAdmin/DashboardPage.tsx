@@ -63,8 +63,14 @@ interface shop {
   id: string;
   _id?: string;
   name: string;
+  location: string;
+  description?: string;
+  image?: string;
+  shop_admin_id?: string;
+  is_active: boolean;
   is_open: boolean;
   final_validity_time: string;
+  next_opening_time: string;
   qr_validity_minutes: number;
 }
 
@@ -95,29 +101,17 @@ const DashboardPage: React.FC = () => {
         
         const shopRes = await api.get(`/api/shops/${user.shop}/`);
         
-        // Analytics endpoint doesn't exist yet, so we'll set empty data
-        setAnalytics({
-          totalProducts: 0,
-          outOfStock: 0,
-          orderStats: {
-            totalOrders: 0,
-            totalPaidOrders: 0,
-            totalVerifiedOrders: 0,
-            totalExpiredOrders: 0,
-            totalRevenue: 0,
-          },
-          dailyStats: [],
-          monthlySales: [],
-          topProducts: [],
-        });
+        // Fetch analytics from backend endpoint
+        const analyticsRes = await api.get(`/api/shops/${user.shop}/analytics/`);
+        setAnalytics(analyticsRes.data);
         setshop(shopRes.data);
         
         // Handle final validity time
         if (shopRes.data.final_validity_time) {
           const d = new Date(shopRes.data.final_validity_time);
-          // Convert to IST by adding 5.5 hours
-          d.setHours(d.getHours() + 5.5);
-          setfinal_validity(d.toISOString().substring(11, 16));
+          setfinal_validity(
+            d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
+          );
         } else {
           setfinal_validity('17:00');
         }
@@ -145,8 +139,8 @@ const DashboardPage: React.FC = () => {
     try {
       setClosing(true);
               const { data } = await api.post(`/api/shops/${user.shop}/toggle/`);
-      setshop(data.shop);
-      toast.success(data.message);
+      setshop(data);
+      toast.success(data.is_open ? 'Shop opened' : 'Shop closed');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to toggle shop status');
     } finally {
@@ -156,39 +150,46 @@ const DashboardPage: React.FC = () => {
 
   const updatefinal_validity = async () => {
     try {
-      if (!user?.shop) return;
+      if (!user?.shop || !shop) return;
       setUpdating(true);
-      
       // Get current date
       const now = new Date();
-      const [hh, mm] = final_validity.split(':');
-      
+      const [hh, mm] = final_validity.split(":");
       // Create a new date for the validity time
       const validityDate = new Date();
       validityDate.setHours(Number(hh), Number(mm), 0, 0);
-      
       // If the time is earlier than current time, set it for tomorrow
       if (validityDate <= now) {
         validityDate.setDate(validityDate.getDate() + 1);
       }
-      
-              const { data } = await api.put(`/api/shops/${user.shop}/`, {
-          final_validity_time: validityDate.toISOString()
-        });
-      
+      // Send all required fields
+      const { data } = await api.put(`/api/shops/${user.shop}/`, {
+        name: shop.name,
+        location: shop.location,
+        shop_admin_id: user._id,
+        final_validity_time: validityDate.toISOString(),
+        next_opening_time: shop.next_opening_time,
+        qr_validity_minutes: shop.qr_validity_minutes,
+        // The following fields are commented out because they do not exist on the 'shop' type.
+        // description: shop.description || "",
+        // image: shop.image || "",
+        // is_active: shop.is_active !== undefined ? shop.is_active : true,
+        // is_open: shop.is_open !== undefined ? shop.is_open : true,
+      });
       // Update local state with the new time
-      setfinal_validity(data.final_validity_time
-        ? new Date(data.final_validity_time).toLocaleTimeString('en-US', {
-            hour12: false,
-            hour: '2-digit',
-            minute: '2-digit'
-          })
-        : '17:00');
-      
+      setfinal_validity(
+        data.final_validity_time
+          ? new Date(data.final_validity_time).toLocaleTimeString("en-US", {
+              hour12: false,
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "17:00"
+      );
       setshop(data);
-      toast.success('Final validity time updated successfully');
-    } catch (error) {
-      toast.error('Failed to update final validity time');
+      toast.success("Final validity time updated successfully");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update final validity time");
     } finally {
       setUpdating(false);
     }
@@ -196,22 +197,30 @@ const DashboardPage: React.FC = () => {
 
   const updateQRValidity = async () => {
     try {
-      if (!user?.shop) return;
-      
+      if (!user?.shop || !shop) return;
       const minutes = parseInt(qrValidityMinutes);
       if (isNaN(minutes) || minutes < 1 || minutes > 60) {
-        throw new Error('QR validity must be between 1 and 60 minutes');
+        throw new Error("QR validity must be between 1 and 60 minutes");
       }
-
       setUpdatingQR(true);
-              const { data } = await api.put(`/api/shops/${user.shop}/`, {
-          qr_validity_minutes: minutes
-        });
+      // Send all required fields
+      const { data } = await api.put(`/api/shops/${user.shop}/`, {
+        name: shop.name,
+        location: shop.location,
+        shop_admin_id: user._id,
+        final_validity_time: shop.final_validity_time,
+        next_opening_time: shop.next_opening_time,
+        qr_validity_minutes: minutes,
+        description: shop.description || "",
+        image: shop.image || "",
+        is_active: shop.is_active !== undefined ? shop.is_active : true,
+        is_open: shop.is_open !== undefined ? shop.is_open : true,
+      });
       setshop(data);
       setQrValidityMinutes(data.qr_validity_minutes.toString());
-      toast.success('QR validity time updated successfully');
+      toast.success("QR validity time updated successfully");
     } catch (error: any) {
-      toast.error(error.message || 'Failed to update QR validity time');
+      toast.error(error?.message || "Failed to update QR validity time");
     } finally {
       setUpdatingQR(false);
     }

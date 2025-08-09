@@ -438,7 +438,7 @@ class ShopViewSet(viewsets.ModelViewSet):
         if self.request.user.is_authenticated:
             if self.request.user.role == 'admin':
                 return Shop.objects.all()
-            elif self.request.user.role == 'shop_admin':
+            elif self.request.user.role == 'shopAdmin':
                 return Shop.objects.filter(id=self.request.user.shop.id)
         return Shop.objects.filter(is_active=True)
 
@@ -505,10 +505,10 @@ class ShopViewSet(viewsets.ModelViewSet):
             # Get order statistics
             orders = Order.objects.filter(shop=shop)
             total_orders = orders.count()
-            total_paid_orders = orders.filter(status='paid').count()
-            total_verified_orders = orders.filter(status='verified').count()
+            total_paid_orders = orders.filter(is_paid=True).count()
+            total_verified_orders = orders.filter(is_verified=True).count()
             total_expired_orders = orders.filter(status='expired').count()
-            total_revenue = sum(order.total_price for order in orders.filter(status='paid'))
+            total_revenue = sum(order.total_price for order in orders.filter(is_paid=True))
             
             # Get daily stats for the last 30 days
             end_date = timezone.now()
@@ -521,10 +521,10 @@ class ShopViewSet(viewsets.ModelViewSet):
                 daily_stats.append({
                     '_id': {'date': current_date.strftime('%Y-%m-%d')},
                     'totalOrders': day_orders.count(),
-                    'paidOrders': day_orders.filter(status='paid').count(),
-                    'verifiedOrders': day_orders.filter(status='verified').count(),
+                    'paidOrders': day_orders.filter(is_paid=True).count(),
+                    'verifiedOrders': day_orders.filter(is_verified=True).count(),
                     'expiredOrders': day_orders.filter(status='expired').count(),
-                    'revenue': sum(order.total_price for order in day_orders.filter(status='paid'))
+                    'revenue': sum(order.total_price for order in day_orders.filter(is_paid=True))
                 })
                 current_date += timedelta(days=1)
             
@@ -539,25 +539,40 @@ class ShopViewSet(viewsets.ModelViewSet):
                 monthly_sales.append({
                     '_id': {'month': month_date.month, 'year': month_date.year},
                     'count': month_orders.count(),
-                    'total': sum(order.total_price for order in month_orders.filter(status='paid'))
+                    'total': sum(order.total_price for order in month_orders.filter(is_paid=True))
                 })
             
-            # Get top products
-            from django.db.models import Sum
-            top_products = []
-            product_sales = Order.objects.filter(shop=shop, status='paid').values(
-                'items__product__name'
-            ).annotate(
-                total_sold=Sum('items__quantity'),
-                total_revenue=Sum('items__price')
-            ).order_by('-total_revenue')[:10]
+            # Get top products from order_items JSON
+            from collections import defaultdict
+            top_products_map = defaultdict(lambda: {'totalSold': 0, 'totalRevenue': Decimal('0')})
+            paid_orders = orders.filter(is_paid=True)
+            for order in paid_orders:
+                items = order.order_items or []
+                for item in items:
+                    name = item.get('name') or 'Unknown'
+                    try:
+                        quantity = int(item.get('quantity') or 0)
+                    except (TypeError, ValueError):
+                        quantity = 0
+                    price_val = item.get('price')
+                    try:
+                        price = Decimal(str(price_val)) if price_val is not None else Decimal('0')
+                    except Exception:
+                        price = Decimal('0')
+                    top_products_map[name]['totalSold'] += quantity
+                    top_products_map[name]['totalRevenue'] += (price * quantity)
             
-            for product in product_sales:
-                top_products.append({
-                    'name': product['items__product__name'],
-                    'totalSold': product['total_sold'],
-                    'totalRevenue': product['total_revenue']
-                })
+            top_products = [
+                {
+                    'name': name,
+                    'totalSold': data['totalSold'],
+                    'totalRevenue': data['totalRevenue']
+                }
+                for name, data in top_products_map.items()
+            ]
+            # Sort by revenue desc and limit 10
+            top_products.sort(key=lambda x: x['totalRevenue'], reverse=True)
+            top_products = top_products[:10]
             
             analytics_data = {
                 'totalProducts': total_products,

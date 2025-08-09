@@ -184,7 +184,14 @@ class OrderSerializer(serializers.ModelSerializer):
 
         # Generate order_id and expires_at
         validated_data['order_id'] = f"ORD-{uuid.uuid4().hex[:10].upper()}"
-        validated_data['expires_at'] = timezone.now() + timedelta(minutes=10) # Example: order expires in 10 minutes
+        # Debug: print the current QR validity minutes
+        print("Shop QR Validity Minutes:", shop.qr_validity_minutes)
+        # Calculate QR expiry: now + shop.qr_validity_minutes, but not after shop.final_validity_time
+        qr_expiry = timezone.now() + timedelta(minutes=shop.qr_validity_minutes)
+        if shop.final_validity_time and qr_expiry > shop.final_validity_time:
+            validated_data['expires_at'] = shop.final_validity_time
+        else:
+            validated_data['expires_at'] = qr_expiry
 
         # Create the order
         # Ensure validated_order_items is fully JSON serializable before saving

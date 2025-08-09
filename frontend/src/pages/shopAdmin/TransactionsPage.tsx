@@ -95,6 +95,37 @@ interface RealTimeAnalytics {
   }>;
 }
 
+// Normalize API responses (snake_case -> camelCase) and handle array/object payloads
+const normalizeTransaction = (t: any): Transaction => ({
+  _id: t._id || t.id,
+  type: t.type,
+  amount: typeof t.amount === 'number' ? t.amount : Number(t.amount || 0),
+  status: t.status,
+  paymentMethod: t.paymentMethod ?? t.payment_method ?? '',
+  description: t.description,
+  createdAt: t.createdAt ?? t.created_at,
+  user: {
+    name: t.user?.name,
+    email: t.user?.email,
+    rollNo: t.user?.rollNo ?? t.user?.roll_no,
+  },
+  order: t.order
+    ? {
+        order_id: t.order.order_id,
+        totalPrice:
+          typeof t.order.totalPrice === 'number'
+            ? t.order.totalPrice
+            : Number(t.order.total_price ?? t.order.totalPrice ?? 0),
+      }
+    : (undefined as any),
+  metadata: t.metadata,
+});
+
+const extractTransactions = (data: any): Transaction[] => {
+  const list = Array.isArray(data) ? data : data?.results || data?.transactions || [];
+  return (list as any[]).map(normalizeTransaction);
+};
+
 const TransactionsPage: React.FC = () => {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -144,18 +175,19 @@ const TransactionsPage: React.FC = () => {
       });
 
       const { data } = await api.get(`/api/transactions/shop/?shop_id=${user?.shop}&${params}`);
-      setTransactions(data.results || data.transactions || []);
+      const normalized = extractTransactions(data);
+      setTransactions(normalized);
       setPagination({
-        currentPage: data.currentPage || 1,
-        totalPages: data.totalPages || 1,
-        total: data.total || 0
+        currentPage: (Array.isArray(data) ? 1 : data.currentPage) || 1,
+        totalPages: (Array.isArray(data) ? 1 : data.totalPages) || 1,
+        total: (Array.isArray(data) ? normalized.length : data.total) || normalized.length || 0,
       });
       
-      // Calculate real stats from actual data
-      const totalTransactions = data.transactions?.length || 0;
-      const totalAmount = data.transactions?.reduce((sum: number, t: Transaction) => sum + t.amount, 0) || 0;
-      const successfulTransactions = data.transactions?.filter((t: Transaction) => t.status === 'success').length || 0;
-      const failedTransactions = data.transactions?.filter((t: Transaction) => t.status === 'failed').length || 0;
+      // Calculate real stats from normalized data
+      const totalTransactions = normalized.length;
+      const totalAmount = normalized.reduce((sum: number, t: Transaction) => sum + t.amount, 0) || 0;
+      const successfulTransactions = normalized.filter((t: Transaction) => t.status === 'success').length || 0;
+      const failedTransactions = normalized.filter((t: Transaction) => t.status === 'failed').length || 0;
       const averageTransactionValue = totalTransactions > 0 ? totalAmount / totalTransactions : 0;
       
       // Calculate growth rate by comparing with previous period
@@ -168,7 +200,8 @@ const TransactionsPage: React.FC = () => {
         previousParams.append('endDate', currentPeriodStart.toISOString().split('T')[0]);
         
         const { data: previousData } = await api.get(`/api/transactions/shop/?shop_id=${user?.shop}&${previousParams}`);
-        const previousAmount = previousData.transactions?.reduce((sum: number, t: Transaction) => sum + t.amount, 0) || 0;
+        const previousList = extractTransactions(previousData);
+        const previousAmount = previousList.reduce((sum: number, t: Transaction) => sum + t.amount, 0) || 0;
         const growthRate = previousAmount > 0 ? ((totalAmount - previousAmount) / previousAmount) * 100 : 0;
         
         setStats({
@@ -177,7 +210,7 @@ const TransactionsPage: React.FC = () => {
           successfulTransactions,
           failedTransactions,
           averageTransactionValue,
-          growthRate
+          growthRate,
         });
       } catch (error) {
         // If previous period data fetch fails, set growth rate to 0
@@ -187,7 +220,7 @@ const TransactionsPage: React.FC = () => {
           successfulTransactions,
           failedTransactions,
           averageTransactionValue,
-          growthRate: 0
+          growthRate: 0,
         });
       }
       
@@ -207,7 +240,7 @@ const TransactionsPage: React.FC = () => {
       if (filters.endDate) analyticsParams.append('endDate', filters.endDate);
 
       const { data } = await api.get(`/api/transactions/shop/?shop_id=${user?.shop}&${analyticsParams}`);
-      const allTransactions = data.transactions || [];
+      const allTransactions = extractTransactions(data);
 
       // Generate hourly distribution from real data
       const hourlyDistribution = Array.from({ length: 24 }, (_, hour) => {
@@ -219,7 +252,7 @@ const TransactionsPage: React.FC = () => {
         return {
           hour,
           count: hourTransactions.length,
-          amount: hourTransactions.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+          amount: hourTransactions.reduce((sum: number, t: Transaction) => sum + t.amount, 0),
         };
       });
 
@@ -237,7 +270,7 @@ const TransactionsPage: React.FC = () => {
         return {
           date: dateString,
           transactions: dayTransactions.length,
-          revenue: dayTransactions.reduce((sum: number, t: Transaction) => sum + t.amount, 0)
+          revenue: dayTransactions.reduce((sum: number, t: Transaction) => sum + t.amount, 0),
         };
       }).reverse();
 
@@ -256,7 +289,7 @@ const TransactionsPage: React.FC = () => {
         type,
         count: data.count,
         amount: data.amount,
-        percentage: totalTransactions > 0 ? Math.round((data.count / totalTransactions) * 100) : 0
+        percentage: totalTransactions > 0 ? Math.round((data.count / totalTransactions) * 100) : 0,
       }));
 
       // Generate payment method stats from real data
@@ -274,7 +307,7 @@ const TransactionsPage: React.FC = () => {
         method,
         count: data.count,
         amount: data.amount,
-        percentage: totalTransactions > 0 ? Math.round((data.count / totalTransactions) * 100) : 0
+        percentage: totalTransactions > 0 ? Math.round((data.count / totalTransactions) * 100) : 0,
       }));
 
       // Generate top customers from real data
@@ -285,7 +318,7 @@ const TransactionsPage: React.FC = () => {
             name: t.user.name,
             rollNo: t.user.rollNo,
             totalSpent: 0,
-            transactionCount: 0
+            transactionCount: 0,
           };
         }
         acc[key].totalSpent += t.amount;
@@ -302,7 +335,7 @@ const TransactionsPage: React.FC = () => {
         dailyTrends,
         typeBreakdown,
         paymentMethodStats,
-        topCustomers: topCustomers as any
+        topCustomers: topCustomers as any,
       };
 
       setAnalytics(realTimeAnalytics);
@@ -324,9 +357,10 @@ const TransactionsPage: React.FC = () => {
       });
       params.append('limit', '1000'); // Export more records
 
-              const { data } = await api.get(`/api/transactions/shop/?shop_id=${user?.shop}&${params}`);
+      const { data } = await api.get(`/api/transactions/shop/?shop_id=${user?.shop}&${params}`);
+      const list = extractTransactions(data);
       
-      const csvData = [];
+      const csvData = [] as any[];
       
       // Header with shop info and date range
       csvData.push(['REAL-TIME TRANSACTION REPORT']);
@@ -349,7 +383,7 @@ const TransactionsPage: React.FC = () => {
       csvData.push(['TRANSACTION DETAILS']);
       csvData.push(['Date', 'Type', 'Amount', 'Status', 'Payment Method', 'User Name', 'Roll No', 'Order ID', 'Description']);
       
-      (data.results || data.transactions || []).forEach((t: Transaction) => {
+      list.forEach((t: Transaction) => {
         csvData.push([
           new Date(t.createdAt).toLocaleString(),
           t.type,
@@ -359,7 +393,7 @@ const TransactionsPage: React.FC = () => {
           t.user.name,
           t.user.rollNo,
           t.order?.order_id || '',
-          `"${t.description}"`
+          `"${t.description}"`,
         ]);
       });
 

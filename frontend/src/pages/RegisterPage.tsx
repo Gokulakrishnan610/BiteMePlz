@@ -172,35 +172,25 @@ const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--primary-bg)] via-[var(--secondary-bg)] to-[var(--primary-bg)] flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        {/* Logo Section */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="p-4 rounded-full bg-gradient-to-r from-[var(--accent-purple)] to-[var(--accent-violet)] glow">
-              <Zap size={32} className="text-white" />
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold gradient-text mb-2">Campus Kiosk</h1>
-          <p className="text-[var(--muted-text)]">Your digital campus marketplace</p>
-        </div>
-
-        {/* Registration Form */}
-        <div className="form-container p-8">
+        {/* Card */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 border border-purple-100">
+          {/* Logo */}
           <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
-              <UserPlus className="text-[var(--accent-purple)]" size={48} />
+            <div className="flex justify-center mb-6">
+              <img 
+                src="/images/rec college.png" 
+                alt="REC College Logo" 
+                className="h-20 w-auto object-contain"
+              />
             </div>
-            <h2 className="text-2xl font-bold text-[var(--primary-text)] mb-2">Create Account</h2>
-            <p className="text-[var(--secondary-text)]">
-              {step === 'register' ? 'Sign up to start shopping' : 'Verify your email'}
-            </p>
           </div>
 
           {step === 'register' ? (
             <form onSubmit={handleRegister} className="space-y-6">
-              <div className="form-group">
-                <label htmlFor="name" className="form-label">
+              <div className="space-y-2">
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
                   <User size={16} className="inline mr-2" />
                   Full Name
                 </label>
@@ -210,15 +200,15 @@ const RegisterPage: React.FC = () => {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className={`input ${errors.name ? 'border-[var(--error)]' : ''}`}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${errors.name ? 'border-red-400' : 'border-gray-300'}`}
                   placeholder="Enter your full name"
                   required
                 />
-                {errors.name && <p className="form-error">{errors.name}</p>}
+                {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
               </div>
 
-              <div className="form-group">
-                <label htmlFor="rollNo" className="form-label">
+              <div className="space-y-2">
+                <label htmlFor="rollNo" className="block text-sm font-medium text-gray-700">
                   <CreditCard size={16} className="inline mr-2" />
                   Roll Number
                 </label>
@@ -228,15 +218,15 @@ const RegisterPage: React.FC = () => {
                   name="rollNo"
                   value={formData.rollNo}
                   onChange={handleChange}
-                  className={`input ${errors.rollNo ? 'border-[var(--error)]' : ''}`}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${errors.rollNo ? 'border-red-400' : 'border-gray-300'}`}
                   placeholder="Enter your roll number"
                   required
                 />
-                {errors.rollNo && <p className="form-error">{errors.rollNo}</p>}
+                {errors.rollNo && <p className="text-sm text-red-600">{errors.rollNo}</p>}
               </div>
 
-              <div className="form-group">
-                <label htmlFor="email" className="form-label">
+              <div className="space-y-2">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                   <Mail size={16} className="inline mr-2" />
                   Email Address
                 </label>
@@ -246,15 +236,15 @@ const RegisterPage: React.FC = () => {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className={`input ${errors.email ? 'border-[var(--error)]' : ''}`}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${errors.email ? 'border-red-400' : 'border-gray-300'}`}
                   placeholder="Enter your email"
                   required
                 />
-                {errors.email && <p className="form-error">{errors.email}</p>}
+                {errors.email && <p className="text-sm text-red-600">{errors.email}</p>}
               </div>
 
-              <div className="form-group">
-                <label htmlFor="password" className="form-label">
+              <div className="space-y-2">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                   <Lock size={16} className="inline mr-2" />
                   Password
                 </label>
@@ -265,7 +255,7 @@ const RegisterPage: React.FC = () => {
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
-                    className={`input pr-12 ${errors.password ? 'border-[var(--error)]' : ''}`}
+                    className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${errors.password ? 'border-red-400' : 'border-gray-300'}`}
                     placeholder="Create a password"
                     required
                     minLength={6}
@@ -273,17 +263,17 @@ const RegisterPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={togglePasswordVisibility}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-[var(--muted-text)] hover:text-[var(--accent-purple)] transition-colors"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-purple-600 transition-colors"
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
-                {errors.password && <p className="form-error">{errors.password}</p>}
-                <p className="form-help">Minimum 6 characters</p>
+                {errors.password && <p className="text-sm text-red-600">{errors.password}</p>}
+                <p className="text-xs text-gray-500">Minimum 6 characters</p>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="confirmPassword" className="form-label">
+              <div className="space-y-2">
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
                   <Lock size={16} className="inline mr-2" />
                   Confirm Password
                 </label>
@@ -294,7 +284,7 @@ const RegisterPage: React.FC = () => {
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    className={`input pr-12 ${errors.confirmPassword ? 'border-[var(--error)]' : ''}`}
+                    className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${errors.confirmPassword ? 'border-red-400' : 'border-gray-300'}`}
                     placeholder="Confirm your password"
                     required
                     minLength={6}
@@ -302,18 +292,18 @@ const RegisterPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={toggleConfirmPasswordVisibility}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-[var(--muted-text)] hover:text-[var(--accent-purple)] transition-colors"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-purple-600 transition-colors"
                   >
                     {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
-                {errors.confirmPassword && <p className="form-error">{errors.confirmPassword}</p>}
+                {errors.confirmPassword && <p className="text-sm text-red-600">{errors.confirmPassword}</p>}
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full btn-primary py-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <span className="flex items-center justify-center">
@@ -330,8 +320,8 @@ const RegisterPage: React.FC = () => {
             </form>
           ) : (
             <form onSubmit={handleVerify} className="space-y-6">
-              <div className="form-group">
-                <label htmlFor="otp" className="form-label">
+              <div className="space-y-2">
+                <label htmlFor="otp" className="block text-sm font-medium text-gray-700">
                   <Mail size={16} className="inline mr-2" />
                   Enter OTP
                 </label>
@@ -341,13 +331,13 @@ const RegisterPage: React.FC = () => {
                   name="otp"
                   value={formData.otp}
                   onChange={handleChange}
-                  className={`input text-center text-2xl tracking-widest ${errors.otp ? 'border-[var(--error)]' : ''}`}
+                  className={`w-full px-4 py-3 text-center text-xl tracking-widest border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${errors.otp ? 'border-red-400' : 'border-gray-300'}`}
                   required
                   maxLength={6}
                   placeholder="000000"
                 />
-                {errors.otp && <p className="form-error">{errors.otp}</p>}
-                <p className="form-help text-center">
+                {errors.otp && <p className="text-sm text-red-600">{errors.otp}</p>}
+                <p className="text-xs text-gray-500 text-center">
                   Please enter the 6-digit OTP sent to {formData.email}
                 </p>
               </div>
@@ -355,7 +345,7 @@ const RegisterPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full btn-primary py-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <span className="flex items-center justify-center">
@@ -371,7 +361,7 @@ const RegisterPage: React.FC = () => {
                 type="button"
                 onClick={handleResendOTP}
                 disabled={loading}
-                className="w-full btn-secondary py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full border border-gray-300 hover:border-purple-500 hover:bg-purple-50 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Resend OTP
               </button>
@@ -379,11 +369,11 @@ const RegisterPage: React.FC = () => {
           )}
 
           <div className="text-center mt-6">
-            <p className="text-[var(--secondary-text)]">
+            <p className="text-gray-600">
               Already have an account?{' '}
               <Link 
                 to="/login" 
-                className="text-[var(--accent-purple)] hover:text-[var(--accent-violet)] font-medium transition-colors"
+                className="text-purple-600 hover:text-purple-700 font-medium transition-colors"
               >
                 Sign in here
               </Link>
@@ -393,8 +383,8 @@ const RegisterPage: React.FC = () => {
 
         {/* Footer */}
         <div className="text-center mt-8">
-          <p className="text-[var(--muted-text)] text-sm">
-            © 2024 Campus Kiosk. All rights reserved.
+          <p className="text-gray-500 text-sm">
+            © 2024 REC College. All rights reserved.
           </p>
         </div>
       </div>

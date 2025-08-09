@@ -47,7 +47,7 @@ class RegisterView(APIView):
                 otp_data = {
                     'otp': otp,
                     'created_at': timezone.now().isoformat(),
-                    'expires_at': (timezone.now() + timedelta(minutes=10)).isoformat()
+                    'expires_at': (timezone.now() + timedelta(minutes=6)).isoformat()
                 }
                 
                 # Create user with OTP
@@ -61,16 +61,14 @@ class RegisterView(APIView):
                 
                 if email_sent:
                     return Response({
-                        'userId': str(user.id),
-                        'message': 'OTP sent to your email'
+                        'message': 'User registered. Please verify with OTP sent to your email',
+                        'userId': str(user.id)
                     }, status=status.HTTP_201_CREATED)
                 else:
-                    # If email fails, delete the user and return error
-                    user.delete()
-                    return Response({
-                        'error': 'Failed to send OTP email. Please try again.'
-                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({'error': 'Failed to send OTP email. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -113,18 +111,19 @@ class VerifyOTPView(APIView):
             
             # Generate token
             refresh = RefreshToken.for_user(user)
-            
             return Response({
-                '_id': str(user.id),
-                'name': user.name,
-                'email': user.email,
-                'role': user.role,
-                'shop': str(user.shop.id) if user.shop else None,
-                'balance': float(user.balance),
-                'is_sub_admin': False,
-                'parent_admin': None,
-                'token': str(refresh.access_token),
-                'message': 'Registration successful!'
+                'message': 'OTP verified successfully',
+                'user': {
+                    'id': str(user.id),
+                    'name': user.name,
+                    'email': user.email,
+                    'role': user.role,
+                    'balance': float(user.balance),
+                },
+                'token': {
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh)
+                }
             }, status=status.HTTP_200_OK)
             
         except Exception as e:
@@ -153,7 +152,7 @@ class ResendOTPView(APIView):
             otp_data = {
                 'otp': otp,
                 'created_at': timezone.now().isoformat(),
-                'expires_at': (timezone.now() + timedelta(minutes=10)).isoformat()
+                'expires_at': (timezone.now() + timedelta(minutes=6)).isoformat()
             }
             
             user.otp = otp_data
@@ -172,6 +171,143 @@ class ResendOTPView(APIView):
                     'error': 'Failed to send OTP email. Please try again.'
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# Forgot Password Flow
+class ForgotPasswordRequestView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            from .models import User
+            import random
+
+            email = request.data.get('email')
+            if not email:
+                return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                # Avoid user enumeration; pretend success
+                return Response({'message': 'If the email exists, an OTP has been sent', 'userId': None}, status=status.HTTP_200_OK)
+
+            otp = str(random.randint(100000, 999999))
+            otp_data = {
+                'otp': otp,
+                'created_at': timezone.now().isoformat(),
+                'expires_at': (timezone.now() + timedelta(minutes=6)).isoformat()
+            }
+            user.password_reset_otp = otp_data
+            user.save()
+
+            from .utils import send_resend_otp_email
+            email_sent = send_resend_otp_email(user.email, otp, user.name)
+            if not email_sent:
+                return Response({'error': 'Failed to send OTP email. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            return Response({'message': 'OTP sent', 'userId': str(user.id)}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class VerifyResetOTPView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            from .models import User
+            import uuid
+
+            user_id = request.data.get('userId')
+            otp = request.data.get('otp')
+            if not user_id or not otp:
+                return Response({'error': 'User ID and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            if not user.password_reset_otp:
+                return Response({'error': 'No OTP requested'}, status=status.HTTP_400_BAD_REQUEST)
+            otp_data = user.password_reset_otp
+            expires_at = timezone.datetime.fromisoformat(otp_data['expires_at'].replace('Z', '+00:00'))
+            if timezone.now() > expires_at:
+                return Response({'error': 'OTP has expired'}, status=status.HTTP_400_BAD_REQUEST)
+            if otp_data['otp'] != otp:
+                return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+
+            token = uuid.uuid4().hex
+            token_data = {
+                'token': token,
+                'created_at': timezone.now().isoformat(),
+                'expires_at': (timezone.now() + timedelta(minutes=30)).isoformat(),
+            }
+            user.password_reset_token = token_data
+            user.save()
+            return Response({'resetToken': token}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ResetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            from .models import User
+            user_id = request.data.get('userId')
+            token = request.data.get('resetToken')
+            new_password = request.data.get('newPassword')
+            if not user_id or not token or not new_password:
+                return Response({'error': 'Missing fields'}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            if not user.password_reset_token:
+                return Response({'error': 'No reset token'}, status=status.HTTP_400_BAD_REQUEST)
+            token_data = user.password_reset_token
+            expires_at = timezone.datetime.fromisoformat(token_data['expires_at'].replace('Z', '+00:00'))
+            if timezone.now() > expires_at:
+                return Response({'error': 'Reset token expired'}, status=status.HTTP_400_BAD_REQUEST)
+            if token_data['token'] != token:
+                return Response({'error': 'Invalid reset token'}, status=status.HTTP_400_BAD_REQUEST)
+
+            user.set_password(new_password)
+            user.password_reset_token = None
+            user.password_reset_otp = None
+            user.save()
+            return Response({'message': 'Password reset successful'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ResendResetOTPView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            from .models import User
+            import random
+            user_id = request.data.get('userId')
+            if not user_id:
+                return Response({'error': 'User ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            otp = str(random.randint(100000, 999999))
+            otp_data = {
+                'otp': otp,
+                'created_at': timezone.now().isoformat(),
+                'expires_at': (timezone.now() + timedelta(minutes=6)).isoformat()
+            }
+            user.password_reset_otp = otp_data
+            user.save()
+
+            from .utils import send_resend_otp_email
+            email_sent = send_resend_otp_email(user.email, otp, user.name)
+            if not email_sent:
+                return Response({'error': 'Failed to send OTP email. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'message': 'New OTP sent'}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -212,10 +348,18 @@ urlpatterns = [
     path('users/verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
     path('users/resend-otp/', ResendOTPView.as_view(), name='resend-otp'),
     path('users/login/', LoginView.as_view(), name='login'),
+    # Forgot password endpoints
+    path('users/forgot-password/', ForgotPasswordRequestView.as_view(), name='forgot-password'),
+    path('users/verify-reset-otp', VerifyResetOTPView.as_view(), name='verify-reset-otp'),
+    path('users/reset-password', ResetPasswordView.as_view(), name='reset-password'),
+    path('users/resend-reset-otp', ResendResetOTPView.as_view(), name='resend-reset-otp'),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('orders/<uuid:pk>/pay/', OrderViewSet.as_view({'put': 'pay'}), name='order-pay'),
     path('orders/scan-qr-code/', OrderViewSet.as_view({'get': 'scan_qr_code'}), name='order-scan-qr-code'),
     path('orders/<uuid:pk>/mark-item-bought/', OrderViewSet.as_view({'patch': 'mark_item_bought'}), name='order-mark-item-bought'),
+]
+
+urlpatterns += [
     path('', include(router.urls)),
 ]

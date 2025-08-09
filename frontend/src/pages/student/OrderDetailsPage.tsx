@@ -37,6 +37,7 @@ interface Order {
     method?: string;
     status: string;
   };
+  expires_at?: string;
 }
 
 // All requests should go through the shared axios client `api` which is preconfigured
@@ -354,7 +355,7 @@ const OrderDetailsPage: React.FC = () => {
                         <div className="flex items-center">
                           <Clock size={16} className="mr-2 text-gray-500" />
                           <p className={`font-medium ${isQRExpired ? 'text-red-600' : 'text-gray-900'}`}>
-                            {isQRExpired ? 'Expired' : formatTime(timeLeft)}
+                            {isQRExpired ? 'Expired' : formatISTTime(order.qr_valid_until || order.expires_at)}
                           </p>
                         </div>
                       </div>

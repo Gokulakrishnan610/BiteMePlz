@@ -70,7 +70,7 @@ class Shop(models.Model):
     final_validity_time = models.DateTimeField()
     next_opening_time = models.DateTimeField()
     qr_validity_minutes = models.IntegerField(
-        default=20,
+        default=1,
         validators=[MinValueValidator(1), MaxValueValidator(60)]
     )
     created_at = models.DateTimeField(auto_now_add=True)
