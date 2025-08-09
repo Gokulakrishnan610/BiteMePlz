@@ -109,7 +109,7 @@ const EditShopPage: React.FC = () => {
         qrValidityMinutes: qrMinutes
       };
 
-      await api.put(`/api/shops/${id}/`, payload);
+      await api.patch(`/api/shops/${id}/`, payload);
       
       toast.success('shop updated successfully');
       navigate('/admin/shops');

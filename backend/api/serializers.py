@@ -95,6 +95,7 @@ class OrderItemSerializer(serializers.Serializer):
     image = serializers.CharField(required=False)
     price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
     stock = serializers.IntegerField(required=False)
+    is_bought = serializers.BooleanField(default=False, required=False)
 
 class OrderSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
@@ -102,7 +103,15 @@ class OrderSerializer(serializers.ModelSerializer):
     shop = ShopSerializer(read_only=True)
     user_id = serializers.UUIDField(write_only=True, required=False)
     shop_id = serializers.UUIDField(write_only=True, required=False)
-    order_items = OrderItemSerializer(many=True)
+    order_items = serializers.SerializerMethodField()
+
+    def get_order_items(self, obj):
+        # Ensure that 'is_bought' is included when serializing order_items
+        items = obj.order_items
+        for item in items:
+            if 'is_bought' not in item:
+                item['is_bought'] = False
+        return items
 
     class Meta:
         model = Order
@@ -113,65 +122,79 @@ class OrderSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'order_id', 'created_at', 'updated_at', 'qr_code', 'qr_valid_until', 'balance_amount', 'held_amount', 'final_validity', 'is_verified', 'verified_at', 'status', 'expires_at']
 
     def create(self, validated_data):
-        print(f"OrderSerializer create - validated_data: {validated_data}")
-        order_items_data = validated_data.pop('order_items')
+        # Handle order_items from request data
+        order_items_data = self.context['request'].data.get('order_items', [])
         user = self.context['request'].user
-        print(f"OrderSerializer create - user: {user}")
         shop_id = validated_data.get('shop_id')
-        print(f"OrderSerializer create - shop_id: {shop_id}")
 
+        # Validate order_items using OrderItemSerializer
+        if order_items_data:
+            order_item_serializer = OrderItemSerializer(data=order_items_data, many=True)
+            order_item_serializer.is_valid(raise_exception=True)
+            validated_order_items = order_item_serializer.validated_data
+        else:
+            validated_order_items = []
+
+
+        # Determine the shop_id for the order
         if not shop_id:
-            # If shop_id is not provided at the top level, try to infer it from the first order item
-            if order_items_data and isinstance(order_items_data, list) and len(order_items_data) > 0:
-                inferred_shop_id = order_items_data[0].get('shop_id')
-                if inferred_shop_id:
-                    validated_data['shop_id'] = inferred_shop_id
+            if validated_order_items:
+                # Try to infer shop_id from the first item's product
+                first_product_id = validated_order_items[0].get('product_id')
+                if first_product_id:
+                    try:
+                        first_product = Product.objects.get(id=first_product_id)
+                        validated_data['shop_id'] = first_product.shop.id
+                    except Product.DoesNotExist:
+                        raise serializers.ValidationError(f"Product with ID {first_product_id} does not exist.")
                 else:
-                    raise serializers.ValidationError("Shop ID is required either at top level or within order_items.")
+                    raise serializers.ValidationError("Shop ID is required either at top level or inferable from order_items.")
             else:
-                raise serializers.ValidationError("Shop ID is required either at top level or within order_items.")
-        
-        # Calculate total price based on order items
+                raise serializers.ValidationError("Shop ID is required when no order items are provided.")
+
+        # Ensure all products belong to the same shop
+        target_shop_id = validated_data['shop_id']
         calculated_total_price = Decimal('0.0')
-        for item_data in order_items_data:
+        for item_data in validated_order_items:
             product_id = item_data.get('product_id')
             quantity = item_data.get('quantity')
-            
+
             if not product_id or not quantity:
                 raise serializers.ValidationError("Product ID and quantity are required for each order item.")
-            
+
             try:
                 product = Product.objects.get(id=product_id)
             except Product.DoesNotExist:
                 raise serializers.ValidationError(f"Product with ID {product_id} does not exist.")
-            
+
+            if str(product.shop.id) != str(target_shop_id):
+                raise serializers.ValidationError(f"Product {product.name} (ID: {product_id}) does not belong to the target shop (ID: {target_shop_id}).")
+
             calculated_total_price += product.price * quantity
-        
+
         validated_data['total_price'] = calculated_total_price
-        print(f"OrderSerializer create - calculated total_price: {validated_data['total_price']}")
-        
+
         # Set user and shop
         validated_data['user'] = user
         try:
-            shop = Shop.objects.get(id=validated_data['shop_id'])
+            shop = Shop.objects.get(id=target_shop_id)
             validated_data['shop'] = shop
-            print(f"OrderSerializer create - shop object: {shop}")
         except Shop.DoesNotExist:
-            raise serializers.ValidationError(f"Shop with ID {validated_data['shop_id']} does not exist.")
+            raise serializers.ValidationError(f"Shop with ID {target_shop_id} does not exist.")
 
         # Generate order_id and expires_at
         validated_data['order_id'] = f"ORD-{uuid.uuid4().hex[:10].upper()}"
         validated_data['expires_at'] = timezone.now() + timedelta(minutes=10) # Example: order expires in 10 minutes
 
         # Create the order
-        # Ensure order_items_data is fully JSON serializable before saving
-        serializable_order_items_data = convert_uuids_to_str_recursive(order_items_data)
+        # Ensure validated_order_items is fully JSON serializable before saving
+        serializable_order_items_data = convert_uuids_to_str_recursive(validated_order_items)
         order = Order.objects.create(order_items=serializable_order_items_data, **validated_data)
         print(f"OrderSerializer create - order created: {order}")
 
         # Process order items and calculate total price
         processed_order_items = []
-        for item_data in order_items_data:
+        for item_data in validated_order_items:
             print(f"OrderSerializer create - processing item_data: {item_data}")
             product_id = item_data.get('product_id')
             quantity = item_data.get('quantity')
@@ -198,6 +221,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 'product_id': str(product.id),
                 'name': product.name,
                 'image': product.image,
+                'is_bought': False,
                 'price': str(product.price),
                 'quantity': quantity,
                 'shop_id': str(product.shop.id),

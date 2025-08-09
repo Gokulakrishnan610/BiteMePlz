@@ -247,13 +247,13 @@ const CartPage: React.FC = () => {
         shopIds.length > 1
           ? {
               order_items: mappedOrderItems,
-              totalPrice: getTotalPrice(),
+              total_price: getTotalPrice(),
               paymentMethod: "razorpay",
             }
           : {
               order_items: mappedOrderItems,
               shop_id: shopIds[0],
-              totalPrice: getTotalPrice(),
+              total_price: getTotalPrice(),
               paymentMethod: "razorpay",
             };
       // debug removed

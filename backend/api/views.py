@@ -687,9 +687,17 @@ class ProductViewSet(viewsets.ModelViewSet):
             traceback.print_exc()
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def perform_create(self, serializer):
-        serializer.save()
+    # Remove the perform_create method override since OrderSerializer handles it
+    # def perform_create(self, serializer):
+    #     # This is handled by the OrderSerializer's create method
+    #     pass
 
+
+from rest_framework.views import APIView
+
+class TestMultiShopView(APIView):
+    def post(self, request, *args, **kwargs):
+        return Response({"message": "Test multi-shop POST successful!"}, status=status.HTTP_200_OK)
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
@@ -862,8 +870,6 @@ class OrderViewSet(viewsets.ModelViewSet):
             
             if not order_items:
                 return Response({'error': 'Order items are required'}, status=status.HTTP_400_BAD_REQUEST)
-            
-
 
             from decimal import Decimal
 
@@ -888,16 +894,15 @@ class OrderViewSet(viewsets.ModelViewSet):
                     # Create order data
                     order_data = {
                         'shop_id': shop_id,
-                        'order_items': items,
-                        'user': request.user
+                        'order_items': items
                     }
                     
-                    # Create serializer
-                    serializer = self.get_serializer(data=order_data)
+                    # Create serializer with context
+                    serializer = self.get_serializer(data=order_data, context={'request': request})
                     serializer.is_valid(raise_exception=True)
                     
-                    # Save order
-                    order = self.perform_create(serializer)
+                    # Create order using the serializer's create method
+                    order = serializer.save()
                     orders.append(order)
                     total_price += order.total_price
                 
@@ -930,7 +935,6 @@ class OrderViewSet(viewsets.ModelViewSet):
                 elif payment_method == 'razorpay':
                     # For Razorpay, we'll create the orders but not mark them as paid yet
                     # The frontend will handle the payment process and call the pay endpoint
-                    # Import Razorpay if needed
                     import razorpay
                     from django.conf import settings
                     
@@ -962,31 +966,34 @@ class OrderViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=False, methods=['get'])
+    def scan_qr_code(self, request):
+        """Scan a QR code and return the associated order details."""
+        qr_code_data = request.data.get('qr_code_data')
+        if not qr_code_data:
+            return Response({'error': 'QR code data is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # QR code data is a JSON string, so parse it
+            qr_payload = json.loads(qr_code_data)
+            order_id = qr_payload.get('order_id')
+
+            if not order_id:
+                return Response({'error': 'Order ID not found in QR code data'}, status=status.HTTP_400_BAD_REQUEST)
+
+            order = Order.objects.get(order_id=order_id)
+            serializer = self.get_serializer(order)
+            return Response(serializer.data)
+        except Order.DoesNotExist:
+            return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+        except json.JSONDecodeError:
+            return Response({'error': 'Invalid QR code data format'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     def perform_create(self, serializer):
-
-
-        from decimal import Decimal
-
-        # Generate order ID
-        order_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
-        
-        # Calculate total price
-        order_items = serializer.validated_data['order_items']
-        total_price = Decimal('0.0')
-        for item in order_items:
-            product = Product.objects.get(id=item['product_id'])
-            total_price += product.price * item['quantity']
-        
-        # Set expiration time
-        shop = Shop.objects.get(id=serializer.validated_data['shop_id'])
-        expires_at = timezone.now() + timedelta(minutes=shop.qr_validity_minutes)
-        
-        # Create order
-        order = serializer.save(
-            order_id=order_id,
-            total_price=total_price,
-            expires_at=expires_at
-        )
+        # The serializer already handles order creation, so we just need to handle post-creation tasks
+        order = serializer.save()
         
         # Generate QR payload as JSON string for frontend to render and scanners to parse
         qr_data = {
@@ -998,6 +1005,42 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         # Store JSON string so the frontend can render a QR from this payload directly
         order.qr_code = json.dumps(qr_data)
+        order.qr_valid_until = order.expires_at
+        order.save()
+        
+        return order
+
+    @action(detail=True, methods=['patch'])
+    def mark_item_bought(self, request, pk=None):
+        """Mark specific items within an order as bought."""
+        try:
+            order = self.get_object()  # Get the specific order based on the pk
+            item_ids_to_mark = request.data.get('item_ids', [])
+
+            if not item_ids_to_mark:
+                return Response({'error': 'No item IDs provided to mark as bought'}, status=status.HTTP_400_BAD_REQUEST)
+
+            updated_items = []
+            for item_id in item_ids_to_mark:
+                found = False
+                for item in order.order_items:
+                    if str(item.get('product_id')) == str(item_id):
+                        item['is_bought'] = True
+                        updated_items.append(item)
+                        found = True
+                        break
+                if not found:
+                    # Optionally, handle cases where item_id is not found in order_items
+                    print(f"Warning: Item ID {item_id} not found in order {order.order_id}")
+
+            order.save() # Save the updated order_items
+            serializer = self.get_serializer(order)
+            return Response(serializer.data)
+
+        except Order.DoesNotExist:
+            return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         order.qr_valid_until = expires_at
         order.save()
         
@@ -1005,7 +1048,16 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['put'])
     def verify(self, request, pk=None):
-        order = self.get_object()
+        # Try to get order by UUID first, then by order_id
+        try:
+            # First try to get by UUID (primary key)
+            order = self.get_object()
+        except:
+            # If that fails, try to get by order_id
+            try:
+                order = Order.objects.get(order_id=pk)
+            except Order.DoesNotExist:
+                return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
         
         if order.is_verified:
             return Response({'error': 'Order already verified'}, status=status.HTTP_400_BAD_REQUEST)

@@ -25,14 +25,6 @@ router.register(r'shop-logs', ShopLogViewSet)
 router.register(r'student-analytics', StudentAnalyticsViewSet)
 router.register(r'upload', FileUploadViewSet, basename='upload')
 
-# Ensure the multi-shop endpoint is properly registered
-# The DefaultRouter will automatically register the multi_shop action as /api/orders/multi-shop/
-
-urlpatterns = router.urls
-urlpatterns += [
-    path('orders/<uuid:pk>/pay/', OrderViewSet.as_view({'put': 'pay'}), name='order-pay'),
-]
-
 class RegisterView(APIView):
     permission_classes = [AllowAny]
     
@@ -222,5 +214,8 @@ urlpatterns = [
     path('users/login/', LoginView.as_view(), name='login'),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('orders/<uuid:pk>/pay/', OrderViewSet.as_view({'put': 'pay'}), name='order-pay'),
+    path('orders/scan-qr-code/', OrderViewSet.as_view({'get': 'scan_qr_code'}), name='order-scan-qr-code'),
+    path('orders/<uuid:pk>/mark-item-bought/', OrderViewSet.as_view({'patch': 'mark_item_bought'}), name='order-mark-item-bought'),
     path('', include(router.urls)),
 ]
