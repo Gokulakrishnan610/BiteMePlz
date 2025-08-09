@@ -63,9 +63,13 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError }) => 
       const html5QrCode = new Html5Qrcode("qr-reader");
       scannerRef.current = html5QrCode;
 
-      const config = {
+      // Make scan area responsive: roughly 85% of the smaller viewport dimension
+      const config: any = {
         fps: 10,
-        qrbox: { width: 250, height: 250 },
+        qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+          const size = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.85);
+          return { width: size, height: size };
+        },
         aspectRatio: 1.0,
         showTorchButtonIfSupported: true,
         showZoomSliderIfSupported: true,
@@ -193,7 +197,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError }) => 
       <div 
         id="qr-reader" 
         ref={scannerContainerRef} 
-        className="w-full max-w-md mx-auto"
+        className="w-full mx-auto"
         style={{ 
           display: isScanning ? 'block' : 'none',
           border: '2px solid #8B5CF6',

@@ -13,12 +13,15 @@ interface VerifiedOrder {
     roll_no: string;
   };
   order_items: Array<{
+    product_id: string;
     name: string;
     quantity: number;
     price: number;
+    is_bought: boolean;
   }>;
   total_price: number;
   created_at: string;
+  is_verified: boolean;
 }
 
 const ScanQRPage: React.FC = () => {
@@ -56,15 +59,52 @@ const ScanQRPage: React.FC = () => {
       }
       
       const parsedData = JSON.parse(qrData);
-      const { data } = await api.put(`/api/orders/${parsedData.order_id}/verify/`, { qrData });
+      // Use the new scan_qr endpoint to get order details without marking as verified
+      const { data } = await api.get(`/api/orders/${parsedData.order_id}/scan_qr/`);
       setVerifiedOrder(data);
-      toast.success('Order verified successfully');
+      toast.success('Order details loaded successfully. You can now mark items as bought.');
     } catch (error: any) {
       console.error('Verification error:', error);
-      toast.error(error.response?.data?.message || error.message || 'Verification failed');
+      toast.error(error.response?.data?.message || error.message || 'Failed to load order details');
     } finally {
       setVerifying(false);
       setQrData('');
+    }
+  };
+
+  const handleMarkItemBought = async (productId: string) => {
+    if (!verifiedOrder) return;
+
+    // Check if order is already verified
+    if (verifiedOrder.is_verified) {
+      toast.error('Cannot modify items for a verified order');
+      return;
+    }
+
+    try {
+      const { data } = await api.patch(`/api/orders/${verifiedOrder.id}/mark_item_bought/`, {
+        item_ids: [productId]
+      });
+      
+      // Update the local state with the new data
+      setVerifiedOrder(data);
+      toast.success('Item marked as bought');
+    } catch (error: any) {
+      console.error('Error marking item as bought:', error);
+      toast.error(error.response?.data?.message || 'Failed to mark item as bought');
+    }
+  };
+
+  const handleVerifyOrder = async () => {
+    if (!verifiedOrder) return;
+
+    try {
+      const { data } = await api.put(`/api/orders/${verifiedOrder.id}/verify/`, {});
+      setVerifiedOrder(data);
+      toast.success('Order verified successfully');
+    } catch (error: any) {
+      console.error('Error verifying order:', error);
+      toast.error(error.response?.data?.message || 'Failed to verify order');
     }
   };
 
@@ -255,19 +295,19 @@ const ScanQRPage: React.FC = () => {
                   {verifying ? (
                     <span className="flex items-center justify-center">
                       <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></span>
-                      Verifying...
+                      Loading...
                     </span>
                   ) : (
-                    'Verify Order'
+                    'Load Order Details'
                   )}
                 </button>
               </form>
             </>
           ) : (
             <div className="space-y-6">
-              <div className="bg-green-50 text-green-700 p-4 rounded-lg flex items-center">
+              <div className="bg-blue-50 text-blue-700 p-4 rounded-lg flex items-center">
                 <CheckCircle className="mr-2" size={20} />
-                <p className="font-medium">Order verified successfully</p>
+                <p className="font-medium">Order details loaded successfully. You can now mark items as bought.</p>
               </div>
 
               <div className="border rounded-lg p-4">
@@ -277,19 +317,73 @@ const ScanQRPage: React.FC = () => {
                   <p><strong>Roll Number:</strong> {verifiedOrder.user?.roll_no || 'N/A'}</p>
                   <p><strong>Order ID:</strong> #{verifiedOrder.id ? verifiedOrder.id.slice(-8) : verifiedOrder.order_id}</p>
                   <p><strong>Date:</strong> {verifiedOrder.created_at ? new Date(verifiedOrder.created_at).toLocaleString() : 'N/A'}</p>
+                  <p><strong>Status:</strong> 
+                    <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
+                      verifiedOrder.is_verified 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {verifiedOrder.is_verified ? 'Verified' : 'Pending'}
+                    </span>
+                  </p>
                 </div>
 
                 <div className="mt-4">
                   <h4 className="font-semibold mb-2">Items</h4>
+                  
+                  {/* Summary */}
+                  {verifiedOrder.order_items && (
+                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                      <div className="flex justify-between text-sm">
+                        <span>Total Items: {verifiedOrder.order_items.length}</span>
+                        <span>Bought: {verifiedOrder.order_items.filter(item => item.is_bought).length}</span>
+                        <span>Remaining: {verifiedOrder.order_items.filter(item => !item.is_bought).length}</span>
+                      </div>
+                      {verifiedOrder.order_items.filter(item => item.is_bought).length === verifiedOrder.order_items.length && (
+                        <div className="mt-2 p-2 bg-green-100 text-green-800 rounded-md text-center">
+                          <CheckCircle className="inline-block mr-1" size={16} />
+                          All items have been collected!
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   <div className="space-y-2">
                     {verifiedOrder.order_items && verifiedOrder.order_items.map((item, index) => (
-                      <div key={index} className="flex justify-between">
-                        <span>{item.name || 'Unknown Item'} x {item.quantity || 0}</span>
-                        <span>₹{(item.price || 0) * (item.quantity || 0)}</span>
+                      <div key={index} className={`flex justify-between items-center p-3 rounded-lg border ${
+                        item.is_bought ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'
+                      }`}>
+                        <div className="flex items-center space-x-3">
+                          {item.is_bought ? (
+                            <CheckCircle className="text-green-600" size={20} />
+                          ) : (
+                            <div className="w-5 h-5 border-2 border-gray-300 rounded-full"></div>
+                          )}
+                          <div>
+                            <span className={`font-medium ${item.is_bought ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                              {item.name || 'Unknown Item'} x {item.quantity || 0}
+                            </span>
+                            <p className="text-sm text-gray-500">₹{(item.price || 0) * (item.quantity || 0)}</p>
+                          </div>
+                        </div>
+                        {!item.is_bought && !verifiedOrder.is_verified && (
+                          <button
+                            onClick={() => handleMarkItemBought(item.product_id)}
+                            className="px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
+                          >
+                            Mark as Bought
+                          </button>
+                        )}
+                        {!item.is_bought && verifiedOrder.is_verified && (
+                          <span className="text-gray-500 text-sm">Cannot modify verified order</span>
+                        )}
+                        {item.is_bought && (
+                          <span className="text-green-600 text-sm font-medium">✓ Bought</span>
+                        )}
                       </div>
                     ))}
                   </div>
-                  <div className="border-t mt-2 pt-2 flex justify-between font-semibold">
+                  <div className="border-t mt-4 pt-4 flex justify-between font-semibold">
                     <span>Total</span>
                     <span>₹{verifiedOrder.total_price || 0}</span>
                   </div>
@@ -304,8 +398,17 @@ const ScanQRPage: React.FC = () => {
                   }}
                   className="flex-1 btn-secondary"
                 >
-                  Verify Another Order
+                  Scan Another Order
                 </button>
+                {!verifiedOrder.is_verified && (
+                  <button
+                    onClick={handleVerifyOrder}
+                    className="flex-1 btn-primary"
+                  >
+                    <CheckCircle size={20} className="inline-block mr-2" />
+                    Verify Order
+                  </button>
+                )}
                 <button
                   onClick={printReceipt}
                   className="flex-1 btn-primary"

@@ -1014,7 +1014,16 @@ class OrderViewSet(viewsets.ModelViewSet):
     def mark_item_bought(self, request, pk=None):
         """Mark specific items within an order as bought."""
         try:
-            order = self.get_object()  # Get the specific order based on the pk
+            # Try to get order by UUID first, then by order_id
+            try:
+                order = self.get_object()
+            except:
+                # If that fails, try to get by order_id
+                try:
+                    order = Order.objects.get(order_id=pk)
+                except Order.DoesNotExist:
+                    return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+            
             item_ids_to_mark = request.data.get('item_ids', [])
 
             if not item_ids_to_mark:
@@ -1025,15 +1034,18 @@ class OrderViewSet(viewsets.ModelViewSet):
                 found = False
                 for item in order.order_items:
                     if str(item.get('product_id')) == str(item_id):
+                        # Check if item is already bought
+                        if item.get('is_bought', False):
+                            return Response({'error': f'Item {item.get("name", "Unknown")} is already marked as bought'}, status=status.HTTP_400_BAD_REQUEST)
+                        
                         item['is_bought'] = True
                         updated_items.append(item)
                         found = True
                         break
                 if not found:
-                    # Optionally, handle cases where item_id is not found in order_items
-                    print(f"Warning: Item ID {item_id} not found in order {order.order_id}")
+                    return Response({'error': f'Item with ID {item_id} not found in order'}, status=status.HTTP_404_NOT_FOUND)
 
-            order.save() # Save the updated order_items
+            order.save()  # Save the updated order_items
             serializer = self.get_serializer(order)
             return Response(serializer.data)
 
@@ -1041,10 +1053,29 @@ class OrderViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        order.qr_valid_until = expires_at
-        order.save()
-        
-        return order
+
+    @action(detail=True, methods=['get'])
+    def scan_qr(self, request, pk=None):
+        """Scan a QR code and return order details without marking as verified."""
+        try:
+            # Try to get order by UUID first, then by order_id
+            try:
+                order = self.get_object()
+            except:
+                # If that fails, try to get by order_id
+                try:
+                    order = Order.objects.get(order_id=pk)
+                except Order.DoesNotExist:
+                    return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            # Return order details without marking as verified
+            serializer = self.get_serializer(order)
+            return Response(serializer.data)
+            
+        except Order.DoesNotExist:
+            return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=['put'])
     def verify(self, request, pk=None):
