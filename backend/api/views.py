@@ -440,7 +440,8 @@ class ShopViewSet(viewsets.ModelViewSet):
                 return Shop.objects.all()
             elif self.request.user.role == 'shopAdmin':
                 return Shop.objects.filter(id=self.request.user.shop.id)
-        return Shop.objects.filter(is_active=True)
+        # For unauthenticated users (like homepage), show all shops
+        return Shop.objects.all()
 
     def perform_create(self, serializer):
         shop = serializer.save()
@@ -651,6 +652,35 @@ class ShopViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=500)
 
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    def debug(self, request):
+        """Debug endpoint to check shops data"""
+        try:
+            all_shops = Shop.objects.all()
+            active_shops = Shop.objects.filter(is_active=True)
+            open_shops = Shop.objects.filter(is_open=True)
+            
+            debug_data = {
+                'total_shops': all_shops.count(),
+                'active_shops': active_shops.count(),
+                'open_shops': open_shops.count(),
+                'all_shops_data': [
+                    {
+                        'id': str(shop.id),
+                        'name': shop.name,
+                        'is_active': shop.is_active,
+                        'is_open': shop.is_open,
+                        'location': shop.location
+                    } for shop in all_shops
+                ],
+                'user_authenticated': request.user.is_authenticated,
+                'user_role': getattr(request.user, 'role', 'anonymous') if request.user.is_authenticated else 'anonymous'
+            }
+            
+            return Response(debug_data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
@@ -820,25 +850,127 @@ class OrderViewSet(viewsets.ModelViewSet):
         """Get orders for the current user"""
         try:
             orders = Order.objects.filter(user=request.user).order_by('-created_at')
-            # Convert orders to dictionaries with proper UUID handling
-            orders_data = []
+
+            # Auto-expire any paid, unverified, pending orders whose validity has passed
+            now = timezone.now()
             for order in orders:
-                order_dict = {
-                    '_id': str(order.id),
-                    'order_id': order.order_id,
-                    'total_price': float(order.total_price),
-                    'is_paid': order.is_paid,
-                    'is_verified': order.is_verified,
-                    'status': order.status,
-                    'order_items': order.order_items,
-                    'qr_code': order.qr_code,
-                    'qr_valid_until': order.qr_valid_until.isoformat() if order.qr_valid_until else None,
-                    'balance_amount': float(order.balance_amount),
-                    'final_validity': order.final_validity.isoformat() if order.final_validity else None,
-                    'createdAt': order.created_at.isoformat() if order.created_at else None,
-                    'payment_result': order.payment_result,
-                }
-                orders_data.append(order_dict)
+                try:
+                    if (
+                        order.is_paid
+                        and not order.is_verified
+                        and order.status == 'pending'
+                        and order.expires_at
+                        and order.expires_at < now
+                    ):
+                        with transaction.atomic():
+                            order.status = 'expired'
+                            order.save()
+                            # Return amount to wallet
+                            user = order.user
+                            user.balance += order.total_price
+                            user.save()
+                            # Log refund transaction
+                            Transaction.objects.create(
+                                user=user,
+                                shop=order.shop,
+                                order=order,
+                                amount=order.total_price,
+                                type='credit',
+                                status='success',
+                                payment_method='balance',
+                                description=f'Order {order.order_id} expired, amount returned to wallet.'
+                            )
+                except Exception:
+                    # Do not block listing if auto-expire fails for any order
+                    pass
+
+            # Group multi-shop sibling orders by their combined QR string (identical across siblings)
+            grouped = {}
+            for order in orders:
+                qr_key = None
+                try:
+                    payload = json.loads(order.qr_code or '{}')
+                    if isinstance(payload, dict) and payload.get('type') == 'multi_order':
+                        # Use the exact QR string as a stable grouping key
+                        qr_key = order.qr_code
+                except Exception:
+                    pass
+
+                if qr_key is None:
+                    # Treat as standalone entry (single shop order)
+                    grouped_key = f"single::{order.id}"
+                    grouped[grouped_key] = {
+                        '_id': str(order.id),
+                        'order_id': order.order_id,
+                        'total_price': float(order.total_price),
+                        'is_paid': order.is_paid,
+                        'is_verified': order.is_verified,
+                        'status': order.status,
+                        'order_items': order.order_items,
+                        'qr_code': order.qr_code,
+                        'qr_valid_until': order.qr_valid_until.isoformat() if order.qr_valid_until else None,
+                        'balance_amount': float(order.balance_amount),
+                        'final_validity': order.final_validity.isoformat() if order.final_validity else None,
+                        'createdAt': order.created_at.isoformat() if order.created_at else None,
+                        'payment_result': order.payment_result,
+                    }
+                    continue
+
+                # Initialize group entry if first time seen
+                if qr_key not in grouped:
+                    grouped[qr_key] = {
+                        '_id': str(order.id),  # representative id for details routing
+                        'order_id': order.order_id,
+                        'total_price': 0.0,
+                        'is_paid': True,      # will be ANDed across siblings
+                        'is_verified': True,  # will be ANDed across siblings
+                        'status': 'pending',
+                        'order_items': [],
+                        'qr_code': order.qr_code,
+                        'qr_valid_until': order.qr_valid_until.isoformat() if order.qr_valid_until else None,
+                        'balance_amount': 0.0,
+                        'final_validity': order.final_validity.isoformat() if order.final_validity else None,
+                        'createdAt': order.created_at.isoformat() if order.created_at else None,
+                        'payment_result': order.payment_result,
+                        '_order_statuses': [],  # internal helper
+                    }
+
+                entry = grouped[qr_key]
+                entry['total_price'] += float(order.total_price)
+                entry['is_paid'] = entry['is_paid'] and order.is_paid
+                entry['is_verified'] = entry['is_verified'] and order.is_verified
+                entry['order_items'].extend(order.order_items or [])
+                entry['balance_amount'] += float(order.balance_amount or 0)
+                entry['_order_statuses'].append(order.status)
+
+                # Keep earliest qr_valid_until within the group
+                if order.qr_valid_until:
+                    if not entry['qr_valid_until']:
+                        entry['qr_valid_until'] = order.qr_valid_until.isoformat()
+                    else:
+                        try:
+                            from datetime import datetime
+                            current = datetime.fromisoformat(entry['qr_valid_until'].replace('Z', '+00:00'))
+                            if order.qr_valid_until < current:
+                                entry['qr_valid_until'] = order.qr_valid_until.isoformat()
+                        except Exception:
+                            entry['qr_valid_until'] = order.qr_valid_until.isoformat()
+
+            # Finalize statuses for grouped entries
+            orders_data = []
+            for key, entry in grouped.items():
+                if '_order_statuses' in entry:
+                    statuses = entry.pop('_order_statuses')
+                    if any(s == 'expired' for s in statuses):
+                        entry['status'] = 'expired'
+                    elif all(s == 'completed' for s in statuses):
+                        entry['status'] = 'completed'
+                    else:
+                        entry['status'] = 'pending'
+                orders_data.append(entry)
+
+            # Maintain reverse chronological order by createdAt
+            orders_data.sort(key=lambda x: x.get('createdAt') or '', reverse=True)
             return Response(orders_data)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -877,7 +1009,11 @@ class OrderViewSet(viewsets.ModelViewSet):
             
     @action(detail=False, methods=['post'])
     def multi_shop(self, request):
-        """Create orders for multiple shops in a single request"""
+        """Create orders for multiple shops in a single request.
+
+        Generates a single combined QR payload (containing per-shop order ids, shop names, and item
+        summaries) and stores that same QR on each created order.
+        """
         try:
             # Extract data from request
             order_items = request.data.get('order_items', [])
@@ -906,20 +1042,73 @@ class OrderViewSet(viewsets.ModelViewSet):
             
             with transaction.atomic():
                 for shop_id, items in items_by_shop.items():
-                    # Create order data
+                    # Validate that all items in this shop group belong to the same shop
+                    for item in items:
+                        product_id = item.get('product_id')
+                        if product_id:
+                            try:
+                                product = Product.objects.get(id=product_id)
+                                if str(product.shop.id) != str(shop_id):
+                                    raise Exception(f"Product {product.name} (ID: {product_id}) does not belong to the target shop (ID: {shop_id}).")
+                            except Product.DoesNotExist:
+                                raise Exception(f"Product with ID {product_id} does not exist.")
+                    
+                    # Create order data with only the items for this specific shop
                     order_data = {
                         'shop_id': shop_id,
                         'order_items': items
                     }
                     
-                    # Create serializer with context
-                    serializer = self.get_serializer(data=order_data, context={'request': request})
+                    # Create serializer with context - use MultiShopOrderSerializer for multi-shop orders
+                    from .serializers import MultiShopOrderSerializer
+                    serializer = MultiShopOrderSerializer(data=order_data, context={'request': request, 'order_items': items})
                     serializer.is_valid(raise_exception=True)
                     
                     # Create order using the serializer's create method
                     order = serializer.save()
+
                     orders.append(order)
                     total_price += order.total_price
+                    print(f"[multi_shop] created order for shop {shop_id} total={order.total_price}")
+
+                # Generate one combined QR after creating all orders and attach to each order
+                try:
+                    combined_qr_orders = []
+                    for o in orders:
+                        # Prepare item summaries for QR
+                        try:
+                            item_summary = [
+                                {
+                                    'name': it.get('name'),
+                                    'quantity': it.get('quantity'),
+                                }
+                                for it in (o.order_items or [])
+                            ]
+                        except Exception:
+                            item_summary = []
+
+                        combined_qr_orders.append({
+                            'order_id': o.order_id,
+                            'shop_id': str(o.shop.id),
+                            'shop_name': o.shop.name,
+                            'items': item_summary,
+                        })
+
+                    combined_qr_payload = {
+                        'type': 'multi_order',
+                        'user_id': str(request.user.id),
+                        'total_price': str(total_price),
+                        'orders': combined_qr_orders,
+                    }
+
+                    combined_qr_str = json.dumps(combined_qr_payload)
+                    for o in orders:
+                        o.qr_code = combined_qr_str
+                        o.qr_valid_until = o.expires_at
+                        o.save()
+                except Exception:
+                    # Non-fatal if QR generation fails
+                    pass
                 
                 # Process payment if using balance
                 if payment_method == 'balance':
@@ -957,6 +1146,7 @@ class OrderViewSet(viewsets.ModelViewSet):
                     client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
                     
                     # Create Razorpay order
+                    print(f"[multi_shop] total_price all orders={total_price}, paise={int(total_price * 100)}")
                     razorpay_order = client.order.create({
                         'amount': int(total_price * 100),  # Amount in paise
                         'currency': 'INR',
@@ -964,18 +1154,39 @@ class OrderViewSet(viewsets.ModelViewSet):
                         'payment_capture': 1  # Auto-capture
                     })
                     
+                    # Tag each order with the shared Razorpay order id (pending status)
+                    for o in orders:
+                        o.payment_result = {
+                            'method': 'razorpay',
+                            'status': 'pending',
+                            'razorpay_order_id': razorpay_order['id']
+                        }
+                        o.save()
+                    
+                    # Prepare response orders data with `_id`
+                    from .serializers import MultiShopOrderSerializer as _MS
+                    orders_data = _MS(orders, many=True).data
+                    for od in orders_data:
+                        od['_id'] = str(od['id'])
+                    
                     # Return response with Razorpay order details
                     return Response({
                         'message': 'Orders created successfully',
-                        'orders': self.get_serializer(orders, many=True).data,
+                        'orders': orders_data,
                         'razorpay_order_id': razorpay_order['id'],
                         'razorpayKeyId': settings.RAZORPAY_KEY_ID
                     }, status=status.HTTP_201_CREATED)
             
+            # Prepare response orders data with `_id` for balance flow
+            from .serializers import MultiShopOrderSerializer as _MS2
+            orders_data = _MS2(orders, many=True).data
+            for od in orders_data:
+                od['_id'] = str(od['id'])
+            
             # Return response for balance payment
             return Response({
                 'message': 'Orders created successfully',
-                'orders': self.get_serializer(orders, many=True).data
+                'orders': orders_data
             }, status=status.HTTP_201_CREATED)
             
         except Exception as e:
@@ -1011,11 +1222,26 @@ class OrderViewSet(viewsets.ModelViewSet):
         order = serializer.save()
         
         # Generate QR payload as JSON string for frontend to render and scanners to parse
+        # Enrich payload with shop name and item summaries
+        try:
+            items_for_qr = [
+                {
+                    'name': item.get('name'),
+                    'quantity': item.get('quantity'),
+                }
+                for item in (order.order_items or [])
+            ]
+        except Exception:
+            items_for_qr = []
+
         qr_data = {
+            'type': 'single_order',
             'order_id': order.order_id,
             'user_id': str(order.user.id),
             'shop_id': str(order.shop.id),
-            'total_price': str(order.total_price)
+            'shop_name': order.shop.name,
+            'total_price': str(order.total_price),
+            'items': items_for_qr,
         }
 
         # Store JSON string so the frontend can render a QR from this payload directly
@@ -1087,6 +1313,82 @@ class OrderViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(order)
             return Response(serializer.data)
             
+        except Order.DoesNotExist:
+            return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['get'])
+    def group_details(self, request, pk=None):
+        """Return combined details for a multi-shop order group using the combined QR payload.
+
+        If the order has a combined QR (type == 'multi_order'), this returns:
+        {
+          combined_qr: str,
+          total_price: str,
+          shops: [{ order_id, shop_id, shop_name, is_paid, is_verified, total_price, items: [...] }]
+        }
+        Otherwise, returns a single-shop structure with the current order only.
+        """
+        try:
+            # Try to get order by UUID first, then by order_id
+            try:
+                order = self.get_object()
+            except Exception:
+                order = Order.objects.get(order_id=pk)
+
+            # Parse QR payload
+            try:
+                qr_payload = json.loads(order.qr_code or '{}')
+            except Exception:
+                qr_payload = {}
+
+            # If not a multi-order QR, just return current order wrapped in shops list
+            if not isinstance(qr_payload, dict) or qr_payload.get('type') != 'multi_order':
+                shop_entry = {
+                    'order_id': order.order_id,
+                    'shop_id': str(order.shop.id),
+                    'shop_name': order.shop.name,
+                    'is_paid': order.is_paid,
+                    'is_verified': order.is_verified,
+                    'total_price': str(order.total_price),
+                    'items': order.order_items or [],
+                }
+                return Response({
+                    'combined_qr': order.qr_code,
+                    'total_price': str(order.total_price),
+                    'shops': [shop_entry],
+                })
+
+            # Resolve sibling orders from the payload's orders[] list for authoritative mapping
+            shops = []
+            total = Decimal('0.0')
+            orders_list = qr_payload.get('orders') or []
+            for entry in orders_list:
+                oid = entry.get('order_id')
+                if not oid:
+                    continue
+                try:
+                    o = Order.objects.get(order_id=oid)
+                except Order.DoesNotExist:
+                    # Skip missing orders
+                    continue
+                shops.append({
+                    'order_id': o.order_id,
+                    'shop_id': str(o.shop.id),
+                    'shop_name': o.shop.name,
+                    'is_paid': o.is_paid,
+                    'is_verified': o.is_verified,
+                    'total_price': str(o.total_price),
+                    'items': o.order_items or [],
+                })
+                total += o.total_price
+
+            return Response({
+                'combined_qr': order.qr_code,
+                'total_price': str(total),
+                'shops': shops,
+            })
         except Order.DoesNotExist:
             return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
@@ -1231,6 +1533,29 @@ class OrderViewSet(viewsets.ModelViewSet):
                         'razorpay_signature': razorpay_signature
                     }
                     order.save()
+                    
+                    # Also mark sibling orders (multi-shop) with same razorpay_order_id as paid
+                    siblings = Order.objects.filter(payment_result__razorpay_order_id=razorpay_order_id, is_paid=False)
+                    for s in siblings:
+                        s.is_paid = True
+                        s.paid_at = timezone.now()
+                        s.payment_result = {
+                            'method': 'razorpay',
+                            'status': 'success',
+                            'razorpay_payment_id': razorpay_payment_id,
+                            'razorpay_order_id': razorpay_order_id,
+                            'razorpay_signature': razorpay_signature
+                        }
+                        s.save()
+                        Transaction.objects.create(
+                            user=s.user,
+                            shop=s.shop,
+                            order=s,
+                            amount=s.total_price,
+                            type='payment',
+                            payment_method='razorpay',
+                            description=f'Razorpay payment for order {s.order_id}'
+                        )
                     
                     # Create transaction
                     Transaction.objects.create(

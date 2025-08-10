@@ -23,6 +23,7 @@ interface Order {
   id?: string;
   createdAt: string;
   created_at?: string;
+  order_id?: string;
   total_price: number;
   is_paid: boolean;
   is_verified: boolean;
@@ -38,6 +39,7 @@ interface Order {
     status: string;
   };
   expires_at?: string;
+  shop?: { name?: string };
 }
 
 // All requests should go through the shared axios client `api` which is preconfigured
@@ -63,6 +65,20 @@ const OrderDetailsPage: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [isQRExpired, setIsQRExpired] = useState(false);
+  const [qrMeta, setQrMeta] = useState<any>(null);
+  const [groupDetails, setGroupDetails] = useState<{
+    combined_qr: string;
+    total_price: string;
+    shops: Array<{
+      order_id: string;
+      shop_id: string;
+      shop_name: string;
+      is_paid: boolean;
+      is_verified: boolean;
+      total_price: string;
+      items: OrderItem[];
+    }>;
+  } | null>(null);
 
   useEffect(() => {
     const checkOrderExpiry = async () => {
@@ -106,6 +122,24 @@ const OrderDetailsPage: React.FC = () => {
           createdAt: data.createdAt || data.created_at || data.created_at?.toString?.() || '',
         };
         setOrder(normalized);
+        // Parse QR payload for UI hints
+        try {
+          const meta = JSON.parse(data.qr_code || '{}');
+          setQrMeta(meta && typeof meta === 'object' ? meta : null);
+        } catch {
+          setQrMeta(null);
+        }
+        // If multi-order, fetch grouped details to render all shops on this page
+        try {
+          const { data: gd } = await api.get(`/api/orders/${id}/group_details/`);
+          if (gd && gd.shops) {
+            setGroupDetails(gd);
+          } else {
+            setGroupDetails(null);
+          }
+        } catch {
+          setGroupDetails(null);
+        }
         setLoading(false);
       } catch (err) {
         setError('Failed to load order details');
@@ -244,6 +278,11 @@ const OrderDetailsPage: React.FC = () => {
                       <CardTitle className="text-2xl font-bold text-gray-900 mb-4">
                         {`Order #${((order._id || order.id || '').toString()).slice(-8)}`}
                       </CardTitle>
+                      {(order.shop?.name || qrMeta?.shop_name) && (
+                        <div className="mb-3 text-sm text-gray-700">
+                          <span className="font-semibold">Shop:</span> {order.shop?.name || qrMeta?.shop_name}
+                        </div>
+                      )}
                       <div className="flex flex-wrap gap-2 mb-4">
                         <Badge
                           variant={order.is_paid ? "default" : "destructive"}
@@ -284,6 +323,11 @@ const OrderDetailsPage: React.FC = () => {
                 <CardContent>
                   <div className="space-y-2 text-sm text-gray-600">
                     <p>Placed on {new Date(order.createdAt || (order as any).created_at).toLocaleString()}</p>
+                    {qrMeta?.type === 'multi_order' && groupDetails && (
+                      <div className="mt-2 p-3 bg-blue-50 text-blue-800 rounded">
+                        This QR contains multiple shop orders. All shops and items are shown below.
+                      </div>
+                    )}
                     {order.payment_result?.razorpay_payment_id && (
                       <p>Payment ID: {order.payment_result.razorpay_payment_id}</p>
                     )}
@@ -292,42 +336,95 @@ const OrderDetailsPage: React.FC = () => {
                 </CardContent>
               </Card>
 
-              {/* Order Items */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl font-semibold">Order Items</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {order.order_items.map((item, index) => (
-                      <div key={index} className="flex items-center p-4 bg-gray-50 rounded-lg">
-                        <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
-                          <img
-                            src={item.image || 'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg'}
-                            alt={item.name}
-                            className="w-full h-full object-cover"
-                          />
+              {/* Order Items (Grouped if multi-order) */}
+              {qrMeta?.type === 'multi_order' && groupDetails ? (
+                <>
+                  {groupDetails.shops.map((shop, sidx) => (
+                    <Card key={sidx}>
+                      <CardHeader>
+                        <CardTitle className="text-xl font-semibold">{shop.shop_name}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {shop.items.map((item, index) => (
+                            <div key={index} className="flex items-center p-4 bg-gray-50 rounded-lg">
+                              <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                                <img
+                                  src={(item as any).image || 'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg'}
+                                  alt={item.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className="ml-4 flex-1">
+                                <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                                <p className="text-sm text-gray-600">
+                                  {item.quantity} x ₹{item.price}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-semibold text-gray-900">₹{item.quantity * (item as any).price}</p>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <div className="ml-4 flex-1">
-                          <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                          <p className="text-sm text-gray-600">
-                            {item.quantity} x ₹{item.price}
-                          </p>
+                        <div className="mt-6 pt-6 border-t border-gray-200">
+                          <div className="flex justify-between items-center">
+                            <span className="text-lg font-semibold text-gray-900">Shop Total</span>
+                            <span className="text-lg font-bold text-purple-600">₹{shop.total_price}</span>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-semibold text-gray-900">₹{item.quantity * item.price}</p>
-                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-xl font-semibold">Grand Total</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex justify-between items-center">
+                        <span className="text-lg font-semibold text-gray-900">Total</span>
+                        <span className="text-lg font-bold text-purple-600">₹{groupDetails.total_price}</span>
                       </div>
-                    ))}
-                  </div>
-                  <div className="mt-6 pt-6 border-t border-gray-200">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-semibold text-gray-900">Total</span>
-                      <span className="text-lg font-bold text-purple-600">₹{order.total_price}</span>
+                    </CardContent>
+                  </Card>
+                </>
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-xl font-semibold">Order Items</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {order.order_items.map((item, index) => (
+                        <div key={index} className="flex items-center p-4 bg-gray-50 rounded-lg">
+                          <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                            <img
+                              src={item.image || 'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg'}
+                              alt={item.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="ml-4 flex-1">
+                            <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                            <p className="text-sm text-gray-600">
+                              {item.quantity} x ₹{item.price}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-gray-900">₹{item.quantity * item.price}</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                    <div className="mt-6 pt-6 border-t border-gray-200">
+                      <div className="flex justify-between items-center">
+                        <span className="text-lg font-semibold text-gray-900">Total</span>
+                        <span className="text-lg font-bold text-purple-600">₹{order.total_price}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* Sidebar */}
@@ -341,8 +438,15 @@ const OrderDetailsPage: React.FC = () => {
                   <CardContent>
                     <div className="space-y-4">
                       <div className="p-3 bg-gray-50 rounded-lg">
-                        <p className="text-sm text-gray-600 mb-1">Item Purchased</p>
-                        <p className="font-medium text-gray-900">{order.order_items[0]?.name}</p>
+                        <p className="text-sm text-gray-600 mb-1">Items Purchased</p>
+                        <div className="space-y-1">
+                          {order.order_items.map((it, idx) => (
+                            <p key={idx} className="font-medium text-gray-900">
+                              {it.name} 
+                              <span className="text-gray-600">× {it.quantity}</span>
+                            </p>
+                          ))}
+                        </div>
                       </div>
 
                       <div className="p-3 bg-gray-50 rounded-lg">
@@ -355,7 +459,7 @@ const OrderDetailsPage: React.FC = () => {
                         <div className="flex items-center">
                           <Clock size={16} className="mr-2 text-gray-500" />
                           <p className={`font-medium ${isQRExpired ? 'text-red-600' : 'text-gray-900'}`}>
-                            {isQRExpired ? 'Expired' : formatISTTime(order.qr_valid_until || order.expires_at)}
+                            {isQRExpired ? 'Expired' : formatISTTime(order.qr_valid_until ?? order.expires_at ?? null)}
                           </p>
                         </div>
                       </div>
@@ -383,7 +487,7 @@ const OrderDetailsPage: React.FC = () => {
 
                       <div className="p-3 bg-gray-50 rounded-lg">
                         <p className="text-sm text-gray-600 mb-1">Final Validity</p>
-                        <p className="font-medium text-gray-900">{formatISTTime(order?.final_validity)}</p>
+                        <p className="font-medium text-gray-900">{formatISTTime(order?.final_validity ?? null)}</p>
                       </div>
                     </div>
                   </CardContent>

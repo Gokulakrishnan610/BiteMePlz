@@ -106,63 +106,141 @@ const HomePage: React.FC = () => {
 
   const fetchShops = async () => {
     try {
+      console.log("=== FETCH SHOPS START ===")
+      console.log("Fetching shops...")
       const { data } = await api.get("/api/shops/")
+      console.log("Shops API response:", data)
+      console.log("Shops API response keys:", Object.keys(data))
+      console.log("Shops API response type:", typeof data)
+      
       const shopsData = data.results || data
-      setShops(Array.isArray(shopsData) ? shopsData : [])
-      setFilteredShops(Array.isArray(shopsData) ? shopsData : [])
+      console.log("Shops data:", shopsData)
+      console.log("Shops data type:", typeof shopsData)
+      console.log("Is array:", Array.isArray(shopsData))
+      
+      if (Array.isArray(shopsData)) {
+        console.log("First shop structure:", shopsData[0])
+        console.log("Shop ID type:", typeof shopsData[0]?.id)
+        console.log("Shop ID value:", shopsData[0]?.id)
+        console.log("Total shops received:", shopsData.length)
+        
+        // Log all shop names for debugging
+        shopsData.forEach((shop, index) => {
+          console.log(`Shop ${index + 1}:`, { id: shop.id, name: shop.name, is_active: shop.is_active, is_open: shop.is_open })
+        })
+      }
+      
+      const shopsArray = Array.isArray(shopsData) ? shopsData : []
+      console.log("Final shops array:", shopsArray)
+      console.log("Number of shops:", shopsArray.length)
+      
+      // Set both shops and filteredShops to ensure consistency
+      setShops(shopsArray)
+      setFilteredShops(shopsArray)
+      
+      console.log("=== FETCH SHOPS END ===")
     } catch (err) {
+      console.error("Error fetching shops:", err)
+      // Try to fetch from debug endpoint
+      try {
+        console.log("Trying debug endpoint...")
+        const debugResponse = await api.get("/api/shops/debug/")
+        console.log("Debug response:", debugResponse.data)
+      } catch (debugErr) {
+        console.error("Debug endpoint also failed:", debugErr)
+      }
       throw new Error("Failed to load shops")
     }
   }
 
+  // Separate useEffect to handle initial shop display
+  useEffect(() => {
+    if (shops.length > 0) {
+      console.log(`=== INITIAL SHOP DISPLAY ===`)
+      console.log(`Setting initial filtered shops: ${shops.length} shops`)
+      setFilteredShops([...shops])
+      console.log(`=== INITIAL SHOP DISPLAY END ===`)
+    }
+  }, [shops])
+
   useEffect(() => {
     const filterShops = async () => {
+      console.log(`=== FILTER SHOPS START ===`)
+      console.log(`Current shops count: ${shops.length}`)
+      console.log(`Selected category: ${selectedCategory}`)
+      console.log(`Search query: ${searchQuery}`)
+      
       setIsFiltering(true)
-      let filtered = shops
-
-      if (selectedCategory !== "All") {
-        // Filter shops that have products in the selected category with stock
+      
+      // Start with all shops
+      let filtered = [...shops]
+      console.log(`Starting with ${filtered.length} shops`)
+      
+      // Apply category filtering only if not "All" and we have shops
+      if (selectedCategory !== "All" && shops.length > 0) {
         try {
+          console.log(`Filtering by category: ${selectedCategory}`)
+          
+          // Get products for the selected category
           const { data } = await api.get("/api/products/", {
             params: {
               category: selectedCategory.toLowerCase(),
               is_available: true,
-              stock__gt: 0, // Products with stock greater than 0
+              stock__gt: 0,
             },
           })
 
           const products = data.results || data
           console.log(`Found ${products.length} products for category: ${selectedCategory}`)
-          console.log('Products:', products)
           
-          const shopIdsWithCategory = new Set(products.map((product: Product) => product.shop.id))
-          console.log('Shop IDs with category:', Array.from(shopIdsWithCategory))
-          console.log('Available shops:', shops.map(shop => ({ id: shop.id, name: shop.name })))
-
-          filtered = shops.filter((shop) => shopIdsWithCategory.has(shop.id))
-          console.log(`Filtered to ${filtered.length} shops`)
+          if (products.length > 0) {
+            // Get unique shop IDs that have products in this category
+            const shopIdsWithCategory = new Set(
+              products.map((product: Product) => product.shop.id)
+            )
+            console.log(`Shop IDs with category ${selectedCategory}:`, Array.from(shopIdsWithCategory))
+            
+            // Filter shops to only those with products in the selected category
+            filtered = shops.filter((shop) => shopIdsWithCategory.has(shop.id))
+            console.log(`After category filtering: ${filtered.length} shops`)
+          } else {
+            // No products found for this category, show all shops
+            console.log(`No products found for category ${selectedCategory}, showing all shops`)
+            filtered = [...shops]
+          }
         } catch (error) {
-          console.error("Failed to filter shops by category:", error)
-          // Fallback to original filtering method
-          filtered = shops.filter((shop) => {
-            return shop.category === selectedCategory || shop.category === selectedCategory.toLowerCase()
-          })
+          console.error("Category filtering failed:", error)
+          // On error, show all shops
+          filtered = [...shops]
         }
       }
 
-      if (searchQuery) {
-        filtered = filtered.filter(
+      // Apply search filtering if there's a search query
+      if (searchQuery && filtered.length > 0) {
+        const searchFiltered = filtered.filter(
           (shop) =>
             shop.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            shop.description.toLowerCase().includes(searchQuery.toLowerCase()),
+            shop.description.toLowerCase().includes(searchQuery.toLowerCase())
         )
+        console.log(`After search filtering: ${searchFiltered.length} shops`)
+        filtered = searchFiltered
       }
 
+      console.log(`Final result: ${filtered.length} shops`)
+      console.log(`Final shops:`, filtered.map(shop => ({ id: shop.id, name: shop.name })))
+      console.log(`=== FILTER SHOPS END ===`)
+      
       setFilteredShops(filtered)
       setIsFiltering(false)
     }
 
-    filterShops()
+    // Only run filtering if we have shops
+    if (shops.length > 0) {
+      filterShops()
+    } else {
+      setFilteredShops([])
+      setIsFiltering(false)
+    }
   }, [shops, selectedCategory, searchQuery])
 
   // Add this useEffect for component loading animation
@@ -298,6 +376,19 @@ const HomePage: React.FC = () => {
               </Button>
             )
           })}
+        </div>
+      </div>
+
+      {/* Debug Section - Remove after fixing */}
+      <div className="max-w-7xl mx-auto px-4 py-2 bg-yellow-100 border border-yellow-300 rounded mb-4">
+        <div className="text-sm text-yellow-800">
+          <strong>DEBUG:</strong> Shops: {shops.length} | Filtered: {filteredShops.length} | Category: {selectedCategory} | Search: "{searchQuery}"
+        </div>
+        <div className="text-xs text-yellow-700 mt-1">
+          Raw shops: {shops.map(s => s.name).join(', ')}
+        </div>
+        <div className="text-xs text-yellow-700">
+          Filtered shops: {filteredShops.map(s => s.name).join(', ')}
         </div>
       </div>
 

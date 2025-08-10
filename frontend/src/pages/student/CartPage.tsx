@@ -156,7 +156,7 @@ const CartPage: React.FC = () => {
       setIsLoading(true);
       setPaymentInitiated(true);
 
-      const endpoint = shopIds.length > 1 ? "/api/orders/multi-shop/" : "/api/orders/";
+      const endpoint = shopIds.length > 1 ? "/api/orders/multi_shop/" : "/api/orders/";
       const requestData =
         shopIds.length > 1
           ? {
@@ -232,7 +232,7 @@ const CartPage: React.FC = () => {
       setIsLoading(true);
       setPaymentInitiated(true);
       // debug removed
-      const endpoint = shopIds.length > 1 ? "/api/orders/multi-shop/" : "/api/orders/";
+      const endpoint = shopIds.length > 1 ? "/api/orders/multi_shop/" : "/api/orders/";
       // Always map validCartItems to required fields and ensure image is not blank
       // debug removed
       const mappedOrderItems = validCartItems.map((item) => ({
@@ -240,6 +240,7 @@ const CartPage: React.FC = () => {
         quantity: item.quantity,
         shop_id: typeof item.shop_id === 'object' && item.shop_id !== null ? item.shop_id.id : item.shop_id,
         shop_name: item.shop_name,
+        price: item.price,
         image: item.image && item.image.trim() !== "" ? item.image : "https://via.placeholder.com/150", // fallback image
       }));
       // debug removed
@@ -265,8 +266,6 @@ const CartPage: React.FC = () => {
       startPaymentTimer();
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_RVKFS8WX756Anx',
-        amount: getTotalPrice() * 100,
-        currency: "INR",
         name: "Campus Kiosk",
         description: "Payment for your order",
         order_id: orderResponse.data.razorpay_order_id,
@@ -782,7 +781,7 @@ const CartPage: React.FC = () => {
                   All payments are final and non-refundable, so please review your order before confirming. Ensure a stable internet connection during payment. For any issues, contact support with your transaction details. By continuing, you agree to our digital purchase terms.
                   </p>
                   <div className="space-y-3">
-                    {getShopIds().length > 1 ? (
+                      {getShopIds().length > 1 ? (
                       <>
                         <div className="flex items-start">
                           <CheckCircle className="text-green-600 mr-3 mt-1 flex-shrink-0" size={16} />
@@ -791,18 +790,18 @@ const CartPage: React.FC = () => {
                         <div className="flex items-start">
                           <CheckCircle className="text-green-600 mr-3 mt-1 flex-shrink-0" size={16} />
                           <p className="text-gray-600">
-                            After payment, you will receive separate QR codes for each shop
+                            After payment, you will receive a single QR code that includes all shop orders
                           </p>
                         </div>
                         <div className="flex items-start">
                           <CheckCircle className="text-green-600 mr-3 mt-1 flex-shrink-0" size={16} />
                           <p className="text-gray-600">
-                            Each QR code must be shown to the respective shop staff for verification
+                            Show the same QR to each respective shop; it contains shop name and item details
                           </p>
                         </div>
                         <div className="flex items-start">
                           <CheckCircle className="text-green-600 mr-3 mt-1 flex-shrink-0" size={16} />
-                          <p className="text-gray-600">QR codes are valid for 20 minutes each</p>
+                          <p className="text-gray-600">QR code is valid for 20 minutes</p>
                         </div>
                         <div className="flex items-start">
                           <CheckCircle className="text-green-600 mr-3 mt-1 flex-shrink-0" size={16} />

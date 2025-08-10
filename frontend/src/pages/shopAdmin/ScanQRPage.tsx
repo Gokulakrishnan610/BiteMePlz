@@ -59,8 +59,24 @@ const ScanQRPage: React.FC = () => {
       }
       
       const parsedData = JSON.parse(qrData);
-      // Use the new scan_qr endpoint to get order details without marking as verified
-      const { data } = await api.get(`/api/orders/${parsedData.order_id}/scan_qr/`);
+
+      // Determine the order_id to load based on QR payload
+      let targetOrderId: string | undefined = parsedData?.order_id;
+      if (parsedData?.type === 'multi_order' && Array.isArray(parsedData?.orders)) {
+        const currentShopId = typeof user?.shop === 'object' ? (user?.shop as any)?.id : user?.shop;
+        const entry = parsedData.orders.find((o: any) => String(o.shop_id) === String(currentShopId));
+        if (!entry) {
+          throw new Error('This QR does not contain an order for your shop');
+        }
+        targetOrderId = entry.order_id;
+      }
+
+      if (!targetOrderId) {
+        throw new Error('Invalid QR data: missing order id');
+      }
+
+      // Load order details without marking as verified
+      const { data } = await api.get(`/api/orders/${targetOrderId}/scan_qr/`);
       setVerifiedOrder(data);
       toast.success('Order details loaded successfully. You can now mark items as bought.');
     } catch (error: any) {

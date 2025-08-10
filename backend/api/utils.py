@@ -3,11 +3,14 @@ import json
 import uuid
 from django.conf import settings
 from django.utils.html import strip_tags
+from decimal import Decimal
 
 
 class UUIDEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, uuid.UUID):
+            return str(obj)
+        if isinstance(obj, Decimal):
             return str(obj)
         return json.JSONEncoder.default(self, obj)
 
@@ -17,6 +20,8 @@ def convert_uuids_to_str_recursive(data):
     elif isinstance(data, list):
         return [convert_uuids_to_str_recursive(elem) for elem in data]
     elif isinstance(data, uuid.UUID):
+        return str(data)
+    elif isinstance(data, Decimal):
         return str(data)
     return data
 
