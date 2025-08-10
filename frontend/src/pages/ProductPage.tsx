@@ -105,8 +105,8 @@ const ProductPage: React.FC = () => {
       shop_id: shop!.id,
        shop_name: shop!.name,
      });
-     console.log("[ProductPage] Added to cart - product_id:", product.id, "shop_id:", shop!.id);
-    toast.success("Added to cart");
+    console.log("[ProductPage] Added to cart - product_id:", product.id, "shop_id:", shop!.id);
+    // Removed add-to-cart popup per UX request
   }
 
   if (loading) {

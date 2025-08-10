@@ -68,11 +68,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             : i
         )
       );
-      showSuccess('Cart Updated', `Updated quantity for ${item.name} in cart.`);
+      // Removed cart update popup per UX request
     } else {
       // Add new item
       setCartItems([...cartItems, item]);
-    showSuccess('Added to Cart', `${item.name} has been added to your cart.`);
+      // Removed add-to-cart popup per UX request
     }
   };
 

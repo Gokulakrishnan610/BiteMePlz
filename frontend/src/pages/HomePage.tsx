@@ -1,17 +1,16 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState, useDeferredValue } from "react"
 import { Link } from "react-router-dom"
 import api from "../api"
-import { Search, MapPin, Clock, Star, Coffee, Utensils, Cookie, BookOpen, Smartphone, Package } from "lucide-react"
+import { Search, MapPin, Clock, Star, Coffee, Utensils, Cookie, BookOpen, Smartphone, Package, Heart } from 'lucide-react'
 import { Card, CardContent } from "../components/ui/card"
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import Navbar from "../components/Navbar"
 import SimpleLoading from "../components/SimpleLoading"
-
 
 interface Shop {
   id: string
@@ -58,57 +57,67 @@ const HomePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [isFiltering, setIsFiltering] = useState(false)
-
   const [componentsLoaded, setComponentsLoaded] = useState(0)
+  const [recentShops, setRecentShops] = useState<Shop[]>([])
+
+  // Get recent shops from localStorage or random shops
+  const getRecentShops = (allShops: Shop[]) => {
+    try {
+      const recentShopIds = JSON.parse(localStorage.getItem("recentShops") || "[]")
+      if (recentShopIds.length > 0) {
+        const recent = recentShopIds
+          .map((id: string) => allShops.find((shop) => shop.id === id))
+          .filter(Boolean)
+          .slice(0, 2)
+        return recent
+      }
+    } catch (error) {
+      console.error("Error loading recent shops:", error)
+    }
+
+    // Return random shops if no recent shops
+    const shuffled = [...allShops].sort(() => 0.5 - Math.random())
+    return shuffled.slice(0, 2)
+  }
+
+  // Save shop to recent when user visits it
+  const addToRecentShops = (shopId: string) => {
+    try {
+      const recentShopIds = JSON.parse(localStorage.getItem("recentShops") || "[]")
+      const updatedRecent = [shopId, ...recentShopIds.filter((id: string) => id !== shopId)].slice(0, 5)
+      localStorage.setItem("recentShops", JSON.stringify(updatedRecent))
+    } catch (error) {
+      console.error("Error saving recent shop:", error)
+    }
+  }
 
   // Fetch available categories from products
-  const fetchAvailableCategories = async () => {
+  const fetchAvailableCategories = async (signal?: AbortSignal) => {
     try {
-      const { data } = await api.get("/api/products/")
+      const { data } = await api.get("/api/products/", { signal, params: { stock__gt: 0, is_available: true } })
       const products = data.results || data
-
       if (Array.isArray(products)) {
-        // Get unique categories from products that are available and in stock
         const categories = new Set<string>()
-
         products.forEach((product: Product) => {
           if (product.is_available && product.stock > 0 && product.category) {
             categories.add(product.category.toLowerCase())
           }
         })
-
-        // Sort categories alphabetically for better UX
         const sortedCategories = Array.from(categories).sort()
         const categoryArray = ["All", ...sortedCategories]
         setAvailableCategories(categoryArray)
       }
     } catch (error) {
       console.error("Failed to fetch categories:", error)
-      // Fallback to default categories if API fails
       setAvailableCategories(["All", "beverages", "electronics", "food", "others", "snacks", "stationery"])
     }
   }
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch both shops and categories
-        await Promise.all([fetchShops(), fetchAvailableCategories()])
-        setLoading(false)
-      } catch (err) {
-        setError("Failed to load data")
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [])
-
-  const fetchShops = async () => {
+  const fetchShops = async (signal?: AbortSignal) => {
     try {
       console.log("=== FETCH SHOPS START ===")
       console.log("Fetching shops...")
-      const { data } = await api.get("/api/shops/")
+      const { data } = await api.get("/api/shops/", { signal })
       console.log("Shops API response:", data)
       console.log("Shops API response keys:", Object.keys(data))
       console.log("Shops API response type:", typeof data)
@@ -134,11 +143,15 @@ const HomePage: React.FC = () => {
       console.log("Final shops array:", shopsArray)
       console.log("Number of shops:", shopsArray.length)
       
-      // Set both shops and filteredShops to ensure consistency
       setShops(shopsArray)
       setFilteredShops(shopsArray)
+
+      // Set recent shops
+      const recent = getRecentShops(shopsArray)
+      setRecentShops(recent)
       
       console.log("=== FETCH SHOPS END ===")
+      return shopsArray
     } catch (err) {
       console.error("Error fetching shops:", err)
       // Try to fetch from debug endpoint
@@ -149,39 +162,34 @@ const HomePage: React.FC = () => {
       } catch (debugErr) {
         console.error("Debug endpoint also failed:", debugErr)
       }
-      throw new Error("Failed to load shops")
+      throw err
     }
   }
 
-  // Separate useEffect to handle initial shop display
   useEffect(() => {
-    if (shops.length > 0) {
-      console.log(`=== INITIAL SHOP DISPLAY ===`)
-      console.log(`Setting initial filtered shops: ${shops.length} shops`)
-      setFilteredShops([...shops])
-      console.log(`=== INITIAL SHOP DISPLAY END ===`)
+    const controller = new AbortController()
+    const load = async () => {
+      try {
+        await Promise.all([fetchShops(controller.signal), fetchAvailableCategories(controller.signal)])
+        setLoading(false)
+      } catch (err) {
+        if ((err as any)?.name !== "CanceledError" && (err as any)?.code !== "ERR_CANCELED") {
+          setError("Failed to load data")
+          setLoading(false)
+        }
+      }
     }
-  }, [shops])
+    load()
+    return () => controller.abort()
+  }, [])
 
   useEffect(() => {
     const filterShops = async () => {
-      console.log(`=== FILTER SHOPS START ===`)
-      console.log(`Current shops count: ${shops.length}`)
-      console.log(`Selected category: ${selectedCategory}`)
-      console.log(`Search query: ${searchQuery}`)
-      
       setIsFiltering(true)
-      
-      // Start with all shops
-      let filtered = [...shops]
-      console.log(`Starting with ${filtered.length} shops`)
-      
-      // Apply category filtering only if not "All" and we have shops
-      if (selectedCategory !== "All" && shops.length > 0) {
+      let filtered = shops
+
+      if (selectedCategory !== "All") {
         try {
-          console.log(`Filtering by category: ${selectedCategory}`)
-          
-          // Get products for the selected category
           const { data } = await api.get("/api/products/", {
             params: {
               category: selectedCategory.toLowerCase(),
@@ -189,103 +197,70 @@ const HomePage: React.FC = () => {
               stock__gt: 0,
             },
           })
-
           const products = data.results || data
-          console.log(`Found ${products.length} products for category: ${selectedCategory}`)
-          
-          if (products.length > 0) {
-            // Get unique shop IDs that have products in this category
-            const shopIdsWithCategory = new Set(
-              products.map((product: Product) => product.shop.id)
-            )
-            console.log(`Shop IDs with category ${selectedCategory}:`, Array.from(shopIdsWithCategory))
-            
-            // Filter shops to only those with products in the selected category
-            filtered = shops.filter((shop) => shopIdsWithCategory.has(shop.id))
-            console.log(`After category filtering: ${filtered.length} shops`)
-          } else {
-            // No products found for this category, show all shops
-            console.log(`No products found for category ${selectedCategory}, showing all shops`)
-            filtered = [...shops]
-          }
+          const shopIdsWithCategory = new Set(
+            products.map((product: Product) => (product.shop && (product.shop as any).id) || product.shop),
+          )
+          filtered = shops.filter((shop) => shopIdsWithCategory.has(shop.id))
         } catch (error) {
-          console.error("Category filtering failed:", error)
-          // On error, show all shops
-          filtered = [...shops]
+          console.error("Failed to filter shops by category:", error)
+          filtered = shops.filter((shop) => {
+            return shop.category === selectedCategory || shop.category === selectedCategory.toLowerCase()
+          })
         }
       }
 
-      // Apply search filtering if there's a search query
-      if (searchQuery && filtered.length > 0) {
-        const searchFiltered = filtered.filter(
+      if (searchQuery) {
+        filtered = filtered.filter(
           (shop) =>
             shop.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            shop.description.toLowerCase().includes(searchQuery.toLowerCase())
+            shop.description.toLowerCase().includes(searchQuery.toLowerCase()),
         )
-        console.log(`After search filtering: ${searchFiltered.length} shops`)
-        filtered = searchFiltered
       }
 
-      console.log(`Final result: ${filtered.length} shops`)
-      console.log(`Final shops:`, filtered.map(shop => ({ id: shop.id, name: shop.name })))
-      console.log(`=== FILTER SHOPS END ===`)
-      
       setFilteredShops(filtered)
       setIsFiltering(false)
     }
-
-    // Only run filtering if we have shops
-    if (shops.length > 0) {
-      filterShops()
-    } else {
-      setFilteredShops([])
-      setIsFiltering(false)
-    }
+    filterShops()
   }, [shops, selectedCategory, searchQuery])
 
-  // Add this useEffect for component loading animation
-  useEffect(() => {
-    if (!loading) {
-      const components = [
-        () => setComponentsLoaded(1), // Navbar
-        () => setComponentsLoaded(2), // Search bar
-        () => setComponentsLoaded(3), // Categories
-        () => setComponentsLoaded(4), // First row of cards
-        () => setComponentsLoaded(5), // All cards
-      ]
+  const deferredSearch = useDeferredValue(searchQuery)
+  const displayedShops = useMemo(() => {
+    if (!deferredSearch) return filteredShops
+    const q = deferredSearch.toLowerCase()
+    return filteredShops.filter((s) => s.name.toLowerCase().includes(q) || s.description.toLowerCase().includes(q))
+  }, [filteredShops, deferredSearch])
 
-      components.forEach((component, index) => {
-        setTimeout(component, (index + 1) * 800)
-      })
-    }
+  useEffect(() => {
+    if (loading) return
+    const steps = [
+      () => setComponentsLoaded(1),
+      () => setComponentsLoaded(2),
+      () => setComponentsLoaded(3),
+      () => setComponentsLoaded(4),
+      () => setComponentsLoaded(5),
+    ]
+    steps.forEach((fn, i) => setTimeout(fn, (i + 1) * 120))
   }, [loading])
 
   const getTimeUntilClosure = (final_validity_time: string) => {
     if (!final_validity_time) return null
-
     const now = new Date()
     const final_validity = new Date(final_validity_time)
     const timeDiff = final_validity.getTime() - now.getTime()
-
     if (timeDiff <= 0) return null
-
     const hours = Math.floor(timeDiff / (1000 * 60 * 60))
     const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60))
-
     return { hours, minutes }
   }
 
   const isShopOpen = (shop: Shop) => {
-    // Check if shop is marked as open
     if (!shop.is_open) return false
-    
-    // Check if shop has passed its final validity time
     if (shop.final_validity_time) {
       const now = new Date()
       const final_validity = new Date(shop.final_validity_time)
       if (now > final_validity) return false
     }
-    
     return true
   }
 
@@ -295,23 +270,30 @@ const HomePage: React.FC = () => {
 
   const getCategoryLabel = (category: string) => {
     if (category === "All") return "All"
-    
     const labels: { [key: string]: string } = {
       food: "Food",
-      beverages: "Beverages", 
+      beverages: "Beverages",
       snacks: "Snacks",
       stationery: "Stationery",
       electronics: "Electronics",
       others: "Others",
     }
-    
     return labels[category.toLowerCase()] || category.charAt(0).toUpperCase() + category.slice(1)
   }
 
-
+  const handleShopClick = (shopId: string) => {
+    addToRecentShops(shopId)
+  }
 
   if (loading) {
-    return <SimpleLoading />
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading shops...</p>
+        </div>
+      </div>
+    )
   }
 
   if (error) {
@@ -329,191 +311,401 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Navbar */}
       <Navbar />
 
-      {/* Header with fade-in animation */}
-      <div
-        className={`pt-32 md:pt-40 bg-white border-b border-gray-200 transition-opacity duration-500 ${componentsLoaded >= 1 ? "opacity-100" : "opacity-0"}`}
-      >
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-            <Input
-              type="text"
-              placeholder="Search shops and items"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-3 w-full border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900 placeholder-gray-500"
-            />
-          </div>
-        </div>
-      </div>
-
-
-
-      {/* Categories with fade-in animation */}
-      <div
-        className={`max-w-7xl mx-auto px-4 py-4 transition-opacity duration-500 ${componentsLoaded >= 2 ? "opacity-100" : "opacity-0"}`}
-      >
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-          {availableCategories.map((category) => {
-            const IconComponent = getCategoryIcon(category)
-            return (
-              <Button
-                key={category}
-                variant={selectedCategory === category ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCategory(category)}
-                className={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
-                  selectedCategory === category
-                    ? "bg-[#6a1b9a] text-white hover:bg-[#5a1688]"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                }`}
-              >
-                <IconComponent size={16} />
-                {getCategoryLabel(category)}
-              </Button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Debug Section - Remove after fixing */}
-      <div className="max-w-7xl mx-auto px-4 py-2 bg-yellow-100 border border-yellow-300 rounded mb-4">
-        <div className="text-sm text-yellow-800">
-          <strong>DEBUG:</strong> Shops: {shops.length} | Filtered: {filteredShops.length} | Category: {selectedCategory} | Search: "{searchQuery}"
-        </div>
-        <div className="text-xs text-yellow-700 mt-1">
-          Raw shops: {shops.map(s => s.name).join(', ')}
-        </div>
-        <div className="text-xs text-yellow-700">
-          Filtered shops: {filteredShops.map(s => s.name).join(', ')}
-        </div>
-      </div>
-
-      {/* Shops Grid with staggered animation */}
-      <div
-        className={`max-w-7xl mx-auto px-4 pb-8 transition-opacity duration-500 ${componentsLoaded >= 3 ? "opacity-100" : "opacity-0"}`}
-      >
-        {isFiltering ? (
-          <div className="text-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Finding shops with {getCategoryLabel(selectedCategory)}...</p>
-          </div>
-        ) : filteredShops.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="text-gray-400 mb-4">
-              <Search size={48} className="mx-auto" />
+      {/* Desktop Layout */}
+      <div className="hidden md:block">
+        {/* Header with fade-in animation */}
+        <div
+          className={`pt-32 md:pt-40 bg-white border-b border-gray-200 transition-opacity duration-500 ${
+            componentsLoaded >= 1 ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <Input
+                type="text"
+                placeholder="Search shops and items"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-4 py-3 w-full border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900 placeholder-gray-500"
+              />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No shops found</h3>
-            <p className="text-gray-600">
-              {selectedCategory !== "All"
-                ? `No shops have products in the "${getCategoryLabel(selectedCategory)}" category with stock available.`
-                : "Try adjusting your search or filters"}
-            </p>
           </div>
-        ) : (
-          <div>
-            {/* Category Summary */}
-            {selectedCategory !== "All" && (
-              <div className="mb-6 text-center">
-                <p className="text-gray-600">
-                  Showing shops with {getCategoryLabel(selectedCategory)} products in stock
-                </p>
-              </div>
-            )}
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-fr">
-            {filteredShops.map((shop, index) => {
-              const timeUntilClosure = getTimeUntilClosure(shop.final_validity_time)
-              const isOpen = isShopOpen(shop)
-              const cardDelay = Math.floor(index / 4) * 200 + (index % 4) * 100
+        </div>
 
-              if (!shop.id) {
-                console.warn(`Shop ${shop.name} has no valid ID, skipping`)
-                return null
-              }
-
+        {/* Categories with fade-in animation */}
+        <div
+          className={`max-w-7xl mx-auto px-4 py-4 transition-opacity duration-500 ${
+            componentsLoaded >= 2 ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {availableCategories.map((category) => {
+              const IconComponent = getCategoryIcon(category)
               return (
-                <Link
-                  key={shop.id}
-                  to={isOpen ? `/shop/${shop.id}` : '#'}
-                  className={`group transition-opacity duration-500 h-full ${isOpen ? '' : 'pointer-events-none opacity-60'} ${
-                    componentsLoaded >= 4 + Math.floor(index / 4) ? "opacity-100" : "opacity-0"
+                <Button
+                  key={category}
+                  variant={selectedCategory === category ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedCategory(category)}
+                  className={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
+                    selectedCategory === category
+                      ? "bg-[#6a1b9a] text-white hover:bg-[#5a1688]"
+                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                   }`}
-                  style={{ transitionDelay: `${cardDelay}ms` }}
                 >
-                  <Card className="overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow duration-200 bg-white font-sans h-full flex flex-col">
-                    <div className="relative aspect-[4/3] overflow-hidden flex-shrink-0">
-                      <img
-                        src={shop.image || "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"}
-                        alt={shop.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                      />
-
-                      {isOpen && (
-                        <Badge className="absolute top-2 left-2 bg-green-600 hover:bg-green-600 text-white text-xs">
-                          Open
-                        </Badge>
-                      )}
-                    </div>
-
-                    <CardContent className="p-3 flex-1 flex flex-col">
-                      <div className="flex items-start justify-between mb-1">
-                        <h3 className="font-semibold text-gray-900 text-sm leading-tight group-hover:text-purple-600 transition-colors line-clamp-2 min-h-[2.5rem]">
-                          {shop.name}
-                        </h3>
-                        <Badge 
-                          variant={isOpen ? "default" : "secondary"}
-                          className={`text-xs ${
-                            isOpen 
-                              ? "bg-green-600 hover:bg-green-700 text-white" 
-                              : "bg-gray-500 hover:bg-gray-600 text-white"
-                          }`}
-                        >
-                          {isOpen ? "Open" : "Closed"}
-                        </Badge>
-                      </div>
-
-                      <p className="text-xs text-gray-600 mb-2 line-clamp-2 min-h-[2rem]">{shop.description}</p>
-
-                      <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
-                        <div className="flex items-center">
-                          <Star className="w-3 h-3 text-yellow-400 fill-current mr-1" />
-                          <span className="font-medium">{shop.rating || 4.8}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <Clock className="w-3 h-3 mr-1" />
-                          <span>{shop.delivery_time || "15-25 min"}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center text-xs text-gray-500 mb-1">
-                        <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
-                        <span className="truncate">{shop.location}</span>
-                      </div>
-
-                      {isOpen && timeUntilClosure && (
-                        <div className="flex items-center text-xs text-gray-500">
-                          <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
-                          <span className="truncate">
-                            Closes in {timeUntilClosure.hours}h {timeUntilClosure.minutes}m
-                          </span>
-                        </div>
-                      )}
-
-                    </CardContent>
-                  </Card>
-                </Link>
+                  <IconComponent size={16} />
+                  {getCategoryLabel(category)}
+                </Button>
               )
             })}
           </div>
+        </div>
+
+        {/* Shops Grid with staggered animation */}
+        <div
+          className={`max-w-7xl mx-auto px-4 pb-8 transition-opacity duration-500 ${
+            componentsLoaded >= 3 ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          {isFiltering ? (
+            <div className="text-center py-16">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Finding shops with {getCategoryLabel(selectedCategory)}...</p>
+            </div>
+          ) : displayedShops.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="text-gray-400 mb-4">
+                <Search size={48} className="mx-auto" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No shops found</h3>
+              <p className="text-gray-600">
+                {selectedCategory !== "All"
+                  ? `No shops have products in the "${getCategoryLabel(selectedCategory)}" category with stock available.`
+                  : "Try adjusting your search or filters"}
+              </p>
+            </div>
+          ) : (
+            <div>
+              {/* Category Summary */}
+              {selectedCategory !== "All" && (
+                <div className="mb-6 text-center">
+                  <p className="text-gray-600">
+                    Showing shops with {getCategoryLabel(selectedCategory)} products in stock
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-fr">
+                {displayedShops.map((shop, index) => {
+                  const timeUntilClosure = getTimeUntilClosure(shop.final_validity_time)
+                  const isOpen = isShopOpen(shop)
+                  const cardDelay = Math.floor(index / 4) * 200 + (index % 4) * 100
+
+                  if (!shop.id) {
+                    console.warn(`Shop ${shop.name} has no valid ID, skipping`)
+                    return null
+                  }
+
+                  return (
+                    <Link
+                      key={shop.id}
+                      to={isOpen ? `/shop/${shop.id}` : "#"}
+                      onClick={() => isOpen && handleShopClick(shop.id)}
+                      className={`group transition-opacity duration-500 h-full ${
+                        isOpen ? "" : "pointer-events-none opacity-60"
+                      } ${componentsLoaded >= 4 + Math.floor(index / 4) ? "opacity-100" : "opacity-0"}`}
+                      style={{ transitionDelay: `${cardDelay}ms` }}
+                    >
+                      <Card className="overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow duration-200 bg-white font-sans h-full flex flex-col">
+                        <div className="relative aspect-[4/3] overflow-hidden flex-shrink-0">
+                          <img
+                            src={
+                              shop.image ||
+                              "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"
+                             || "/placeholder.svg"}
+                            alt={shop.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          />
+                        </div>
+                        <CardContent className="p-3 flex-1 flex flex-col">
+                          <div className="flex items-start justify-between mb-1">
+                            <h3 className="font-semibold text-gray-900 text-sm leading-tight group-hover:text-purple-600 transition-colors line-clamp-2 min-h-[2.5rem]">
+                              {shop.name}
+                            </h3>
+                            <Badge
+                              variant={isOpen ? "default" : "secondary"}
+                              className={`text-xs ${
+                                isOpen
+                                  ? "bg-green-600 hover:bg-green-700 text-white"
+                                  : "bg-gray-500 hover:bg-gray-600 text-white"
+                              }`}
+                            >
+                              {isOpen ? "Open" : "Closed"}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-gray-600 mb-2 line-clamp-2 min-h-[2rem]">{shop.description}</p>
+                          <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
+                            <div className="flex items-center">
+                              <Star className="w-3 h-3 text-yellow-400 fill-current mr-1" />
+                              <span className="font-medium">{shop.rating || 4.8}</span>
+                            </div>
+                            <div className="flex items-center">
+                              <Clock className="w-3 h-3 mr-1" />
+                              <span>{shop.delivery_time || "15-25 min"}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center text-xs text-gray-500 mb-1">
+                            <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
+                            <span className="truncate">{shop.location}</span>
+                          </div>
+                          {isOpen && timeUntilClosure && (
+                            <div className="flex items-center text-xs text-gray-500">
+                              <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
+                              <span className="truncate">
+                                Closes in {timeUntilClosure.hours}h {timeUntilClosure.minutes}m
+                              </span>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Mobile Layout */}
+      <div className="md:hidden">
+        {/* Content */}
+        <div className="pt-20">
+          {/* Search Bar */}
+          <div className="px-4 py-8">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Input
+                type="text"
+                placeholder="Search shops and items"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-4 py-3 w-full border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900 placeholder-gray-500"
+              />
+            </div>
           </div>
-        )}
+
+          {/* Mobile Category Filters */}
+          <div className="px-4 pb-4">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              {availableCategories.map((category) => {
+                const IconComponent = getCategoryIcon(category)
+                return (
+                  <Button
+                    key={category}
+                    variant={selectedCategory === category ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedCategory(category)}
+                    className={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
+                      selectedCategory === category
+                        ? "bg-[#6a1b9a] text-white hover:bg-[#5a1688]"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    <IconComponent size={16} />
+                    {getCategoryLabel(category)}
+                  </Button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="px-4 py-4">
+            {isFiltering ? (
+              <div className="text-center py-16">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Finding shops with {getCategoryLabel(selectedCategory)}...</p>
+              </div>
+            ) : displayedShops.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="text-gray-400 mb-4">
+                  <Search size={48} className="mx-auto" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No shops found</h3>
+                <p className="text-gray-600">
+                  {selectedCategory !== "All"
+                    ? `No shops have products in the "${getCategoryLabel(selectedCategory)}" category with stock available.`
+                    : "Try adjusting your search or filters"}
+                </p>
+              </div>
+            ) : (
+              <div>
+                {/* Category Summary */}
+                {selectedCategory !== "All" && (
+                  <div className="mb-6 text-center">
+                    <p className="text-gray-600">
+                      Showing shops with {getCategoryLabel(selectedCategory)} products in stock
+                    </p>
+                  </div>
+                )}
+
+                {/* Recent Section */}
+                <div className="mb-6">
+                  <h2 className="text-xl font-bold text-gray-900 mb-3">Recent</h2>
+                  <div className="grid grid-cols-1 gap-4">
+                    {recentShops.map((shop) => {
+                      const timeUntilClosure = getTimeUntilClosure(shop.final_validity_time)
+                      const isOpen = isShopOpen(shop)
+                      return (
+                        <Link key={shop.id} to={`/shop/${shop.id}`} onClick={() => handleShopClick(shop.id)}>
+                          <Card className="overflow-hidden hover:shadow-lg transition-all duration-200 border-0 shadow-md">
+                            <div className="flex">
+                              <div className="relative w-32 h-32 flex-shrink-0">
+                                <img
+                                  src={shop.image || "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"}
+                                  alt={shop.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <CardContent className="flex-1 p-4">
+                                <div className="mb-1">
+                                  <h3 className="font-bold text-lg text-gray-900 line-clamp-1">{shop.name}</h3>
+                                </div>
+                                <p className="text-gray-600 text-sm mb-2 line-clamp-1">{shop.description}</p>
+                                <div className="flex items-center justify-between text-sm">
+                                  <div className="flex items-center gap-3 text-gray-500">
+                                    <div className="flex items-center gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      <span>{shop.delivery_time || "15-25 min"}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <MapPin className="h-3 w-3" />
+                                      <span className="truncate max-w-[100px]">{shop.location}</span>
+                                    </div>
+                                  </div>
+                                  <Badge
+                                    variant={isOpen ? "default" : "secondary"}
+                                    className={`text-xs ${
+                                      isOpen
+                                        ? "bg-green-600 hover:bg-green-700 text-white"
+                                        : "bg-gray-500 hover:bg-gray-600 text-white"
+                                    }`}
+                                  >
+                                    {isOpen ? "Open" : "Closed"}
+                                  </Badge>
+                                </div>
+                                {isOpen && timeUntilClosure && (
+                                  <div className="mt-2">
+                                    <span className="text-xs text-orange-600 font-medium">
+                                      Closes in {timeUntilClosure.hours}h {timeUntilClosure.minutes}m
+                                    </span>
+                                  </div>
+                                )}
+                              </CardContent>
+                            </div>
+                          </Card>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* All Shops */}
+                <div className="mb-6">
+                  <h2 className="text-xl font-bold text-gray-900 mb-3">All Shops</h2>
+                  <div className="grid grid-cols-2 gap-3">
+                    {displayedShops.map((shop, index) => {
+                      const timeUntilClosure = getTimeUntilClosure(shop.final_validity_time)
+                      const isOpen = isShopOpen(shop)
+
+                      if (!shop.id) {
+                        console.warn(`Shop ${shop.name} has no valid ID, skipping`)
+                        return null
+                      }
+
+                      return (
+                        <Link
+                          key={shop.id}
+                          to={isOpen ? `/shop/${shop.id}` : "#"}
+                          onClick={() => isOpen && handleShopClick(shop.id)}
+                          className={`group transition-opacity duration-500 ${
+                            isOpen ? "" : "pointer-events-none opacity-60"
+                          }`}
+                        >
+                          <Card className="overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow duration-200 bg-white">
+                            <div className="relative aspect-square overflow-hidden">
+                              <img
+                                src={shop.image || "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"}
+                                alt={shop.name}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                              />
+                              <div className="absolute top-2 right-2">
+                                <div className="bg-white rounded-full p-1.5 shadow-md">
+                                  <Heart className="h-3 w-3 text-gray-400" />
+                                </div>
+                              </div>
+                            </div>
+                            <CardContent className="p-3">
+                              <div className="flex items-start justify-between mb-1">
+                                <h3 className="font-semibold text-gray-900 text-sm leading-tight group-hover:text-purple-600 transition-colors line-clamp-1">
+                                  {shop.name}
+                                </h3>
+                                <Badge
+                                  variant={isOpen ? "default" : "secondary"}
+                                  className={`text-xs ml-1 ${
+                                    isOpen
+                                      ? "bg-green-600 hover:bg-green-700 text-white"
+                                      : "bg-gray-500 hover:bg-gray-600 text-white"
+                                  }`}
+                                >
+                                  {isOpen ? "Open" : "Closed"}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-gray-600 mb-2 line-clamp-2">{shop.description}</p>
+                              <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+                                <div className="flex items-center">
+                                  <Star className="w-3 h-3 text-yellow-400 fill-current mr-1" />
+                                  <span className="font-medium">{shop.rating || 4.8}</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  <span>{shop.delivery_time || "15-25 min"}</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center text-xs text-gray-500 mb-1">
+                                <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
+                                <span className="truncate">{shop.location}</span>
+                              </div>
+                              {isOpen && timeUntilClosure && (
+                                <div className="flex items-center text-xs text-gray-500">
+                                  <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
+                                  <span className="truncate">
+                                    Closes in {timeUntilClosure.hours}h {timeUntilClosure.minutes}m
+                                  </span>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom padding for mobile */}
+        <div className="h-20"></div>
       </div>
     </div>
   )
 }
 
-export default HomePage;
+export default HomePage
