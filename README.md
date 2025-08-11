@@ -69,6 +69,40 @@ REC-KIOSK/
    ```
    The backend will be available at `http://localhost:8000`
 
+6. **Background jobs (Celery + Redis)**
+
+   This project uses Celery for automated tasks like expiring orders and handling wallet refunds per your multi-shop constraints.
+
+   - Install and run Redis (no Docker):
+     - Windows (Chocolatey, run PowerShell as Administrator):
+       - Install: `choco install redis-64 -y`
+        -path:`C:\Users\asiva\Downloads\Redis-x64-3.0.504`
+       - Start: `\redis-server.exe`
+       - Test: `redis-cli ping` → should return `PONG`
+     - Or via WSL (Ubuntu):
+       - `sudo apt update && sudo apt install -y redis-server`
+       - `sudo service redis-server start`
+       - `redis-cli ping`
+
+   - Start Celery (Windows PowerShell):
+     - From backend folder:
+       - `cd D:\REC-KIOSK\backend`
+       - Set env (one-time per session):
+         - `$env:DJANGO_SETTINGS_MODULE='rec_kiosk.settings'`
+       - Worker (Windows uses solo pool):
+         - `celery -A rec_kiosk worker -l info -P solo`
+       - Beat (scheduler):
+         - `celery -A rec_kiosk beat -l info`
+
+   - Alternatively, from repo root:
+     - Worker: `celery -A backend.rec_kiosk worker -l info -P solo`
+     - Beat: `celery -A backend.rec_kiosk beat -l info`
+
+   Notes:
+   - Broker URL is `redis://localhost:6379/0` (configured in `backend/rec_kiosk/settings.py`).
+   - The beat schedule is defined in `backend/rec_kiosk/celery.py` and runs every minute.
+   - Refund logic: For multi-shop orders, each shop’s order expires independently; wallet refunds are applied only to unverified, expired siblings paid by wallet.
+
 ### Frontend Setup
 
 1. **Navigate to frontend directory:**

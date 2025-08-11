@@ -440,18 +440,36 @@ const OrderDetailsPage: React.FC = () => {
                       <div className="p-3 bg-gray-50 rounded-lg">
                         <p className="text-sm text-gray-600 mb-1">Items Purchased</p>
                         <div className="space-y-1">
-                          {order.order_items.map((it, idx) => (
-                            <p key={idx} className="font-medium text-gray-900">
-                              {it.name} 
-                              <span className="text-gray-600">× {it.quantity}</span>
-                            </p>
-                          ))}
+                          {qrMeta?.type === 'multi_order' && groupDetails ? (
+                            groupDetails.shops.map((shop, sidx) => (
+                              <div key={sidx} className="space-y-1">
+                                {shop.items.map((it, idx) => (
+                                  <p key={`${sidx}-${idx}`} className="font-medium text-gray-900">
+                                    <span className="text-gray-500 mr-1">{shop.shop_name} —</span>
+                                    {it.name}
+                                    <span className="text-gray-600"> × {it.quantity}</span>
+                                  </p>
+                                ))}
+                              </div>
+                            ))
+                          ) : (
+                            order.order_items.map((it, idx) => {
+                              const shopLabel = (it as any).shop_name || order.shop?.name || qrMeta?.shop_name;
+                              return (
+                                <p key={idx} className="font-medium text-gray-900">
+                                  {shopLabel && <span className="text-gray-500 mr-1">{shopLabel} —</span>}
+                                  {it.name}
+                                  <span className="text-gray-600"> × {it.quantity}</span>
+                                </p>
+                              );
+                            })
+                          )}
                         </div>
                       </div>
 
                       <div className="p-3 bg-gray-50 rounded-lg">
                         <p className="text-sm text-gray-600 mb-1">Amount Paid</p>
-                        <p className="font-medium text-gray-900">₹{order.total_price}</p>
+                        <p className="font-medium text-gray-900">₹{qrMeta?.type === 'multi_order' && groupDetails ? groupDetails.total_price : order.total_price}</p>
                       </div>
 
                       <div className="p-3 bg-gray-50 rounded-lg">
