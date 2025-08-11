@@ -38,7 +38,13 @@ const HoveredLink = ({ children, href, ...rest }: HoveredLinkProps) => {
 
     const handleLogout = () => {
         logout()
-        navigate("/login")
+        if (user?.role === 'admin') {
+          navigate('/kisok-ac-back-office/login')
+        } else if (user?.role === 'shopAdmin') {
+          navigate('/kisok-sp-back-office/login')
+        } else {
+          navigate('/login')
+        }
     }
 
     return (

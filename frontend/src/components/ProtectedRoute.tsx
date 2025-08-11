@@ -5,11 +5,13 @@ import { useAuth } from '../context/AuthContext';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredRole?: string;
+  allowSubAdmin?: boolean;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
-  requiredRole 
+  requiredRole,
+  allowSubAdmin = true,
 }) => {
   const { user, loading } = useAuth();
 
@@ -22,10 +24,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" />;
   }
 
+  // Disallow sub-admins when requested for shopAdmin routes
+  if (requiredRole === 'shopAdmin' && allowSubAdmin === false && (user as any).is_sub_admin) {
+    return <Navigate to="/kisok-sp-back-office/products" />;
+  }
+
   // Check role if required
   if (requiredRole) {
-
-
     // Check specific roles
     if (user.role !== requiredRole) {
       // Redirect based on role

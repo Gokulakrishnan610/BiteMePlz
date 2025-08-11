@@ -145,17 +145,19 @@ const LoginPage: React.FC = () => {
               >
                 Forgot your password?
               </Link>
-              <div className="border-t border-gray-200 pt-4">
-                <p className="text-gray-600">
-                  Don't have an account?{' '}
-                  <Link 
-                    to="/register" 
-                    className="text-purple-600 hover:text-purple-700 font-medium transition-colors"
-                  >
-                    Register here
-                  </Link>
-                </p>
-              </div>
+              {getExpectedRole() === 'student' && (
+                <div className="border-t border-gray-200 pt-4">
+                  <p className="text-gray-600">
+                    Don't have an account?{' '}
+                    <Link 
+                      to="/register" 
+                      className="text-purple-600 hover:text-purple-700 font-medium transition-colors"
+                    >
+                      Register here
+                    </Link>
+                  </p>
+                </div>
+              )}
             </div>
           </form>
         </div>

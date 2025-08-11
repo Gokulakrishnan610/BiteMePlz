@@ -155,14 +155,28 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<ShopAdminDashboardPage />} />
+            <Route 
+              index 
+              element={
+                <ProtectedRoute requiredRole="shopAdmin" allowSubAdmin={false}>
+                  <ShopAdminDashboardPage />
+                </ProtectedRoute>
+              } 
+            />
             <Route path="products" element={<ShopAdminProductsPage />} />
             <Route path="products/create" element={<ShopAdminCreateProductPage />} />
             <Route path="products/edit/:id" element={<ShopAdminEditProductPage />} />
             <Route path="orders" element={<ShopAdminOrdersPage />} />
             <Route path="transactions" element={<ShopAdminTransactionsPage />} />
             <Route path="scan" element={<ShopAdminScanQRPage />} />
-            <Route path="sub-admins" element={<SubShopAdminsPage />} />
+            <Route 
+              path="sub-admins" 
+              element={
+                <ProtectedRoute requiredRole="shopAdmin" allowSubAdmin={false}>
+                  <SubShopAdminsPage />
+                </ProtectedRoute>
+              } 
+            />
           </Route>
           
           {/* 404 Page - Must be last */}

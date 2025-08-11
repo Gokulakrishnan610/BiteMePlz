@@ -26,12 +26,23 @@ api.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       // Clear token and redirect to login
+      const userRaw = localStorage.getItem('user');
+      let role: string | null = null;
+      try {
+        role = userRaw ? JSON.parse(userRaw).role : null;
+      } catch {}
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       
       // Only redirect if not already on login page
       if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
+        if (role === 'admin') {
+          window.location.href = '/kisok-ac-back-office/login';
+        } else if (role === 'shopAdmin') {
+          window.location.href = '/kisok-sp-back-office/login';
+        } else {
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);

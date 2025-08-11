@@ -28,6 +28,8 @@ class User(AbstractUser):
     password_reset_otp = models.JSONField(null=True, blank=True)
     password_reset_token = models.JSONField(null=True, blank=True)
     balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    is_sub_admin = models.BooleanField(default=False)
+    parent_admin = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='sub_admins')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -53,6 +55,8 @@ class User(AbstractUser):
             'shop': str(self.shop.id) if self.shop else None,
             'is_verified': self.is_verified,
             'balance': float(self.balance),
+            'is_sub_admin': self.is_sub_admin,
+            'parent_admin': str(self.parent_admin.id) if self.parent_admin else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }

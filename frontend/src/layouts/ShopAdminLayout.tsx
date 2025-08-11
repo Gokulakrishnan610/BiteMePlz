@@ -23,7 +23,7 @@ const ShopAdminLayout: React.FC = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/kisok-sp-back-office/login');
   };
 
   const toggleSidebar = () => {
@@ -37,6 +37,14 @@ const ShopAdminLayout: React.FC = () => {
   const is_active = (path: string) => {
     return location.pathname === path;
   };
+
+  React.useEffect(() => {
+    if (user?.is_sub_admin) {
+      if (location.pathname === '/kisok-sp-back-office' || location.pathname === '/kisok-sp-back-office/') {
+        navigate('/kisok-sp-back-office/products', { replace: true });
+      }
+    }
+  }, [user, location.pathname, navigate]);
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-[var(--primary-bg)] via-[var(--secondary-bg)] to-[var(--primary-bg)]">

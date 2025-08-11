@@ -129,7 +129,7 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response({'error': 'No shop associated with this user'}, status=status.HTTP_400_BAD_REQUEST)
         
         # Get all users associated with this shop
-        sub_admins = User.objects.filter(shop=request.user.shop, role='shopAdmin')
+        sub_admins = User.objects.filter(shop=request.user.shop, role='shopAdmin', is_sub_admin=True)
         serializer = UserSerializer(sub_admins, many=True)
         return Response(serializer.data)
 
@@ -162,9 +162,7 @@ class UserViewSet(viewsets.ModelViewSet):
             'password': password,
             'confirm_password': password,
             'role': 'shopAdmin',
-            'roll_no': f'SUB_ADMIN_{email.split("@")[0]}',
-            'shop': request.user.shop,
-            'is_verified': True  # Sub-admins are pre-verified
+            'roll_no': f'SUB_ADMIN_{email.split("@")[0]}'
         }
         
         user_serializer = UserRegistrationSerializer(data=user_data)
@@ -173,7 +171,12 @@ class UserViewSet(viewsets.ModelViewSet):
         
         # Create user
         user = user_serializer.save()
-        
+        # Set sub-admin flags and link to shop and parent admin
+        user.is_verified = True
+        user.is_sub_admin = True
+        user.parent_admin = request.user
+        user.shop = request.user.shop
+        user.save()
         return Response({
             'message': 'Sub-shop admin created successfully',
             'user': UserSerializer(user).data
@@ -343,6 +346,9 @@ class UserViewSet(viewsets.ModelViewSet):
     def shop_admin(self, request):
         """Create a shop admin user and shop"""
         try:
+            # Only the main admin can create shop admins
+            if request.user.role != 'admin':
+                return Response({'error': 'Only admins can create shop admins'}, status=status.HTTP_403_FORBIDDEN)
             # Extract data from request
             shop_name = request.data.get('shopName')
             shop_description = request.data.get('shopDescription')

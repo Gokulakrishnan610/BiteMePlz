@@ -335,8 +335,8 @@ class LoginView(APIView):
                     'role': user.role,
                     'shop': str(user.shop.id) if user.shop else None,
                     'balance': float(user.balance),
-                    'is_sub_admin': False,
-                    'parent_admin': None,
+                    'is_sub_admin': bool(getattr(user, 'is_sub_admin', False)),
+                    'parent_admin': str(user.parent_admin.id) if getattr(user, 'parent_admin', None) else None,
                     'token': str(refresh.access_token),
                 }, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

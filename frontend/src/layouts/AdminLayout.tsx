@@ -4,7 +4,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   BarChart3, Store, Users, LogOut, Menu, X,
-  Receipt, TrendingUp, DollarSign, Zap,
+  Receipt, TrendingUp, DollarSign,
   FileText
 } from 'lucide-react';
 
@@ -16,7 +16,7 @@ const AdminLayout: React.FC = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/kisok-ac-back-office/login');
   };
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
