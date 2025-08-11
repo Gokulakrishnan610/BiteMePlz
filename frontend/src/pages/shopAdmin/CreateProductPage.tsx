@@ -16,7 +16,8 @@ const CreateProductPage: React.FC = () => {
     description: '',
     price: '',
     stock: '',
-    image: ''
+    image: '',
+    category: 'others',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,7 +26,7 @@ const CreateProductPage: React.FC = () => {
 
     try {
       // Validate required fields
-      if (!formData.name.trim() || !formData.description.trim() || !formData.price || !formData.stock) {
+      if (!formData.name.trim() || !formData.description.trim() || !formData.price || !formData.stock || !formData.category) {
         toast.error('Please fill in all required fields');
         setLoading(false);
         return;
@@ -60,7 +61,8 @@ const CreateProductPage: React.FC = () => {
         price: price,
         stock: stock,
         image: formData.image || '',
-        shop_id: user.shop
+        shop_id: user.shop,
+        category: formData.category,
       };
       
 
@@ -96,7 +98,7 @@ const CreateProductPage: React.FC = () => {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
     // Validate input based on field type
@@ -198,6 +200,28 @@ const CreateProductPage: React.FC = () => {
               <p className="text-xs text-[var(--muted-text)] mt-1">
                 Available quantity in stock
               </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
+                Category *
+              </label>
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                className="input"
+                required
+              >
+                <option value="breakfast">Breakfast</option>
+                <option value="lunch">Lunch</option>
+                <option value="food">Food</option>
+                <option value="beverages">Beverages</option>
+                <option value="snacks">Snacks</option>
+                <option value="stationery">Stationery</option>
+                <option value="electronics">Electronics</option>
+                <option value="others">Others</option>
+              </select>
             </div>
 
             <div>

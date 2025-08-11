@@ -103,6 +103,8 @@ class Shop(models.Model):
 
 class Product(models.Model):
     CATEGORY_CHOICES = [
+        ('breakfast', 'Breakfast'),
+        ('lunch', 'Lunch'),
         ('food', 'Food'),
         ('beverages', 'Beverages'),
         ('snacks', 'Snacks'),
