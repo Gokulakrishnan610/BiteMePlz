@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { LogIn, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -12,7 +12,14 @@ const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showPostLoginAnimation, setShowPostLoginAnimation] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
+
+  const getExpectedRole = () => {
+    if (location.pathname.startsWith('/kisok-ac-back-office/login')) return 'admin';
+    if (location.pathname.startsWith('/kisok-sp-back-office/login')) return 'shopAdmin';
+    return 'student';
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,6 +27,14 @@ const LoginPage: React.FC = () => {
 
     try {
       await login(email, password);
+      // Check role after login
+      const expectedRole = getExpectedRole();
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (!user.role || user.role !== expectedRole) {
+        setLoading(false);
+        toast.error('You are not authorized to login here.');
+        return;
+      }
       toast.success('Login successful');
       setShowPostLoginAnimation(true);
     } catch {
@@ -29,7 +44,14 @@ const LoginPage: React.FC = () => {
   };
 
   const handleAnimationComplete = () => {
-    navigate('/');
+    const expectedRole = getExpectedRole();
+    if (expectedRole === 'admin') {
+      navigate('/admin');
+    } else if (expectedRole === 'shopAdmin') {
+      navigate('/shop-admin');
+    } else {
+      navigate('/');
+    }
   };
 
   const togglePasswordVisibility = () => {

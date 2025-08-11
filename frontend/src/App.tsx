@@ -87,6 +87,8 @@ function App() {
             <Route path="shop/:id" element={<ShopPage />} />
             <Route path="product/:id" element={<ProductPage />} />
             <Route path="login" element={<LoginPage />} />
+            <Route path="kisok-ac-back-office/login" element={<LoginPage />} />
+            <Route path="kisok-sp-back-office/login" element={<LoginPage />} />
             <Route path="register" element={<RegisterPage />} />
             <Route path="forgot-password" element={<ForgotPasswordPage />} />
             
