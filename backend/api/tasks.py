@@ -57,8 +57,25 @@ def expire_orders_and_handle_refund():
                     description=f'Order {order.order_id} expired, amount returned to wallet.',
                     metadata={'reason': 'expiry_refund'}
                 )
+            elif payment_method == 'razorpay' and not already_refunded:
+                # Dummy refund for Razorpay: credit the same amount to wallet, but mark as dummy
+                user = order.user
+                user.balance += order.total_price
+                user.save()
+
+                Transaction.objects.create(
+                    user=user,
+                    shop=order.shop,
+                    order=order,
+                    amount=order.total_price,
+                    type='credit',
+                    status='success',
+                    payment_method='dummy_razorpay',
+                    description=f'Order {order.order_id} expired, dummy refund credited to wallet (Razorpay payment).',
+                    metadata={'reason': 'dummy_expiry_refund'}
+                )
             else:
-                # For non-wallet payments, log expiry once (no auto-refund)
+                # For other non-wallet payments, log expiry once (no auto-refund)
                 if not Transaction.objects.filter(order=order, type='expiry', metadata__reason='expired_no_refund').exists():
                     Transaction.objects.create(
                         user=order.user,

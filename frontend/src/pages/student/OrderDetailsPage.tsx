@@ -425,6 +425,18 @@ const OrderDetailsPage: React.FC = () => {
                   </CardContent>
                 </Card>
               )}
+                {order.status === 'expired' && !order.is_verified && (
+                  <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded mb-4">
+                    <strong>Refund Policy:</strong><br/>
+                    <span>
+                      <ul className="list-disc pl-5 mt-1">
+                        <li>If you paid using <b>wallet balance</b> and your order expired without being verified, your amount is refunded automatically to your wallet.</li>
+                        <li>If you paid using <b>Razorpay</b> or other payment gateways and your order expired, <b>the amount is <u>not</u> refunded</b>.</li>
+                        <li>If your order was verified, no refund is processed for any payment method.</li>
+                      </ul>
+                    </span>
+                  </div>
+                )}
             </div>
 
             {/* Sidebar */}

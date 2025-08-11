@@ -780,6 +780,16 @@ const CartPage: React.FC = () => {
                   <p className="text-red-600 text-lg">
                   All payments are final and non-refundable, so please review your order before confirming. Ensure a stable internet connection during payment. For any issues, contact support with your transaction details. By continuing, you agree to our digital purchase terms.
                   </p>
+                  <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded mb-2">
+                    <strong>Refund Policy:</strong><br/>
+                    <span>
+                      <ul className="list-disc pl-5 mt-1">
+                        <li>If you pay using <b>wallet balance</b> and your order expires without being verified, your amount will be refunded automatically to your wallet.</li>
+                        <li>If you pay using <b>Razorpay</b> or other payment gateways and your order expires, <b>the amount will <u>not</u> be refunded</b>.</li>
+                        <li>If your order is verified, no refund is processed for any payment method.</li>
+                      </ul>
+                    </span>
+                  </div>
                   <div className="space-y-3">
                       {getShopIds().length > 1 ? (
                       <>
