@@ -122,7 +122,7 @@ function App() {
           
           {/* Admin Routes */}
           <Route 
-            path="/admin" 
+            path="/kisok-ac-back-office" 
             element={
               <ProtectedRoute requiredRole="admin">
                 <AdminLayout />
@@ -148,7 +148,7 @@ function App() {
           
           {/* shop Admin Routes */}
           <Route 
-            path="/shop-admin" 
+            path="/kisok-sp-back-office" 
             element={
               <ProtectedRoute requiredRole="shopAdmin">
                 <ShopAdminLayout />

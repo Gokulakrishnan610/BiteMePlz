@@ -71,10 +71,21 @@ const FinancialReportsPage: React.FC = () => {
 
   const fetchshops = async () => {
     try {
-      const { data } = await api.get('/api/shops');
-      // Handle paginated response
-      const shopsData = data.results || data;
-      setshops(shopsData);
+      const all: shop[] = [];
+      let page = 1;
+      let next: string | null = `/api/shops/?page=${page}`;
+      while (next) {
+        const { data } = await api.get(next);
+        const shopsData = data.results || data;
+        if (Array.isArray(shopsData)) {
+          all.push(...shopsData);
+          next = data.next || null;
+        } else {
+          all.push(...shopsData);
+          next = null;
+        }
+      }
+      setshops(all);
     } catch (error) {
       toast.error('Failed to fetch shops');
     }

@@ -46,9 +46,9 @@ const LoginPage: React.FC = () => {
   const handleAnimationComplete = () => {
     const expectedRole = getExpectedRole();
     if (expectedRole === 'admin') {
-      navigate('/admin');
+      navigate('/kisok-ac-back-office');
     } else if (expectedRole === 'shopAdmin') {
-      navigate('/shop-admin');
+      navigate('/kisok-sp-back-office');
     } else {
       navigate('/');
     }

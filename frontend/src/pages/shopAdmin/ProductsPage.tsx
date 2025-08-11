@@ -63,7 +63,7 @@ const ProductsPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Products</h1>
-        <Link to="/shop-admin/products/create" className="btn-primary flex items-center">
+        <Link to="/kisok-sp-back-office/products/create" className="btn-primary flex items-center">
           <Plus size={20} className="mr-2" />
           Add Product
         </Link>
@@ -108,7 +108,7 @@ const ProductsPage: React.FC = () => {
                   <td>
                     <div className="flex space-x-2">
                       <Link
-                        to={`/shop-admin/products/edit/${product.id || product._id}`}
+                        to={`/kisok-sp-back-office/products/edit/${product.id || product._id}`}
                         className="p-2 text-[var(--primary)] hover:bg-[var(--gray-100)] rounded"
                       >
                         <Edit size={18} />

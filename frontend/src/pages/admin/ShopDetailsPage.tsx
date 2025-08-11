@@ -265,7 +265,7 @@ const ShopDetailsPage: React.FC = () => {
         <div className="text-center">
           <AlertCircle className="mx-auto text-[var(--error)] mb-4" size={48} />
           <p className="text-[var(--error)] mb-4">{error}</p>
-          <Link to="/admin/shops" className="btn-primary">
+          <Link to="/kisok-ac-back-office/shops" className="btn-primary">
             Back to shops
           </Link>
         </div>
@@ -317,7 +317,7 @@ const ShopDetailsPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center">
           <Link
-            to="/admin/shops"
+            to="/kisok-ac-back-office/shops"
             className="flex items-center text-[var(--primary)] hover:underline mr-4"
           >
             <ArrowLeft size={20} className="mr-2" />

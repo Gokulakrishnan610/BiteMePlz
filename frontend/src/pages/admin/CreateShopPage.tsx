@@ -71,10 +71,10 @@ const CreateShopPage: React.FC = () => {
         qrValidityMinutes: qrMinutes
       };
 
-      const response = await api.post('/api/users/shop_admin/', payload);
+      await api.post('/api/users/shop_admin/', payload);
       
       toast.success('shop created successfully');
-      navigate('/admin/shops');
+      navigate('/kisok-ac-back-office/shops');
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to create shop';
       toast.error(errorMessage);
@@ -260,7 +260,7 @@ const CreateShopPage: React.FC = () => {
           <div className="flex justify-end space-x-4">
             <button
               type="button"
-              onClick={() => navigate('/admin/shops')}
+              onClick={() => navigate('/kisok-ac-back-office/shops')}
               className="btn-secondary"
             >
               Cancel

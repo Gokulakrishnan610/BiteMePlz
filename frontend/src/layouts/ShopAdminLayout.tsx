@@ -10,7 +10,6 @@ import {
   Menu, 
   X,
   Receipt,
-  Zap,
   Users
 } from 'lucide-react';
 
@@ -86,9 +85,9 @@ const ShopAdminLayout: React.FC = () => {
             {/* Only show Dashboard link for original shop admins (not sub-admins) */}
             {user && !user.is_sub_admin && (
               <Link
-                to="/shop-admin"
+                to="/kisok-sp-back-office"
                 className={`sidebar-item rounded-xl ${
-                  is_active('/shop-admin') ? 'active' : ''
+                  is_active('/kisok-sp-back-office') ? 'active' : ''
                 }`}
                 onClick={closeSidebar}
               >
@@ -98,9 +97,9 @@ const ShopAdminLayout: React.FC = () => {
             )}
             
             <Link
-              to="/shop-admin/products"
+              to="/kisok-sp-back-office/products"
               className={`sidebar-item rounded-xl ${
-                location.pathname.includes('/shop-admin/products') ? 'active' : ''
+                location.pathname.includes('/kisok-sp-back-office/products') ? 'active' : ''
               }`}
               onClick={closeSidebar}
             >
@@ -109,9 +108,9 @@ const ShopAdminLayout: React.FC = () => {
             </Link>
             
             <Link
-              to="/shop-admin/orders"
+              to="/kisok-sp-back-office/orders"
               className={`sidebar-item rounded-xl ${
-                is_active('/shop-admin/orders') ? 'active' : ''
+                is_active('/kisok-sp-back-office/orders') ? 'active' : ''
               }`}
               onClick={closeSidebar}
             >
@@ -120,9 +119,9 @@ const ShopAdminLayout: React.FC = () => {
             </Link>
             
             <Link
-              to="/shop-admin/transactions"
+              to="/kisok-sp-back-office/transactions"
               className={`sidebar-item rounded-xl ${
-                is_active('/shop-admin/transactions') ? 'active' : ''
+                is_active('/kisok-sp-back-office/transactions') ? 'active' : ''
               }`}
               onClick={closeSidebar}
             >
@@ -131,9 +130,9 @@ const ShopAdminLayout: React.FC = () => {
             </Link>
             
             <Link
-              to="/shop-admin/scan"
+              to="/kisok-sp-back-office/scan"
               className={`sidebar-item rounded-xl ${
-                is_active('/shop-admin/scan') ? 'active' : ''
+                is_active('/kisok-sp-back-office/scan') ? 'active' : ''
               }`}
               onClick={closeSidebar}
             >
@@ -144,9 +143,9 @@ const ShopAdminLayout: React.FC = () => {
             {/* Only show Sub-Admins link for original shop admins (not sub-admins) */}
             {user && !user.is_sub_admin && (
               <Link
-                to="/shop-admin/sub-admins"
+                to="/kisok-sp-back-office/sub-admins"
                 className={`sidebar-item rounded-xl ${
-                  is_active('/shop-admin/sub-admins') ? 'active' : ''
+                  is_active('/kisok-sp-back-office/sub-admins') ? 'active' : ''
                 }`}
                 onClick={closeSidebar}
               >

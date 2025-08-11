@@ -31,9 +31,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       // Redirect based on role
       switch (user.role) {
         case 'admin':
-          return <Navigate to="/admin" />;
+          return <Navigate to="/kisok-ac-back-office" />;
         case 'shopAdmin':
-          return <Navigate to="/shop-admin" />;
+          return <Navigate to="/kisok-sp-back-office" />;
         default:
           return <Navigate to="/" />;
       }

@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api';
-import { Package } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
-import Loader from '../../components/Loader';
 import ImageUpload from '../../components/ImageUpload';
 
 const CreateProductPage: React.FC = () => {
@@ -67,7 +65,7 @@ const CreateProductPage: React.FC = () => {
       
 
       
-      const response = await api.post('/api/products/', createData);
+      await api.post('/api/products/', createData);
       
       toast.success('Product created successfully');
       navigate('/shop-admin/products');
@@ -241,7 +239,7 @@ const CreateProductPage: React.FC = () => {
           <div className="flex justify-end space-x-4">
             <button
               type="button"
-              onClick={() => navigate('/shop-admin/products')}
+              onClick={() => navigate('/kisok-sp-back-office/products')}
               className="btn-secondary"
               disabled={loading}
             >

@@ -78,7 +78,7 @@ const HoveredLink = ({ children, href, ...rest }: HoveredLinkProps) => {
                         <div className="p-4 lg:p-5">
                         <div className="flex flex-col space-y-3 lg:space-y-4 text-sm lg:text-base">
                             {user && (user.role === 'admin' || user.role === 'shopAdmin') && (
-                                <HoveredLink href={user.role === 'admin' ? '/admin' : '/shop-admin'}>Dashboard</HoveredLink>
+                                <HoveredLink href={user.role === 'admin' ? '/kisok-ac-back-office' : '/kisok-sp-back-office'}>Dashboard</HoveredLink>
                             )}
                             <HoveredLink href="/profile">Profile</HoveredLink>
                             <HoveredLink href="/orders">My Orders</HoveredLink>
@@ -133,7 +133,7 @@ const HoveredLink = ({ children, href, ...rest }: HoveredLinkProps) => {
                     <div className="space-y-2 pl-4">
                     {user && (user.role === 'admin' || user.role === 'shopAdmin') && (
                         <div className="py-2">
-                            <HoveredLink href={user.role === 'admin' ? '/admin' : '/shop-admin'}>Dashboard</HoveredLink>
+                            <HoveredLink href={user.role === 'admin' ? '/kisok-ac-back-office' : '/kisok-sp-back-office'}>Dashboard</HoveredLink>
                         </div>
                     )}
                     <div className="py-2">

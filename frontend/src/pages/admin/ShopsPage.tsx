@@ -35,10 +35,18 @@ const ShopsPage: React.FC = () => {
 
   const fetchshops = async () => {
     try {
-      const { data } = await api.get('/api/shops');
-      // Handle paginated response
-      const shopsData = data.results || data;
-      setshops(shopsData);
+      const all: shop[] = [];
+      type Paginated<T> = { results: T[]; next: string | null };
+      let page = 1;
+      let next: string | null = `/api/shops/?page=${page}`;
+      while (next) {
+        const response = await api.get(next);
+        const data = response.data as Paginated<shop> | shop[];
+        const shopsData = Array.isArray(data) ? data : data.results;
+        all.push(...shopsData);
+        next = Array.isArray(data) ? null : data.next;
+      }
+      setshops(all);
       setLoading(false);
     } catch (error) {
       toast.error('Failed to fetch shops');
@@ -99,7 +107,7 @@ const ShopsPage: React.FC = () => {
           <h1 className="text-3xl font-bold gradient-text">shop Management</h1>
           <p className="text-[var(--secondary-text)] mt-2">Manage all campus shops and their settings</p>
         </div>
-        <Link to="/admin/shops/create" className="btn-primary flex items-center">
+        <Link to="/kisok-ac-back-office/shops/create" className="btn-primary flex items-center">
           <Plus size={20} className="mr-2" />
           Create shop
         </Link>
@@ -156,14 +164,14 @@ const ShopsPage: React.FC = () => {
                 </span>
                 <div className="flex space-x-2">
                   <Link
-                    to={`/admin/shops/${shop.id}`}
+                    to={`/kisok-ac-back-office/shops/${shop.id}`}
                     className="p-2 text-[var(--info)] hover:bg-[var(--hover-bg)] rounded-lg transition-colors"
                     title="View Details"
                   >
                     <Eye size={16} />
                   </Link>
                   <Link
-                    to={`/admin/shops/${shop.id}/edit`}
+                    to={`/kisok-ac-back-office/shops/${shop.id}/edit`}
                     className="p-2 text-[var(--accent-purple)] hover:bg-[var(--hover-bg)] rounded-lg transition-colors"
                     title="Edit shop"
                   >
@@ -194,7 +202,7 @@ const ShopsPage: React.FC = () => {
             <p className="text-[var(--muted-text)] mb-6">
               Get started by creating your first shop.
             </p>
-            <Link to="/admin/shops/create" className="btn-primary">
+            <Link to="/kisok-ac-back-office/shops/create" className="btn-primary">
               <Plus size={20} className="inline mr-2" />
               Create First shop
             </Link>
