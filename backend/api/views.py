@@ -744,8 +744,8 @@ class ProductViewSet(viewsets.ModelViewSet):
                     return Product.objects.none()
             return Product.objects.all()
 
-        # For shop admins listing their shop via query param, show all products
-        if self.request.user.role == 'shopAdmin' and shop_id:
+        # For admin or shop admins listing a specific shop via query param, show all products
+        if getattr(self.request.user, 'role', None) in ['admin', 'shopAdmin'] and shop_id:
             return Product.objects.filter(shop=shop_id)
 
         # Public listing: only show available products (optionally by shop)
@@ -768,6 +768,9 @@ class ProductViewSet(viewsets.ModelViewSet):
                 if str(instance.shop.id) != str(request.user.shop.id):
                     return Response({'error': 'You can only update products for your own shop'}, status=status.HTTP_403_FORBIDDEN)
             
+            # For admins, they can update any product (no additional restrictions needed)
+            # The get_queryset method already filters products appropriately
+            
             # Always allow partial updates for flexibility
             kwargs['partial'] = True
             serializer = self.get_serializer(instance, data=request.data, partial=True)
@@ -784,7 +787,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         return self.update(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
-        """Custom create method to validate shop_id for shop admins"""
+        """Custom create method to validate shop_id for shop admins and admins"""
         try:
             # Get the data
             data = request.data.copy()
@@ -798,6 +801,18 @@ class ProductViewSet(viewsets.ModelViewSet):
                 # Ensure shop admin can only create products for their own shop
                 if str(request.user.shop.id) != str(shop_id):
                     return Response({'error': 'You can only create products for your own shop'}, status=status.HTTP_403_FORBIDDEN)
+            
+            # For both admin and shopAdmin users, verify shop exists
+            if shop_id:
+                try:
+                    shop = Shop.objects.get(id=shop_id)
+                except Shop.DoesNotExist:
+                    return Response({'error': 'Shop not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            # Validate shop_id for admins
+            elif request.user.role == 'admin':
+                if not shop_id:
+                    return Response({'error': 'Shop ID is required for admins'}, status=status.HTTP_400_BAD_REQUEST)
                 
                 # Verify shop exists
                 try:
@@ -1090,6 +1105,30 @@ class OrderViewSet(viewsets.ModelViewSet):
             # Convert orders to dictionaries with proper UUID handling
             orders_data = []
             for order in orders:
+                # Process order items to include product information
+                processed_items = []
+                for item in order.order_items:
+                    try:
+                        product = Product.objects.get(id=item.get('product_id'))
+                        processed_item = {
+                            'product': {
+                                'name': product.name,
+                                'price': float(product.price)
+                            },
+                            'quantity': item.get('quantity', 0)
+                        }
+                        processed_items.append(processed_item)
+                    except Product.DoesNotExist:
+                        # If product doesn't exist, include basic info
+                        processed_item = {
+                            'product': {
+                                'name': 'Product Not Found',
+                                'price': 0
+                            },
+                            'quantity': item.get('quantity', 0)
+                        }
+                        processed_items.append(processed_item)
+                
                 order_dict = {
                     '_id': str(order.id),
                     'order_id': order.order_id,
@@ -1102,7 +1141,7 @@ class OrderViewSet(viewsets.ModelViewSet):
                     'is_paid': order.is_paid,
                     'is_verified': order.is_verified,
                     'status': order.status,
-                    'order_items': order.order_items,
+                    'order_items': processed_items,
                     'createdAt': order.created_at.isoformat() if order.created_at else None,
                 }
                 orders_data.append(order_dict)

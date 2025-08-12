@@ -30,6 +30,7 @@ import {
   Legend
 } from 'chart.js';
 import { useAuth } from '../../context/AuthContext';
+import { useAdminShop } from '../../context/AdminShopContext';
 import toast from 'react-hot-toast';
 
 ChartJS.register(
@@ -128,6 +129,7 @@ const extractTransactions = (data: any): Transaction[] => {
 
 const TransactionsPage: React.FC = () => {
   const { user } = useAuth();
+  const { selectedShop } = useAdminShop();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [analytics, setAnalytics] = useState<RealTimeAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -156,14 +158,17 @@ const TransactionsPage: React.FC = () => {
     total: 0
   });
 
+  // Determine the effective shop ID
+  const effectiveShopId = user?.role === 'admin' && selectedShop ? selectedShop.id : user?.shop;
+
   useEffect(() => {
-    if (user?.shop) {
+    if (effectiveShopId) {
       fetchTransactions();
       if (activeTab === 'analytics') {
         generateRealTimeAnalytics();
       }
     }
-  }, [user, filters, activeTab]);
+  }, [effectiveShopId, filters, activeTab]);
 
   const fetchTransactions = async () => {
     try {
@@ -174,7 +179,7 @@ const TransactionsPage: React.FC = () => {
         if (value) params.append(key, value.toString());
       });
 
-      const { data }: { data: any } = await api.get(`/api/transactions/shop/?shop_id=${user?.shop}&${params}`);
+      const { data }: { data: any } = await api.get(`/api/transactions/shop/?shop_id=${effectiveShopId}&${params}`);
       const normalized = extractTransactions(data);
       setTransactions(normalized);
       setPagination({
@@ -199,7 +204,7 @@ const TransactionsPage: React.FC = () => {
         previousParams.append('startDate', previousPeriodStart.toISOString().split('T')[0]);
         previousParams.append('endDate', currentPeriodStart.toISOString().split('T')[0]);
         
-        const { data: previousData }: { data: any } = await api.get(`/api/transactions/shop/?shop_id=${user?.shop}&${previousParams}`);
+        const { data: previousData }: { data: any } = await api.get(`/api/transactions/shop/?shop_id=${effectiveShopId}&${previousParams}`);
         const previousList = extractTransactions(previousData);
         const previousAmount = previousList.reduce((sum: number, t: Transaction) => sum + t.amount, 0) || 0;
         const growthRate = previousAmount > 0 ? ((totalAmount - previousAmount) / previousAmount) * 100 : 0;
@@ -239,7 +244,7 @@ const TransactionsPage: React.FC = () => {
       if (filters.startDate) analyticsParams.append('startDate', filters.startDate);
       if (filters.endDate) analyticsParams.append('endDate', filters.endDate);
 
-      const { data }: { data: any } = await api.get(`/api/transactions/shop/?shop_id=${user?.shop}&${analyticsParams}`);
+      const { data }: { data: any } = await api.get(`/api/transactions/shop/?shop_id=${effectiveShopId}&${analyticsParams}`);
       const allTransactions = extractTransactions(data);
 
       // Generate hourly distribution from real data
@@ -357,14 +362,14 @@ const TransactionsPage: React.FC = () => {
       });
       params.append('limit', '1000'); // Export more records
 
-      const { data }: { data: any } = await api.get(`/api/transactions/shop/?shop_id=${user?.shop}&${params}`);
+      const { data }: { data: any } = await api.get(`/api/transactions/shop/?shop_id=${effectiveShopId}&${params}`);
       const list = extractTransactions(data);
       
       const csvData = [] as any[];
       
       // Header with shop info and date range
       csvData.push(['REAL-TIME TRANSACTION REPORT']);
-      csvData.push(['shop ID', user?.shop || '']);
+      csvData.push(['shop ID', effectiveShopId || '']);
       csvData.push(['Generated On', new Date().toLocaleString()]);
       csvData.push(['Date Range', `${filters.startDate || 'All'} to ${filters.endDate || 'All'}`]);
       csvData.push(['']);

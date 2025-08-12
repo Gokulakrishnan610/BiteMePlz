@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useAdminShop } from '../../context/AdminShopContext';
 import api from '../../api';
 import { AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -21,6 +22,8 @@ interface ProductFormData {
 const EditProductPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { selectedShop } = useAdminShop();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +36,9 @@ const EditProductPage: React.FC = () => {
     image: '',
     is_available: true
   });
+
+  // Determine the effective shop ID
+  const effectiveShopId = user?.role === 'admin' && selectedShop ? selectedShop.id : user?.shop;
 
   const categories = [
     { value: 'breakfast', label: 'Breakfast' },
@@ -82,15 +88,17 @@ const EditProductPage: React.FC = () => {
     }
   }, [id]);
 
-  const { user } = useAuth();
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
 
     try {
-      if (!user || !user.shop) {
-        toast.error('Shop ID not found. Please log in as a shop admin.');
+      if (!effectiveShopId) {
+        if (user?.role === 'admin') {
+          toast.error('Please select a shop first to edit products.');
+        } else {
+          toast.error('Shop ID not found. Please contact administrator.');
+        }
         setSaving(false);
         return;
       }
@@ -103,7 +111,7 @@ const EditProductPage: React.FC = () => {
         stock: Number(formData.stock),
         image: formData.image,
         is_available: formData.is_available,
-        shop_id: user.shop // Include shop_id from authenticated user
+        shop_id: effectiveShopId // Include shop_id from effective shop
       };
       
 
@@ -112,7 +120,13 @@ const EditProductPage: React.FC = () => {
 
       
       toast.success('Product updated successfully');
-      navigate('/kisok-sp-back-office/products');
+      
+      // Navigate based on user role and context
+      if (user?.role === 'admin' && selectedShop) {
+        navigate('/kisok-ac-back-office/shop-admin/products');
+      } else {
+        navigate('/kisok-sp-back-office/products');
+      }
     } catch (error: any) {
       console.error('Error updating product:', error);
       console.error('Full error response:', error.response);

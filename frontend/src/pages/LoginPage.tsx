@@ -27,14 +27,14 @@ const LoginPage: React.FC = () => {
 
     try {
       await login(email, password);
-      // Remove the role check that blocks non-student logins
-      // const expectedRole = getExpectedRole();
-      // const user = JSON.parse(localStorage.getItem('user') || '{}');
-      // if (!user.role || user.role !== expectedRole) {
-      //   setLoading(false);
-      //   toast.error('You are not authorized to login here.');
-      //   return;
-      // }
+      // Enforce role restriction based on path
+      const expectedRole = getExpectedRole();
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (!user.role || user.role !== expectedRole) {
+        setLoading(false);
+        toast.error('You are not authorized to login here.');
+        return;
+      }
       toast.success('Login successful');
       setShowPostLoginAnimation(true);
     } catch {
@@ -173,4 +173,4 @@ const LoginPage: React.FC = () => {
   );
 };
 
-export default LoginPage;
+export default LoginPage;

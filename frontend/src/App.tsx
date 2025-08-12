@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { WalletProvider } from './context/WalletContext';
+import { AdminShopProvider } from './context/AdminShopContext';
 import { ToastProvider } from './components/ToastContainer';
 
 // Layouts
@@ -79,111 +80,122 @@ function App() {
   return (
     <ToastProvider>
       <WalletProvider>
-        <LocalhostNotification />
-        
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<MainLayout />}>
-            <Route index element={<HomePage />} />
-            <Route path="shop/:id" element={<ShopPage />} />
-            <Route path="product/:id" element={<ProductPage />} />
+        <AdminShopProvider>
+          <LocalhostNotification />
+          
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<MainLayout />}>
+              <Route index element={<HomePage />} />
+              <Route path="shop/:id" element={<ShopPage />} />
+              <Route path="product/:id" element={<ProductPage />} />
+              
+              <Route path="kisok-ac-back-office/login" element={<LoginPage />} />
+              <Route path="kisok-sp-back-office/login" element={<LoginPage />} />
+              <Route path="register" element={<RegisterPage />} />
+              <Route path="forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="login" element={<LoginPage />} />
+              
+              {/* Student Routes */}
+              <Route path="cart" element={<CartPage />} />
+              <Route 
+                path="profile" 
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="orders" 
+                element={
+                  <ProtectedRoute>
+                    <OrdersPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="order/:id" 
+                element={
+                  <ProtectedRoute>
+                    <OrderDetailsPage />
+                  </ProtectedRoute>
+                } 
+              />
+            </Route>
             
-            <Route path="kisok-ac-back-office/login" element={<LoginPage />} />
-            <Route path="kisok-sp-back-office/login" element={<LoginPage />} />
-            <Route path="register" element={<RegisterPage />} />
-            <Route path="forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="login" element={<LoginPage />} />
+            {/* Admin Routes */}
+            <Route 
+              path="/kisok-ac-back-office" 
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route 
+                index 
+                element={<AdminDashboardPage setMaintenanceMode={setMaintenanceMode} />} 
+              />
+              <Route path="shops" element={<AdminShopsPage />} />
+              <Route path="shops/:id" element={<AdminShopDetailsPage />} />
+              <Route path="shops/:id/edit" element={<AdminEditShopPage />} />
+              <Route path="shops/create" element={<AdminCreateShopPage />} />
+              <Route path="users" element={<AdminUsersPage />} />
+              <Route path="transactions" element={<TransactionsPage />} />
+              <Route path="analytics" element={<AnalyticsPage />} />
+              <Route path="financial-reports" element={<FinancialReportsPage />} />
+                          
+              <Route path="shop-logs" element={<ShopLogsPage />} />
+              <Route path="student-analytics" element={<StudentAnalyticsPage />} />
+              
+              {/* Admin Shop Admin Routes */}
+              <Route path="shop-admin" element={<ShopAdminDashboardPage />} />
+              <Route path="shop-admin/products" element={<ShopAdminProductsPage />} />
+              <Route path="shop-admin/products/create" element={<ShopAdminCreateProductPage />} />
+              <Route path="shop-admin/products/edit/:id" element={<ShopAdminEditProductPage />} />
+              <Route path="shop-admin/orders" element={<ShopAdminOrdersPage />} />
+              <Route path="shop-admin/transactions" element={<ShopAdminTransactionsPage />} />
+              <Route path="shop-admin/scan" element={<ShopAdminScanQRPage />} />
+            </Route>
             
-            {/* Student Routes */}
-            <Route path="cart" element={<CartPage />} />
+            {/* shop Admin Routes */}
             <Route 
-              path="profile" 
+              path="/kisok-sp-back-office" 
               element={
-                <ProtectedRoute>
-                  <ProfilePage />
+                <ProtectedRoute requiredRole="shopAdmin">
+                  <ShopAdminLayout />
                 </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="orders" 
-              element={
-                <ProtectedRoute>
-                  <OrdersPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="order/:id" 
-              element={
-                <ProtectedRoute>
-                  <OrderDetailsPage />
-                </ProtectedRoute>
-              } 
-            />
-          </Route>
-          
-          {/* Admin Routes */}
-          <Route 
-            path="/kisok-ac-back-office" 
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route 
-              index 
-              element={<AdminDashboardPage setMaintenanceMode={setMaintenanceMode} />} 
-            />
-            <Route path="shops" element={<AdminShopsPage />} />
-            <Route path="shops/:id" element={<AdminShopDetailsPage />} />
-            <Route path="shops/:id/edit" element={<AdminEditShopPage />} />
-            <Route path="shops/create" element={<AdminCreateShopPage />} />
-            <Route path="users" element={<AdminUsersPage />} />
-            <Route path="transactions" element={<TransactionsPage />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
-            <Route path="financial-reports" element={<FinancialReportsPage />} />
-                        
-            <Route path="shop-logs" element={<ShopLogsPage />} />
-            <Route path="student-analytics" element={<StudentAnalyticsPage />} />
-          </Route>
-          
-          {/* shop Admin Routes */}
-          <Route 
-            path="/kisok-sp-back-office" 
-            element={
-              <ProtectedRoute requiredRole="shopAdmin">
-                <ShopAdminLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route 
-              index 
-              element={
-                <ProtectedRoute requiredRole="shopAdmin" allowSubAdmin={false}>
-                  <ShopAdminDashboardPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route path="products" element={<ShopAdminProductsPage />} />
-            <Route path="products/create" element={<ShopAdminCreateProductPage />} />
-            <Route path="products/edit/:id" element={<ShopAdminEditProductPage />} />
-            <Route path="orders" element={<ShopAdminOrdersPage />} />
-            <Route path="transactions" element={<ShopAdminTransactionsPage />} />
-            <Route path="scan" element={<ShopAdminScanQRPage />} />
-            <Route 
-              path="sub-admins" 
-              element={
-                <ProtectedRoute requiredRole="shopAdmin" allowSubAdmin={false}>
-                  <SubShopAdminsPage />
-                </ProtectedRoute>
-              } 
-            />
-          </Route>
-          
-          {/* 404 Page - Must be last */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
+              }
+            >
+              <Route 
+                index 
+                element={
+                  <ProtectedRoute requiredRole="shopAdmin" allowSubAdmin={false}>
+                    <ShopAdminDashboardPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route path="products" element={<ShopAdminProductsPage />} />
+              <Route path="products/create" element={<ShopAdminCreateProductPage />} />
+              <Route path="products/edit/:id" element={<ShopAdminEditProductPage />} />
+              <Route path="orders" element={<ShopAdminOrdersPage />} />
+              <Route path="transactions" element={<ShopAdminTransactionsPage />} />
+              <Route path="scan" element={<ShopAdminScanQRPage />} />
+              <Route 
+                path="sub-admins" 
+                element={
+                  <ProtectedRoute requiredRole="shopAdmin" allowSubAdmin={false}>
+                    <SubShopAdminsPage />
+                  </ProtectedRoute>
+                } 
+              />
+            </Route>
+            
+            {/* 404 Page - Must be last */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </AdminShopProvider>
       </WalletProvider>
     </ToastProvider>
   );

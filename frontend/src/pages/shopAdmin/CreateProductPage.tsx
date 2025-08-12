@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../context/AuthContext';
+import { useAdminShop } from '../../context/AdminShopContext';
 import toast from 'react-hot-toast';
 import ImageUpload from '../../components/ImageUpload';
 
 const CreateProductPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { selectedShop } = useAdminShop();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -17,6 +19,9 @@ const CreateProductPage: React.FC = () => {
     image: '',
     category: 'others',
   });
+
+  // Determine the effective shop ID
+  const effectiveShopId = user?.role === 'admin' && selectedShop ? selectedShop.id : user?.shop;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,9 +51,13 @@ const CreateProductPage: React.FC = () => {
         return;
       }
 
-      // Validate shop_id for shop admins
-      if (!user?.shop) {
-        toast.error('Shop information not found. Please contact administrator.');
+      // Validate shop_id
+      if (!effectiveShopId) {
+        if (user?.role === 'admin') {
+          toast.error('Please select a shop first to add products.');
+        } else {
+          toast.error('Shop information not found. Please contact administrator.');
+        }
         setLoading(false);
         return;
       }
@@ -59,16 +68,20 @@ const CreateProductPage: React.FC = () => {
         price: price,
         stock: stock,
         image: formData.image || '',
-        shop_id: user.shop,
+        shop_id: effectiveShopId,
         category: formData.category,
       };
-      
-
       
       await api.post('/api/products/', createData);
       
       toast.success('Product created successfully');
-      navigate('/kisok-sp-back-office/products');
+      
+      // Navigate based on user role and context
+      if (user?.role === 'admin' && selectedShop) {
+        navigate('/kisok-ac-back-office/shop-admin/products');
+      } else {
+        navigate('/kisok-sp-back-office/products');
+      }
     } catch (error: any) {
       console.error('Error creating product:', error);
       
@@ -121,9 +134,14 @@ const CreateProductPage: React.FC = () => {
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Add New Product</h1>
-        {user?.shop && (
+        {effectiveShopId && (
           <div className="text-sm text-[var(--muted-text)]">
-            Shop: {user.shop}
+            Shop: {selectedShop?.name || 'Selected Shop'}
+          </div>
+        )}
+        {user?.role === 'admin' && !selectedShop && (
+          <div className="text-sm text-red-600">
+            Please select a shop first
           </div>
         )}
       </div>
@@ -239,7 +257,14 @@ const CreateProductPage: React.FC = () => {
           <div className="flex justify-end space-x-4">
             <button
               type="button"
-              onClick={() => navigate('/kisok-sp-back-office/products')}
+              onClick={() => {
+                // Navigate based on user role and context
+                if (user?.role === 'admin' && selectedShop) {
+                  navigate('/kisok-ac-back-office/shop-admin/products');
+                } else {
+                  navigate('/kisok-sp-back-office/products');
+                }
+              }}
               className="btn-secondary"
               disabled={loading}
             >

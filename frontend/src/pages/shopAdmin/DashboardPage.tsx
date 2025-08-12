@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../api';
 import { useAuth } from '../../context/AuthContext';
+import { useAdminShop } from '../../context/AdminShopContext';
 import { Package, ShoppingBag, TrendingUp, AlertCircle, Power, Clock, QrCode, ArrowLeft } from 'lucide-react';
 import { Line, Bar } from 'react-chartjs-2';
 import {
@@ -77,6 +78,7 @@ interface shop {
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { selectedShop } = useAdminShop();
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [shop, setshop] = useState<shop | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,22 +89,22 @@ const DashboardPage: React.FC = () => {
   const [updatingQR, setUpdatingQR] = useState(false);
   const [closing, setClosing] = useState(false);
 
+  // Determine the effective shop ID
+  const effectiveShopId = user?.role === 'admin' && selectedShop ? selectedShop.id : user?.shop;
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        if (!user?.shop) {
-  
+        if (!effectiveShopId) {
           setError('No shop associated with this account');
           setLoading(false);
           return;
         }
         
-        
-        
-        const shopRes = await api.get(`/api/shops/${user.shop}/`);
+        const shopRes = await api.get(`/api/shops/${effectiveShopId}/`);
         
         // Fetch analytics from backend endpoint
-        const analyticsRes = await api.get(`/api/shops/${user.shop}/analytics/`);
+        const analyticsRes = await api.get(`/api/shops/${effectiveShopId}/analytics/`);
         setAnalytics(analyticsRes.data);
         setshop(shopRes.data);
         
@@ -132,13 +134,13 @@ const DashboardPage: React.FC = () => {
     };
 
     fetchData();
-  }, [user]);
+  }, [effectiveShopId]);
 
   const handleToggleshop = async () => {
-    if (!user?.shop) return;
+    if (!effectiveShopId) return;
     try {
       setClosing(true);
-              const { data } = await api.post(`/api/shops/${user.shop}/toggle/`);
+              const { data } = await api.post(`/api/shops/${effectiveShopId}/toggle/`);
       setshop(data);
       toast.success(data.is_open ? 'Shop opened' : 'Shop closed');
     } catch (error: any) {
@@ -150,7 +152,7 @@ const DashboardPage: React.FC = () => {
 
   const updatefinal_validity = async () => {
     try {
-      if (!user?.shop || !shop) return;
+      if (!effectiveShopId || !shop) return;
       setUpdating(true);
       // Get current date
       const now = new Date();
@@ -163,10 +165,10 @@ const DashboardPage: React.FC = () => {
         validityDate.setDate(validityDate.getDate() + 1);
       }
       // Send all required fields
-      const { data } = await api.put(`/api/shops/${user.shop}/`, {
+      const { data } = await api.put(`/api/shops/${effectiveShopId}/`, {
         name: shop.name,
         location: shop.location,
-        shop_admin_id: user._id,
+        shop_admin_id: user?._id,
         final_validity_time: validityDate.toISOString(),
         next_opening_time: shop.next_opening_time,
         qr_validity_minutes: shop.qr_validity_minutes,
@@ -197,17 +199,17 @@ const DashboardPage: React.FC = () => {
 
   const updateQRValidity = async () => {
     try {
-      if (!user?.shop || !shop) return;
+      if (!effectiveShopId || !shop) return;
       const minutes = parseInt(qrValidityMinutes);
       if (isNaN(minutes) || minutes < 1 || minutes > 60) {
         throw new Error("QR validity must be between 1 and 60 minutes");
       }
       setUpdatingQR(true);
       // Send all required fields
-      const { data } = await api.put(`/api/shops/${user.shop}/`, {
+      const { data } = await api.put(`/api/shops/${effectiveShopId}/`, {
         name: shop.name,
         location: shop.location,
-        shop_admin_id: user._id,
+        shop_admin_id: user?._id,
         final_validity_time: shop.final_validity_time,
         next_opening_time: shop.next_opening_time,
         qr_validity_minutes: minutes,

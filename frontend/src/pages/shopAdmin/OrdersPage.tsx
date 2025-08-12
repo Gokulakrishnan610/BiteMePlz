@@ -1,27 +1,34 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../api';
-import { ShoppingBag, AlertCircle, ArrowUpDown, Calendar, X } from 'lucide-react';
+import { ShoppingBag, Eye, CheckCircle, XCircle, Clock, RefreshCw, AlertCircle, Calendar, X, ArrowUpDown } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useAdminShop } from '../../context/AdminShopContext';
 import toast from 'react-hot-toast';
 import Loader from '../../components/Loader';
 
-interface OrderItem {
-  name: string;
-  quantity: number;
-  price: number;
-}
-
 interface Order {
   _id: string;
+  order_id: string;
   user: {
     name: string;
     email: string;
+    rollNo: string;
   };
-  order_items: OrderItem[];
-  total_price: number;
-  is_paid: boolean;
-  is_verified: boolean;
-  createdAt: string;
+  items: Array<{
+    product: {
+      name: string;
+      price: number;
+    };
+    quantity: number;
+  }>;
+  totalPrice: number;
+  status: string;
+  payment_status: string;
+  created_at: string;
+  shop: {
+    name: string;
+  };
 }
 
 type SortField = 'date' | 'total' | 'status';
@@ -29,29 +36,50 @@ type SortOrder = 'asc' | 'desc';
 
 const OrdersPage: React.FC = () => {
   const { user } = useAuth();
+  const { selectedShop } = useAdminShop();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [selectedDate, setSelectedDate] = useState<string>('');
+  const [filter, setFilter] = useState('all');
+
+  // Determine the effective shop ID
+  const effectiveShopId = user?.role === 'admin' && selectedShop ? selectedShop.id : user?.shop;
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const { data } = await api.get(`/api/orders/shop/?shop_id=${user?.shop}`);
-        setOrders(data);
+        if (!effectiveShopId) {
+          setLoading(false);
+          return;
+        }
+        
+        const { data }: { data: any } = await api.get(`/api/orders/shop/?shop_id=${effectiveShopId}`);
+        // Transform backend data to match frontend format
+        const transformedOrders = (data.results || data).map((order: any) => ({
+          _id: order._id,
+          order_id: order.order_id,
+          user: order.user,
+          items: order.order_items || [],
+          totalPrice: order.total_price,
+          status: order.is_verified ? 'verified' : 'pending',
+          payment_status: order.is_paid ? 'paid' : 'pending',
+          created_at: order.createdAt,
+          shop: { name: 'Current Shop' } // Placeholder since we're in shop context
+        }));
+        setOrders(transformedOrders);
         setLoading(false);
       } catch (err) {
-        setError('Failed to load orders');
+        console.error('Error fetching orders:', err);
+        toast.error('Failed to fetch orders');
         setLoading(false);
       }
     };
 
-    if (user?.shop) {
-      fetchOrders();
-    }
-  }, [user]);
+    fetchOrders();
+  }, [effectiveShopId]);
 
   const handleSort = (field: SortField) => {
     if (field === sortField) {
@@ -70,9 +98,48 @@ const OrdersPage: React.FC = () => {
     setSelectedDate('');
   };
 
+  const updateOrderStatus = async (orderId: string, status: string) => {
+    try {
+      await api.put(`/api/orders/${orderId}/`, { status });
+      setOrders(prev => prev.map(order => 
+        order._id === orderId ? { ...order, status } : order
+      ));
+      toast.success(`Order ${status}`);
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      toast.error('Failed to update order status');
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'text-yellow-600 bg-yellow-100';
+      case 'verified':
+        return 'text-green-600 bg-green-100';
+      case 'expired':
+        return 'text-red-600 bg-red-100';
+      default:
+        return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  const getPaymentStatusColor = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return 'text-green-600 bg-green-100';
+      case 'pending':
+        return 'text-yellow-600 bg-yellow-100';
+      case 'failed':
+        return 'text-red-600 bg-red-100';
+      default:
+        return 'text-gray-600 bg-gray-100';
+    }
+  };
+
   const filteredOrders = selectedDate
     ? orders.filter(order => {
-        const orderDate = new Date(order.createdAt).toLocaleDateString();
+        const orderDate = new Date(order.created_at).toLocaleDateString();
         const filterDate = new Date(selectedDate).toLocaleDateString();
         return orderDate === filterDate;
       })
@@ -82,14 +149,14 @@ const OrdersPage: React.FC = () => {
     let comparison = 0;
     switch (sortField) {
       case 'date':
-        comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
         break;
       case 'total':
-        comparison = a.total_price - b.total_price;
+        comparison = a.totalPrice - b.totalPrice;
         break;
       case 'status':
-        const statusA = `${a.is_paid ? '1' : '0'}${a.is_verified ? '1' : '0'}`;
-        const statusB = `${b.is_paid ? '1' : '0'}${b.is_verified ? '1' : '0'}`;
+        const statusA = `${a.payment_status === 'paid' ? '1' : '0'}${a.status === 'verified' ? '1' : '0'}`;
+        const statusB = `${b.payment_status === 'paid' ? '1' : '0'}${b.status === 'verified' ? '1' : '0'}`;
         comparison = statusA.localeCompare(statusB);
         break;
     }
@@ -180,7 +247,7 @@ const OrdersPage: React.FC = () => {
             <tbody>
               {sortedOrders.map((order) => (
                 <tr key={order._id}>
-                  <td className="font-medium">#{order._id.slice(-8)}</td>
+                  <td className="font-medium">#{order.order_id.slice(-8)}</td>
                   <td>
                     <div>
                       <p className="font-medium">{order.user.name}</p>
@@ -189,33 +256,33 @@ const OrdersPage: React.FC = () => {
                   </td>
                   <td>
                     <div className="space-y-1">
-                      {order.order_items.map((item, index) => (
+                      {order.items.map((item, index) => (
                         <p key={index} className="text-sm">
-                          {item.quantity}x {item.name}
+                          {(item.quantity || 0)}x {item.product?.name || 'Unknown Product'}
                         </p>
                       ))}
                     </div>
                   </td>
-                  <td className="font-medium">₹{order.total_price}</td>
+                  <td className="font-medium">₹{order.totalPrice}</td>
                   <td>
                     <div className="space-y-1">
                       <span
                         className={`badge ${
-                          order.is_paid ? 'badge-success' : 'badge-error'
+                          order.payment_status === 'paid' ? 'badge-success' : 'badge-error'
                         }`}
                       >
-                        {order.is_paid ? 'Paid' : 'Pending'}
+                        {order.payment_status === 'paid' ? 'Paid' : 'Pending'}
                       </span>
                       <span
                         className={`badge ${
-                          order.is_verified ? 'badge-success' : 'badge-warning'
+                          order.status === 'verified' ? 'badge-success' : 'badge-warning'
                         }`}
                       >
-                        {order.is_verified ? 'Verified' : 'Not Verified'}
+                        {order.status === 'verified' ? 'Verified' : 'Not Verified'}
                       </span>
                     </div>
                   </td>
-                  <td>{new Date(order.createdAt).toLocaleDateString()}</td>
+                  <td>{new Date(order.created_at).toLocaleDateString()}</td>
                 </tr>
               ))}
             </tbody>

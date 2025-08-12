@@ -3,26 +3,31 @@ import { Link } from 'react-router-dom';
 import api from '../../api';
 import { Package, Plus, Edit, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useAdminShop } from '../../context/AdminShopContext';
 import toast from 'react-hot-toast';
 import Loader from '../../components/Loader';
 import { Product } from '../../types';
 
 const ProductsPage: React.FC = () => {
   const { user } = useAuth();
+  const { selectedShop } = useAdminShop();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [disabledCategories, setDisabledCategories] = useState<string[]>([]);
   const [savingCategories, setSavingCategories] = useState(false);
 
+  // Determine the effective shop ID
+  const effectiveShopId = user?.role === 'admin' && selectedShop ? selectedShop.id : user?.shop;
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        if (!user?.shop) {
+        if (!effectiveShopId) {
           setLoading(false);
           return;
         }
         
-        const { data } = await api.get(`/api/products/?shop=${user.shop}`);
+        const { data } = await api.get(`/api/products/?shop=${effectiveShopId}`);
         // Handle paginated response
         setProducts(data.results || data);
         setLoading(false);
@@ -34,18 +39,18 @@ const ProductsPage: React.FC = () => {
     };
 
     fetchProducts();
-  }, [user]);
+  }, [effectiveShopId]);
 
   useEffect(() => {
     const fetchDisabled = async () => {
       try {
-        if (!user?.shop) return;
-        const { data } = await api.get(`/api/shops/${user.shop}/`);
+        if (!effectiveShopId) return;
+        const { data } = await api.get(`/api/shops/${effectiveShopId}/`);
         setDisabledCategories(data.disabled_categories || []);
       } catch {}
     };
     fetchDisabled();
-  }, [user]);
+  }, [effectiveShopId]);
 
   const toggleCategory = (cat: string) => {
     setDisabledCategories((prev) =>
@@ -55,9 +60,9 @@ const ProductsPage: React.FC = () => {
 
   const saveCategories = async () => {
     try {
-      if (!user?.shop) return;
+      if (!effectiveShopId) return;
       setSavingCategories(true);
-      await api.put(`/api/shops/${user.shop}/`, { disabled_categories: disabledCategories, shop_admin_id: (user as any)?._id || (user as any)?.id });
+      await api.put(`/api/shops/${effectiveShopId}/`, { disabled_categories: disabledCategories, shop_admin_id: (user as any)?._id || (user as any)?.id });
       toast.success('Category visibility updated');
     } catch {
       toast.error('Failed to update categories');
@@ -72,7 +77,7 @@ const ProductsPage: React.FC = () => {
       const productId = p.id || p._id;
       const response = await api.put(`/api/products/${productId}/`, { 
         is_available: next, 
-        shop_id: user?.shop 
+        shop_id: effectiveShopId 
       });
       console.log('Update response:', response.data);
       
@@ -98,8 +103,9 @@ const ProductsPage: React.FC = () => {
     try {
       await api.delete(`/api/products/${id}/`);
       toast.success('Product deleted successfully');
-      setProducts(products.filter(product => (product.id || product._id) !== id));
-    } catch (error) {
+      setProducts((prev) => prev.filter((p) => (p.id || p._id) !== id));
+    } catch (error: any) {
+      console.error('Error deleting product:', error);
       toast.error('Failed to delete product');
     }
   };
@@ -112,7 +118,10 @@ const ProductsPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Products</h1>
-        <Link to="/kisok-sp-back-office/products/create" className="btn-primary flex items-center">
+        <Link 
+          to={user?.role === 'admin' && selectedShop ? '/kisok-ac-back-office/shop-admin/products/create' : '/kisok-sp-back-office/products/create'} 
+          className="btn-primary flex items-center"
+        >
           <Plus size={20} className="mr-2" />
           Add Product
         </Link>
@@ -183,7 +192,7 @@ const ProductsPage: React.FC = () => {
                         {product.is_available ? 'Disable' : 'Enable'}
                       </button>
                       <Link
-                        to={`/kisok-sp-back-office/products/edit/${product.id || product._id}`}
+                        to={user?.role === 'admin' && selectedShop ? `/kisok-ac-back-office/shop-admin/products/edit/${product.id || product._id}` : `/kisok-sp-back-office/products/edit/${product.id || product._id}`}
                         className="p-2 text-[var(--primary)] hover:bg-[var(--gray-100)] rounded"
                       >
                         <Edit size={18} />
