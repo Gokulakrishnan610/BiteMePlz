@@ -569,7 +569,7 @@ const ProfilePage: React.FC = () => {
                   variant="outline"
                   className="h-16 border-gray-200 hover:border-purple-300 hover:bg-purple-50 text-gray-700 hover:text-purple-700 transition-all duration-200"
                 >
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-3 justify-start w-full">
                     <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
                       <Clock size={20} className="text-purple-600" />
                     </div>
@@ -585,7 +585,7 @@ const ProfilePage: React.FC = () => {
                   variant="outline"
                   className="h-16 border-gray-200 hover:border-purple-300 hover:bg-purple-50 text-gray-700 hover:text-purple-700 transition-all duration-200"
                 >
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-3 justify-start w-full">
                     <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
                       <CreditCard size={20} className="text-purple-600" />
                     </div>
@@ -600,7 +600,7 @@ const ProfilePage: React.FC = () => {
                   onClick={() => navigate("/")}
                   className="h-16 bg-purple-600 hover:bg-purple-700 text-white transition-all duration-200 sm:col-span-2"
                 >
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-3 justify-start w-full">
                     <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                       <MapPin size={20} className="text-white" />
                     </div>
