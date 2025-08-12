@@ -27,14 +27,14 @@ const LoginPage: React.FC = () => {
 
     try {
       await login(email, password);
-      // Check role after login
-      const expectedRole = getExpectedRole();
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      if (!user.role || user.role !== expectedRole) {
-        setLoading(false);
-        toast.error('You are not authorized to login here.');
-        return;
-      }
+      // Remove the role check that blocks non-student logins
+      // const expectedRole = getExpectedRole();
+      // const user = JSON.parse(localStorage.getItem('user') || '{}');
+      // if (!user.role || user.role !== expectedRole) {
+      //   setLoading(false);
+      //   toast.error('You are not authorized to login here.');
+      //   return;
+      // }
       toast.success('Login successful');
       setShowPostLoginAnimation(true);
     } catch {
@@ -44,10 +44,10 @@ const LoginPage: React.FC = () => {
   };
 
   const handleAnimationComplete = () => {
-    const expectedRole = getExpectedRole();
-    if (expectedRole === 'admin') {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (user.role === 'admin') {
       navigate('/kisok-ac-back-office');
-    } else if (expectedRole === 'shopAdmin') {
+    } else if (user.role === 'shopAdmin') {
       navigate('/kisok-sp-back-office');
     } else {
       navigate('/');

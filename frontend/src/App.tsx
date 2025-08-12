@@ -17,8 +17,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import NotFoundPage from './pages/NotFoundPage';
-import ParentLoginPage from './pages/ParentLoginPage';
-import ParentHomePage from './pages/ParentHomePage';
+
 
 // Student Pages
 import CartPage from './pages/student/CartPage';
@@ -88,13 +87,12 @@ function App() {
             <Route index element={<HomePage />} />
             <Route path="shop/:id" element={<ShopPage />} />
             <Route path="product/:id" element={<ProductPage />} />
-            <Route path="login" element={<LoginPage />} />
-            <Route path="parent-login" element={<ParentLoginPage />} />
-            <Route path="parent-home" element={<ParentHomePage />} />
+            
             <Route path="kisok-ac-back-office/login" element={<LoginPage />} />
             <Route path="kisok-sp-back-office/login" element={<LoginPage />} />
             <Route path="register" element={<RegisterPage />} />
             <Route path="forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="login" element={<LoginPage />} />
             
             {/* Student Routes */}
             <Route path="cart" element={<CartPage />} />
