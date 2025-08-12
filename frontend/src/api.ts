@@ -6,13 +6,20 @@ const api = axios.create({
   timeout: 10000,
 });
 
-// Request interceptor to automatically attach token
+// Request interceptor to automatically attach token and session ID
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Add parent session ID if available
+    const parentSessionId = localStorage.getItem('parentSessionId') || sessionStorage.getItem('parentSessionId');
+    if (parentSessionId) {
+      config.headers['X-Parent-Session-ID'] = parentSessionId;
+    }
+    
     return config;
   },
   (error) => {

@@ -114,6 +114,7 @@ AUTH_USER_MODEL = 'api.User'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'api.authentication.ParentSessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -123,6 +124,7 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
+    'UNAUTHENTICATED_USER': None,
 }
 
 # CORS settings
@@ -147,6 +149,7 @@ CORS_ALLOW_METHODS = [
     "POST",
     "PUT",
 ]
+
 CORS_ALLOW_HEADERS = [
     "accept",
     "accept-encoding",
@@ -157,7 +160,22 @@ CORS_ALLOW_HEADERS = [
     "user-agent",
     "x-csrftoken",
     "x-requested-with",
+    "x-parent-session-id",  # Allow parent session ID header
+    "X-Parent-Session-ID",  # Allow uppercase version too
 ]
+
+# Additional CORS settings for development
+CORS_EXPOSE_HEADERS = [
+    "x-parent-session-id",
+    "X-Parent-Session-ID",
+]
+
+# Allow all headers during development (remove in production)
+# CORS_ALLOW_ALL_HEADERS = True
+
+# Additional CORS settings for preflight requests
+CORS_PREFLIGHT_MAX_AGE = 86400  # 24 hours
+# CORS_REPLACE_HTTPS_REFERER = True
 
 # JWT settings
 from datetime import timedelta

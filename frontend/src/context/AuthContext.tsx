@@ -5,7 +5,7 @@ interface User {
   _id: string;
   name: string;
   email: string;
-  role: 'student' | 'shopAdmin' | 'admin';
+  role: 'student' | 'shopAdmin' | 'admin' | 'parent';
   shop?: string;
   balance?: number;
   is_sub_admin?: boolean;
@@ -16,9 +16,11 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
+  parentLogin: (email: string) => Promise<void>;
   register: (name: string, email: string, password: string, role: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
+  isParent: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -149,15 +151,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     localStorage.removeItem('hasShownLoadingScreen');
+    localStorage.removeItem('parentSessionId');
+    sessionStorage.removeItem('parentSessionId');
+  };
+
+  const parentLogin = async (email: string) => {
+    try {
+      // Create a parent user object
+      const parentUserData: User = {
+        _id: `parent_${Date.now()}`,
+        name: `Parent (${email})`,
+        email: email,
+        role: 'parent',
+        balance: 0
+      };
+
+      setUser(parentUserData);
+      setToken(null); // Parents don't have JWT tokens
+      
+      // Store parent user data
+      localStorage.setItem('user', JSON.stringify(parentUserData));
+      localStorage.setItem('parentEmail', email);
+      
+      console.log('Parent login completed successfully');
+    } catch (error: any) {
+      console.error('Parent login error:', error);
+      throw new Error('Parent login failed');
+    }
   };
 
   const value = {
     user,
     token,
     login,
+    parentLogin,
     register,
     logout,
-    loading
+    loading,
+    isParent: user?.role === 'parent'
   };
 
   return (

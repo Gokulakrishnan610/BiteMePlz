@@ -14,8 +14,6 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  BarChart,
-  Bar,
   PieChart,
   Pie,
   Cell,
@@ -445,25 +443,24 @@ const ProfilePage: React.FC = () => {
                   <p className="text-purple-100 text-sm mt-2">Use for quick payments</p>
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Spending Summary Card */}
-          <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Spending</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-4 rounded-xl bg-gray-50">
-                  <p className="text-sm text-gray-500 mb-1">Total Spent</p>
-                  <p className="text-2xl font-bold text-gray-900">₹{spending.total.toFixed(2)}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-gray-50">
-                  <p className="text-sm text-gray-500 mb-1">This Month</p>
-                  <p className="text-2xl font-bold text-gray-900">₹{spending.thisMonth.toFixed(2)}</p>
+              {/* Embedded Spending Summary */}
+              <div className="mt-6">
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Spending</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-gray-50">
+                    <p className="text-sm text-gray-500 mb-1">Total Spent</p>
+                    <p className="text-2xl font-bold text-gray-900">₹{spending.total.toFixed(2)}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-gray-50">
+                    <p className="text-sm text-gray-500 mb-1">This Month</p>
+                    <p className="text-2xl font-bold text-gray-900">₹{spending.thisMonth.toFixed(2)}</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+
+          
 
           {/* Detailed Spending Card */}
           <div className="bg-white rounded-2xl shadow-sm border overflow-hidden lg:col-span-3">
@@ -487,17 +484,10 @@ const ProfilePage: React.FC = () => {
                   <p className="text-2xl font-bold text-gray-900">{spendingDetails.ordersCount}</p>
                 </div>
                 <div className="p-4 rounded-xl bg-gray-50">
-                  <p className="text-sm text-gray-500 mb-1">Avg Order</p>
+                  <p className="text-sm text-gray-500 mb-1">Avg Spent</p>
                   <p className="text-2xl font-bold text-gray-900">₹{spendingDetails.averageOrderValue.toFixed(2)}</p>
                 </div>
-                <div className="p-4 rounded-xl bg-gray-50">
-                  <p className="text-sm text-gray-500 mb-1">Median</p>
-                  <p className="text-2xl font-bold text-gray-900">₹{(spendingDetails.medianOrderValue || 0).toFixed(2)}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-gray-50">
-                  <p className="text-sm text-gray-500 mb-1">Max</p>
-                  <p className="text-2xl font-bold text-gray-900">₹{(spendingDetails.maxOrderValue || 0).toFixed(2)}</p>
-                </div>
+
                 <div className="p-4 rounded-xl bg-gray-50">
                   <p className="text-sm text-gray-500 mb-1">Last 7 Days</p>
                   <p className="text-2xl font-bold text-gray-900">₹{spendingDetails.last7Days.toFixed(2)}</p>
@@ -515,28 +505,22 @@ const ProfilePage: React.FC = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={[...(spendingDetails.perDay || [])].slice().reverse()}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" tickFormatter={(d) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={(d: string) =>
+                          new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+                        }
+                      />
                       <YAxis />
-                      <Tooltip formatter={(v: any) => [`₹${Number(v).toFixed(2)}`, 'Amount']} labelFormatter={(d) => new Date(d).toLocaleDateString()} />
+                      <Tooltip
+                        formatter={(v: any) => [`₹${Number(v).toFixed(2)}`, 'Amount']}
+                        labelFormatter={(d: any) => new Date(d).toLocaleDateString()}
+                      />
                       <Line type="monotone" dataKey="amount" stroke="#7c3aed" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="h-64 border rounded-xl p-3">
-                  <p className="text-sm text-gray-600 mb-2">Spend by shop</p>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={spendingDetails.byShop.slice(0, 6)}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="shop" />
-                      <YAxis />
-                      <Tooltip formatter={(v: any) => [`₹${Number(v).toFixed(2)}`, 'Amount']} />
-                      <Bar dataKey="amount" fill="#7c3aed" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="h-64 border rounded-xl p-3">
                   <p className="text-sm text-gray-600 mb-2">Top items share</p>
                   <ResponsiveContainer width="100%" height="100%">
@@ -549,18 +533,6 @@ const ProfilePage: React.FC = () => {
                       <Tooltip formatter={(v: any, _n: any, e: any) => [`₹${Number(v).toFixed(2)}`, (e && e.payload && e.payload.item) || 'Item']} />
                       <Legend />
                     </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="h-64 border rounded-xl p-3">
-                  <p className="text-sm text-gray-600 mb-2">Orders by hour of day</p>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={(spendingDetails.hourOfDay || []).map(h => ({ ...h, label: `${h.hour}:00` }))}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="label" />
-                      <YAxis />
-                      <Tooltip formatter={(v: any) => [Number(v).toFixed(0), 'Orders']} />
-                      <Bar dataKey="count" fill="#6366f1" />
-                    </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
@@ -648,4 +620,4 @@ const ProfilePage: React.FC = () => {
   )
 }
 
-export default ProfilePage
+export default ProfilePage

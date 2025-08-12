@@ -42,6 +42,8 @@ const HoveredLink = ({ children, href, ...rest }: HoveredLinkProps) => {
           navigate('/kisok-ac-back-office/login')
         } else if (user?.role === 'shopAdmin') {
           navigate('/kisok-sp-back-office/login')
+        } else if (user?.role === 'parent') {
+          navigate('/parent-login')
         } else {
           navigate('/login')
         }
@@ -85,6 +87,9 @@ const HoveredLink = ({ children, href, ...rest }: HoveredLinkProps) => {
                         <div className="flex flex-col space-y-3 lg:space-y-4 text-sm lg:text-base">
                             {user && (user.role === 'admin' || user.role === 'shopAdmin') && (
                                 <HoveredLink href={user.role === 'admin' ? '/kisok-ac-back-office' : '/kisok-sp-back-office'}>Dashboard</HoveredLink>
+                            )}
+                            {user && user.role === 'parent' && (
+                                <HoveredLink href="/profile">Parent Dashboard</HoveredLink>
                             )}
                             <HoveredLink href="/profile">Profile</HoveredLink>
                             <HoveredLink href="/orders">My Orders</HoveredLink>
@@ -140,6 +145,11 @@ const HoveredLink = ({ children, href, ...rest }: HoveredLinkProps) => {
                     {user && (user.role === 'admin' || user.role === 'shopAdmin') && (
                         <div className="py-2">
                             <HoveredLink href={user.role === 'admin' ? '/kisok-ac-back-office' : '/kisok-sp-back-office'}>Dashboard</HoveredLink>
+                        </div>
+                    )}
+                    {user && user.role === 'parent' && (
+                        <div className="py-2">
+                            <HoveredLink href="/profile">Parent Dashboard</HoveredLink>
                         </div>
                     )}
                     <div className="py-2">

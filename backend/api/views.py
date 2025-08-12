@@ -20,6 +20,10 @@ from .serializers import (
     ShopLogSerializer, StudentAnalyticsSerializer
 )
 from .utils import convert_uuids_to_str_recursive
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+from .authentication import ParentSessionAuthentication  # use dedicated module
+
 
 class UUIDEncoder(DjangoJSONEncoder):
     def default(self, obj):
@@ -70,12 +74,14 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        if self.request.user.role == 'admin':
+        if getattr(self.request.user, 'role', None) == 'admin' and getattr(self.request.user, 'is_authenticated', False):
             return User.objects.all()
-        elif self.request.user.role == 'shopAdmin':
+        elif getattr(self.request.user, 'role', None) == 'shopAdmin' and getattr(self.request.user, 'is_authenticated', False):
             return User.objects.filter(shop=self.request.user.shop)
         else:
-            return User.objects.filter(id=self.request.user.id)
+            if getattr(self.request.user, 'is_authenticated', False):
+                return User.objects.filter(id=self.request.user.id)
+            return User.objects.none()
 
     @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
     def login(self, request):
@@ -96,15 +102,31 @@ class UserViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
     def profile(self, request):
-        serializer = UserSerializer(request.user)
-        data = serializer.data
-        # Ensure UUIDs are converted to strings
-        data['id'] = str(request.user.id)
-        if request.user.shop:
-            data['shop'] = str(request.user.shop.id)
-        return Response(data)
+        # If regular authenticated user, return real profile
+        if getattr(request.user, 'is_authenticated', False):
+            serializer = UserSerializer(request.user)
+            data = serializer.data
+            data['id'] = str(request.user.id)
+            if getattr(request.user, 'shop', None):
+                data['shop'] = str(request.user.shop.id)
+            return Response(data)
+
+        # Parent session (anonymous user with auth set to session_id)
+        session_id = getattr(request, 'auth', None)
+        if session_id:
+            return Response({
+                'id': None,
+                'name': 'Parent User',
+                'email': None,
+                'role': 'parent',
+                'balance': 0,
+                'shop': None,
+            })
+
+        # Otherwise unauthorized
+        return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
 
     @action(detail=False, methods=['put'])
     def update_profile(self, request):
@@ -188,8 +210,7 @@ class UserViewSet(viewsets.ModelViewSet):
         try:
             email = request.data.get('email')
             if not email:
-                return Response({
-                    'message': 'Order created successfully',
+                return Response({'message': 'Order created successfully',
                     'order': convert_uuids_to_str_recursive(order_data)
                 }, status=status.HTTP_201_CREATED)
             elif payment_method == 'razorpay':
@@ -441,12 +462,13 @@ class ShopViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
-        if self.request.user.is_authenticated:
-            if self.request.user.role == 'admin':
+        user = getattr(self.request, 'user', None)
+        if getattr(user, 'is_authenticated', False):
+            if getattr(user, 'role', None) == 'admin':
                 return Shop.objects.all()
-            elif self.request.user.role == 'shopAdmin':
-                return Shop.objects.filter(id=self.request.user.shop.id)
-        # For unauthenticated users (like homepage), show all shops
+            elif getattr(user, 'role', None) == 'shopAdmin' and getattr(user, 'shop', None):
+                return Shop.objects.filter(id=user.shop.id)
+        # For unauthenticated/parent sessions (homepage), show all shops
         return Shop.objects.all()
 
     def perform_create(self, serializer):
@@ -665,7 +687,11 @@ class ShopViewSet(viewsets.ModelViewSet):
             all_shops = Shop.objects.all()
             active_shops = Shop.objects.filter(is_active=True)
             open_shops = Shop.objects.filter(is_open=True)
-            
+
+            is_auth = getattr(request, 'user', None)
+            is_auth_flag = getattr(is_auth, 'is_authenticated', False)
+            role = getattr(is_auth, 'role', 'anonymous') if is_auth_flag else 'anonymous'
+
             debug_data = {
                 'total_shops': all_shops.count(),
                 'active_shops': active_shops.count(),
@@ -679,10 +705,10 @@ class ShopViewSet(viewsets.ModelViewSet):
                         'location': shop.location
                     } for shop in all_shops
                 ],
-                'user_authenticated': request.user.is_authenticated,
-                'user_role': getattr(request.user, 'role', 'anonymous') if request.user.is_authenticated else 'anonymous'
+                'user_authenticated': is_auth_flag,
+                'user_role': role
             }
-            
+
             return Response(debug_data)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -744,36 +770,64 @@ class ProductViewSet(viewsets.ModelViewSet):
     #     pass
 
 
-from rest_framework.views import APIView
-
-class TestMultiShopView(APIView):
-    def post(self, request, *args, **kwargs):
-        return Response({"message": "Test multi-shop POST successful!"}, status=status.HTTP_200_OK)
-
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_permissions(self):
+        # Allow parent sessions to access these without JWT
+        if self.action in ['create', 'myorders', 'verify_payment']:
+            return [permissions.AllowAny()]
+        return super().get_permissions()
+
     def get_queryset(self):
-        if self.request.user.role in ['admin', 'shopAdmin']:
+        if getattr(self.request.user, 'role', None) in ['admin', 'shopAdmin'] and getattr(self.request.user, 'is_authenticated', False):
             return Order.objects.all()
-        return Order.objects.filter(user=self.request.user)
-        
+        if getattr(self.request.user, 'is_authenticated', False):
+            return Order.objects.filter(user=self.request.user)
+        # For parent session, no listing here (use myorders which returns [])
+        return Order.objects.none()
+
+    def _get_or_create_parent_guest_user(self) -> User:
+        # A shared guest user for parent sessions
+        email = 'parent-guest@kiosk.local'
+        roll_no = 'PARENT_GUEST'
+        defaults = {
+            'username': 'parent_guest',
+            'name': 'Parent Guest',
+            'role': 'student',
+            'is_verified': True,
+        }
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            user = User.objects.create_user(email=email, password=None, roll_no=roll_no, **defaults)
+        return user
+
+    def perform_create(self, serializer):
+        # Determine acting user: real authenticated user or parent guest
+        if getattr(self.request.user, 'is_authenticated', False):
+            acting_user = self.request.user
+        else:
+            # Require parent session id to proceed
+            if not getattr(self.request, 'auth', None):
+                raise PermissionError('Unauthorized')
+            acting_user = self._get_or_create_parent_guest_user()
+        # Ensure order saved with acting_user
+        order = serializer.save(user=acting_user)
+        return order
+
     def create(self, request, *args, **kwargs):
         """Create a single shop order"""
         try:
-
-
-
-            from decimal import Decimal
-
-            print(f"Incoming request data: {request.data}")
             serializer = self.get_serializer(data=request.data, context={'request': request})
             serializer.is_valid(raise_exception=True)
             try:
                 # Use perform_create to ensure QR code and related fields are generated
                 order = self.perform_create(serializer)
+            except PermissionError:
+                return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
             except Exception as e:
                 import traceback
                 traceback.print_exc()
@@ -781,21 +835,22 @@ class OrderViewSet(viewsets.ModelViewSet):
 
             # Handle payment based on method
             payment_method = request.data.get('paymentMethod', 'balance')
-            total_price = order.total_price # Use the total_price calculated by the serializer
+            total_price = order.total_price
+
+            # If this is a parent session (anonymous), disallow balance payments
+            is_parent_session = not getattr(request.user, 'is_authenticated', False) and bool(getattr(request, 'auth', None))
+            if is_parent_session and payment_method == 'balance':
+                return Response({'error': 'Parent session cannot pay with balance. Use razorpay.'}, status=status.HTTP_400_BAD_REQUEST)
 
             if payment_method == 'balance':
                 if request.user.balance < total_price:
                     return Response({'error': 'Insufficient balance'}, status=status.HTTP_400_BAD_REQUEST)
-                
                 request.user.balance -= total_price
                 request.user.save()
-                
                 order.is_paid = True
                 order.paid_at = timezone.now()
                 order.payment_result = {'method': 'balance', 'status': 'success'}
-
                 order.save()
-                
                 Transaction.objects.create(
                     user=order.user,
                     shop=order.shop,
@@ -805,40 +860,28 @@ class OrderViewSet(viewsets.ModelViewSet):
                     payment_method='balance',
                     description=f'Payment for order {order.order_id}'
                 )
-                
                 order_data = self.get_serializer(order).data
                 order_data['_id'] = str(order_data['id'])
-                print(f"OrderViewSet create - razorpay - order_data before response: {order_data}")
-                print(f"OrderViewSet create - balance - order_data before response: {order_data}")
-                
-                return Response({
-                    'message': 'Order created successfully',
-                    'order': order_data
-                }, status=status.HTTP_201_CREATED)
+                return Response({'message': 'Order created successfully', 'order': order_data}, status=status.HTTP_201_CREATED)
+
             elif payment_method == 'razorpay':
                 import razorpay
                 from django.conf import settings
-                
                 client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-                
                 razorpay_order = client.order.create({
                     'amount': int(total_price * 100),
                     'currency': 'INR',
                     'receipt': f'order_{uuid.uuid4().hex[:8]}',
                     'payment_capture': 1
                 })
-
-                # Store the Razorpay order ID in the order's payment_result
                 order.payment_result = {
                     'method': 'razorpay',
                     'status': 'pending',
                     'razorpay_order_id': razorpay_order['id']
                 }
                 order.save()
-                
                 order_data = self.get_serializer(order).data
                 order_data['_id'] = str(order_data['id'])
-                
                 return Response({
                     'message': 'Order created successfully',
                     'order': order_data,
@@ -847,14 +890,17 @@ class OrderViewSet(viewsets.ModelViewSet):
                 }, status=status.HTTP_201_CREATED)
             else:
                 return Response({'error': 'Invalid payment method'}, status=status.HTTP_400_BAD_REQUEST)
-                
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
     def myorders(self, request):
-        """Get orders for the current user"""
+        """Get orders for the current user or return empty for parent session"""
         try:
+            # Parent session (anonymous) should get empty list
+            if not getattr(request.user, 'is_authenticated', False):
+                return Response([])
+
             orders = Order.objects.filter(user=request.user).order_by('-created_at')
 
             # Auto-expire any paid, unverified, pending orders whose validity has passed
@@ -887,7 +933,6 @@ class OrderViewSet(viewsets.ModelViewSet):
                                 description=f'Order {order.order_id} expired, amount returned to wallet.'
                             )
                 except Exception:
-                    # Do not block listing if auto-expire fails for any order
                     pass
 
             # Group multi-shop sibling orders by their combined QR string (identical across siblings)
@@ -897,7 +942,6 @@ class OrderViewSet(viewsets.ModelViewSet):
                 try:
                     payload = json.loads(order.qr_code or '{}')
                     if isinstance(payload, dict) and payload.get('type') == 'multi_order':
-                        # Use the exact QR string as a stable grouping key
                         qr_key = order.qr_code
                 except Exception:
                     pass
@@ -1614,6 +1658,65 @@ class OrderViewSet(viewsets.ModelViewSet):
         
         return Response({'message': 'Order cancelled successfully'})
 
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def verify_payment(self, request):
+        """Verify Razorpay payment and mark order as paid.
+        Accepts: razorpay_order_id, razorpay_payment_id, razorpay_signature
+        """
+        try:
+            razorpay_order_id = request.data.get('razorpay_order_id')
+            razorpay_payment_id = request.data.get('razorpay_payment_id')
+            razorpay_signature = request.data.get('razorpay_signature')
+            if not (razorpay_order_id and razorpay_payment_id and razorpay_signature):
+                return Response({'error': 'Missing payment verification fields'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Find order with matching stored razorpay_order_id
+            order = Order.objects.filter(payment_result__razorpay_order_id=razorpay_order_id).order_by('-created_at').first()
+            if not order:
+                return Response({'error': 'Order not found for given razorpay_order_id'}, status=status.HTTP_404_NOT_FOUND)
+
+            # Verify signature with Razorpay
+            import razorpay
+            from django.conf import settings
+            client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+            try:
+                client.utility.verify_payment_signature({
+                    'razorpay_order_id': razorpay_order_id,
+                    'razorpay_payment_id': razorpay_payment_id,
+                    'razorpay_signature': razorpay_signature,
+                })
+            except Exception as e:
+                return Response({'error': 'Payment signature verification failed', 'details': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Mark order as paid
+            order.is_paid = True
+            order.paid_at = timezone.now()
+            pr = order.payment_result or {}
+            pr.update({
+                'status': 'success',
+                'razorpay_payment_id': razorpay_payment_id,
+                'razorpay_signature': razorpay_signature,
+            })
+            order.payment_result = pr
+            order.save()
+
+            # Create transaction record
+            Transaction.objects.create(
+                user=order.user,
+                shop=order.shop,
+                order=order,
+                amount=order.total_price,
+                type='payment',
+                payment_method='razorpay',
+                description=f'Razorpay payment verified for order {order.order_id}'
+            )
+
+            data = self.get_serializer(order).data
+            data['_id'] = str(order.id)
+            return Response({'message': 'Payment verified', 'order': data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class TransactionViewSet(viewsets.ModelViewSet):
     queryset = Transaction.objects.all()
@@ -1624,20 +1727,6 @@ class TransactionViewSet(viewsets.ModelViewSet):
         if self.request.user.role in ['admin', 'shopAdmin']:
             return Transaction.objects.all()
         return Transaction.objects.filter(user=self.request.user)
-
-    @action(detail=False, methods=['get'])
-    def shop(self, request):
-        """Get transactions for a specific shop"""
-        shop_id = request.query_params.get('shop_id') or request.query_params.get('id')
-        if not shop_id:
-            return Response({'error': 'Shop ID is required'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        try:
-            transactions = Transaction.objects.filter(shop=shop_id)
-            serializer = self.get_serializer(transactions, many=True)
-            return Response(serializer.data)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ShopLogViewSet(viewsets.ModelViewSet):
@@ -1675,3 +1764,31 @@ class StudentAnalyticsViewSet(viewsets.ModelViewSet):
             }
         )
         return Response(StudentAnalyticsSerializer(analytics).data)
+
+class CreateSessionView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [ParentSessionAuthentication]
+
+    def options(self, request, *args, **kwargs):
+        """Handle CORS preflight OPTIONS request"""
+        response = Response()
+        response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response["Access-Control-Allow-Headers"] = "Content-Type, X-Parent-Session-ID, x-parent-session-id"
+        response["Access-Control-Max-Age"] = "86400"
+        return response
+
+    def post(self, request):
+        """Create a temporary session for parent users"""
+        try:
+            session_id = str(uuid.uuid4())
+            return Response({
+                'session_id': session_id,
+                'message': 'Session created successfully',
+                'expires_in': '24 hours'
+            })
+        except Exception as e:
+            return Response({
+                'error': 'Failed to create session',
+                'details': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
