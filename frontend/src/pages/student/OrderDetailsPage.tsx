@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../api';
 import { ArrowLeft, AlertCircle, QrCode, Trash2, Clock, Wallet } from 'lucide-react';
 import QRCode from 'react-qr-code';
@@ -63,7 +63,7 @@ const OrderDetailsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [timeLeft, setTimeLeft] = useState<number>(0);
+  // Removed unused timeLeft state (timer display not used)
   const [isQRExpired, setIsQRExpired] = useState(false);
   const [qrMeta, setQrMeta] = useState<any>(null);
   const [groupDetails, setGroupDetails] = useState<{
@@ -158,10 +158,8 @@ const OrderDetailsPage: React.FC = () => {
       const difference = validUntil - now;
       if (difference <= 0) {
         setIsQRExpired(true);
-        setTimeLeft(0);
       } else {
         setIsQRExpired(false);
-        setTimeLeft(Math.floor(difference / 1000));
       }
     };
 
@@ -192,11 +190,7 @@ const OrderDetailsPage: React.FC = () => {
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
+  // Removed unused formatTime helper
 
   const formatISTTime = (date: Date | string | null) => {
     if (!date) return 'Not Set';
