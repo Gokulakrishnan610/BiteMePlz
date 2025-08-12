@@ -82,6 +82,20 @@ const ShopPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<"relevance" | "price" | "stock">("relevance")
   const mobileSearchRef = useRef<HTMLInputElement>(null)
   const [favoriteProductIds, setFavoriteProductIds] = useState<Set<string>>(new Set())
+  const favoritesStorageKey = useMemo(() => (user ? `favorites_${user._id}` : 'favorites_guest'), [user])
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(favoritesStorageKey)
+      if (raw) {
+        const arr = JSON.parse(raw)
+        if (Array.isArray(arr)) {
+          setFavoriteProductIds(new Set(arr))
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load favorites:', e)
+    }
+  }, [favoritesStorageKey])
   const [showMultiShopNotice, setShowMultiShopNotice] = useState(false)
   
 
@@ -166,23 +180,19 @@ const ShopPage: React.FC = () => {
     }
   }, [cartItems, id])
 
-  const toggleFavorite = async (productId: string) => {
-    try {
-      const isFav = favoriteProductIds.has(productId)
-      if (isFav) {
-        setFavoriteProductIds((prev) => {
-          const n = new Set(prev)
-          n.delete(productId)
-          return n
-        })
+  const toggleFavorite = (productId: string) => {
+    setFavoriteProductIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(productId)) {
+        next.delete(productId)
       } else {
-        setFavoriteProductIds((prev) => {
-          const n = new Set(prev)
-          n.add(productId)
-          return n
-        })
+        next.add(productId)
       }
-    } catch {}
+      try {
+        localStorage.setItem(favoritesStorageKey, JSON.stringify(Array.from(next)))
+      } catch {}
+      return next
+    })
   }
 
   useEffect(() => {
