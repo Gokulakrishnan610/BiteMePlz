@@ -78,8 +78,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setMaintenanceMode }) => 
   useEffect(() => {
     fetchDashboardData();
     
-    // Set up real-time updates every 30 seconds
-    const interval = setInterval(fetchDashboardData, 30000);
+    // Set up real-time updates (every 10 seconds)
+    const interval = setInterval(fetchDashboardData, 10000);
     
     return () => clearInterval(interval);
   }, []);
@@ -106,7 +106,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setMaintenanceMode }) => 
       const totalUsers = users.length;
       const totalshops = shops.length;
       const totalOrders = allOrders.length;
-      const totalRevenue = allOrders.reduce((sum: number, order: any) => sum + (order.totalPrice || 0), 0);
+      const totalRevenue = allOrders
+        .filter((order: any) => Boolean(order.is_paid))
+        .reduce((sum: number, order: any) => sum + (order.totalPrice || 0), 0);
       const totalTransactions = allTransactions.length;
       const successfulTransactions = allTransactions.filter((t: any) => t.status === 'successful').length;
       const failedTransactions = allTransactions.filter((t: any) => t.status === 'failed').length;
@@ -119,8 +121,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setMaintenanceMode }) => 
 
       // Calculate shop performance
       const shopPerformance = shops.map((shop: any) => {
-        const shopOrders = allOrders.filter((order: any) => order.shop?.id === shop.id || order.shop?._id === shop._id);
-        const shopRevenue = shopOrders.reduce((sum: number, order: any) => sum + (order.totalPrice || 0), 0);
+        const shopOrders = allOrders.filter((order: any) => {
+          const oid = order.shop?.id || order.shop?._id || order.shop_id;
+          return oid === shop.id || oid === shop._id;
+        });
+        const shopRevenue = shopOrders
+          .filter((o: any) => Boolean(o.is_paid))
+          .reduce((sum: number, order: any) => sum + (Number(order.totalPrice ?? 0)), 0);
         const shopOrderCount = shopOrders.length;
         const avgOrderValue = shopOrderCount > 0 ? shopRevenue / shopOrderCount : 0;
 
@@ -140,10 +147,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setMaintenanceMode }) => 
         date.setDate(date.getDate() - i);
         const dateStr = date.toISOString().split('T')[0];
         
-        const dayOrders = allOrders.filter((order: any) => 
-          order.createdAt?.startsWith(dateStr)
-        );
-        const dayRevenue = dayOrders.reduce((sum: number, order: any) => sum + (order.totalPrice || 0), 0);
+        const dayOrders = allOrders.filter((order: any) => order.createdAt?.startsWith(dateStr));
+        const dayRevenue = dayOrders
+          .filter((o: any) => Boolean(o.is_paid))
+          .reduce((sum: number, order: any) => sum + (order.totalPrice || 0), 0);
         const dayTransactions = allTransactions.filter((t: any) => 
           t.createdAt?.startsWith(dateStr)
         );
@@ -229,7 +236,14 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setMaintenanceMode }) => 
           const { data } = await api.get(`/api/orders/shop/?shop_id=${shopId}`);
           // Handle paginated response for orders too
           const ordersData = data.results || data;
-          allOrders.push(...ordersData);
+          const normalized = (Array.isArray(ordersData) ? ordersData : []).map((o: any) => ({
+            ...o,
+            createdAt: o.createdAt ?? o.created_at,
+            totalPrice: Number(o.totalPrice ?? o.total_price ?? 0),
+            shop_id: o.shop_id ?? o.shop?.id ?? o.shop?._id ?? shopId,
+            shop: o.shop ?? { id: shopId, name: shop.name },
+          }));
+          allOrders.push(...normalized);
         } catch (error) {
           console.error(`Failed to fetch orders for shop ${shop.name}:`, error);
         }
@@ -260,7 +274,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setMaintenanceMode }) => 
           const { data } = await api.get(`/api/transactions/shop/?shop_id=${shopId}`);
           // Handle paginated response for transactions too
           const transactionsData = data.results || data;
-          allTransactions.push(...transactionsData);
+          const normalized = (Array.isArray(transactionsData) ? transactionsData : []).map((t: any) => ({
+            ...t,
+            createdAt: t.createdAt ?? t.created_at,
+            amount: Number(t.amount ?? 0),
+            type: t.type ?? t.transaction_type ?? 'unknown',
+          }));
+          allTransactions.push(...normalized);
         } catch (error) {
           console.error(`Failed to fetch transactions for shop ${shop.name}:`, error);
         }
