@@ -733,6 +733,21 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         shop_id = self.request.query_params.get('shop_id') or self.request.query_params.get('shop')
+        # For mutation/detail actions, don't filter by is_available so we can update disabled items
+        if getattr(self, 'action', None) in ['retrieve', 'update', 'partial_update', 'destroy']:
+            if self.request.user.role == 'shopAdmin':
+                # Limit to the current shop admin's products
+                try:
+                    return Product.objects.filter(shop=self.request.user.shop_id)
+                except Exception:
+                    return Product.objects.none()
+            return Product.objects.all()
+
+        # For shop admins listing their shop via query param, show all products
+        if self.request.user.role == 'shopAdmin' and shop_id:
+            return Product.objects.filter(shop=shop_id)
+
+        # Public listing: only show available products (optionally by shop)
         if shop_id:
             return Product.objects.filter(shop=shop_id, is_available=True)
         return Product.objects.filter(is_available=True)
@@ -741,6 +756,31 @@ class ProductViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
+
+    def update(self, request, *args, **kwargs):
+        """Custom update method to handle product availability updates"""
+        try:
+            instance = self.get_object()
+            
+            # For shop admins, ensure they can only update their own shop's products
+            if request.user.role == 'shopAdmin':
+                if str(instance.shop.id) != str(request.user.shop.id):
+                    return Response({'error': 'You can only update products for your own shop'}, status=status.HTTP_403_FORBIDDEN)
+            
+            # Always allow partial updates for flexibility
+            kwargs['partial'] = True
+            serializer = self.get_serializer(instance, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def partial_update(self, request, *args, **kwargs):
+        """Handle PATCH requests for partial updates"""
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
         """Custom create method to validate shop_id for shop admins"""

@@ -29,6 +29,7 @@ export interface shop {
 
 export interface Product {
   _id: string;
+  id?: string; // API sometimes returns id instead of _id
   name: string;
   description: string;
   category: string; // Added missing category field

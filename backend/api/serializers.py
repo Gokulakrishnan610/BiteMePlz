@@ -77,13 +77,25 @@ class ShopSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
     shop = ShopSerializer(read_only=True)
-    shop_id = serializers.UUIDField(write_only=True)
+    shop_id = serializers.UUIDField(write_only=True, required=False)
 
     class Meta:
         model = Product
         fields = ['id', 'name', 'description', 'price', 'stock', 'image', 'category', 'shop', 'shop_id', 
                  'is_available', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def update(self, instance, validated_data):
+        """Custom update method to handle partial updates properly"""
+        # Remove shop_id from validated_data as it's not a model field
+        validated_data.pop('shop_id', None)
+        
+        # Update only the fields that are provided
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        instance.save()
+        return instance
 
 
 class OrderItemSerializer(serializers.Serializer):

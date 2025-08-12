@@ -5,16 +5,7 @@ import { Package, Plus, Edit, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import Loader from '../../components/Loader';
-
-interface Product {
-  id?: string;
-  _id?: string;
-  name: string;
-  price: number;
-  stock: number;
-  is_available: boolean;
-  createdAt: string;
-}
+import { Product } from '../../types';
 
 const ProductsPage: React.FC = () => {
   const { user } = useAuth();
@@ -77,11 +68,27 @@ const ProductsPage: React.FC = () => {
 
   const toggleAvailability = async (p: Product, next: boolean) => {
     try {
-      await api.put(`/api/products/${p.id || p._id}/`, { is_available: next, shop_id: user?.shop });
-      setProducts((prev) => prev.map((x) => (x.id === (p.id || p._id) || x._id === (p.id || p._id) ? { ...x, is_available: next } as any : x)));
+      console.log('Toggling product availability:', { product: p, next });
+      const productId = p.id || p._id;
+      const response = await api.put(`/api/products/${productId}/`, { 
+        is_available: next, 
+        shop_id: user?.shop 
+      });
+      console.log('Update response:', response.data);
+      
+      setProducts((prev) => prev.map((x) => {
+        const xId = x.id || x._id;
+        const pId = p.id || p._id;
+        if (xId === pId) {
+          return { ...x, is_available: next };
+        }
+        return x;
+      }));
       toast.success(`Product ${next ? 'enabled' : 'disabled'}`);
     } catch (e: any) {
-      toast.error(e?.response?.data?.message || 'Failed to update product');
+      console.error('Error toggling availability:', e);
+      console.error('Error response:', e?.response?.data);
+      toast.error(e?.response?.data?.error || e?.response?.data?.message || 'Failed to update product');
     }
   };
 
@@ -169,11 +176,11 @@ const ProductsPage: React.FC = () => {
                   <td>
                     <div className="flex space-x-2 items-center">
                       <button
-                        onClick={() => toggleAvailability(product as any, !((product as any).is_available))}
-                        className={`${(product as any).is_available ? 'text-red-600' : 'text-green-600'} px-2 py-1 rounded border`}
-                        title={(product as any).is_available ? 'Disable Product' : 'Enable Product'}
+                        onClick={() => toggleAvailability(product, !product.is_available)}
+                        className={`${product.is_available ? 'text-red-600' : 'text-green-600'} px-2 py-1 rounded border`}
+                        title={product.is_available ? 'Disable Product' : 'Enable Product'}
                       >
-                        {(product as any).is_available ? 'Disable' : 'Enable'}
+                        {product.is_available ? 'Disable' : 'Enable'}
                       </button>
                       <Link
                         to={`/kisok-sp-back-office/products/edit/${product.id || product._id}`}
@@ -182,7 +189,7 @@ const ProductsPage: React.FC = () => {
                         <Edit size={18} />
                       </Link>
                       <button
-                        onClick={() => handleDelete(product.id || product._id || '')}
+                        onClick={() => handleDelete(product.id || product._id)}
                         className="p-2 text-[var(--error)] hover:bg-[var(--gray-100)] rounded"
                       >
                         <Trash2 size={18} />
