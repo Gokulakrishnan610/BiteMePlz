@@ -20,6 +20,8 @@ const ProductsPage: React.FC = () => {
   const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [disabledCategories, setDisabledCategories] = useState<string[]>([]);
+  const [savingCategories, setSavingCategories] = useState(false);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -42,6 +44,46 @@ const ProductsPage: React.FC = () => {
 
     fetchProducts();
   }, [user]);
+
+  useEffect(() => {
+    const fetchDisabled = async () => {
+      try {
+        if (!user?.shop) return;
+        const { data } = await api.get(`/api/shops/${user.shop}/`);
+        setDisabledCategories(data.disabled_categories || []);
+      } catch {}
+    };
+    fetchDisabled();
+  }, [user]);
+
+  const toggleCategory = (cat: string) => {
+    setDisabledCategories((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+    );
+  };
+
+  const saveCategories = async () => {
+    try {
+      if (!user?.shop) return;
+      setSavingCategories(true);
+      await api.put(`/api/shops/${user.shop}/`, { disabled_categories: disabledCategories, shop_admin_id: (user as any)?._id || (user as any)?.id });
+      toast.success('Category visibility updated');
+    } catch {
+      toast.error('Failed to update categories');
+    } finally {
+      setSavingCategories(false);
+    }
+  };
+
+  const toggleAvailability = async (p: Product, next: boolean) => {
+    try {
+      await api.put(`/api/products/${p.id || p._id}/`, { is_available: next, shop_id: user?.shop });
+      setProducts((prev) => prev.map((x) => (x.id === (p.id || p._id) || x._id === (p.id || p._id) ? { ...x, is_available: next } as any : x)));
+      toast.success(`Product ${next ? 'enabled' : 'disabled'}`);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Failed to update product');
+    }
+  };
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
@@ -67,6 +109,27 @@ const ProductsPage: React.FC = () => {
           <Plus size={20} className="mr-2" />
           Add Product
         </Link>
+      </div>
+
+      <div className="card p-4 mb-4">
+        <h2 className="text-lg font-semibold mb-2">Category Controls</h2>
+        <p className="text-sm text-gray-600 mb-3">Enable/disable entire categories. Disabled categories will be hidden from customers.</p>
+        <div className="flex flex-wrap gap-2">
+          {['breakfast','lunch','food','beverages','snacks','stationery','electronics','others'].map((cat) => (
+            <button
+              key={cat}
+              onClick={() => toggleCategory(cat)}
+              className={`px-3 py-1 rounded border text-sm ${disabledCategories.includes(cat) ? 'bg-red-50 text-red-700 border-red-300' : 'bg-green-50 text-green-700 border-green-300'}`}
+            >
+              {disabledCategories.includes(cat) ? `Disabled: ${cat}` : `Enabled: ${cat}`}
+            </button>
+          ))}
+        </div>
+        <div className="mt-3">
+          <button onClick={saveCategories} disabled={savingCategories} className="btn-primary px-4 py-2">
+            {savingCategories ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
       </div>
 
       <div className="card">
@@ -98,15 +161,20 @@ const ProductsPage: React.FC = () => {
                     </span>
                   </td>
                   <td>
-                    <span className={`badge ${
-                      product.is_available ? 'badge-success' : 'badge-error'
-                    }`}>
+                    <span className={`badge ${product.is_available ? 'badge-success' : 'badge-error'}`}>
                       {product.is_available ? 'Available' : 'Unavailable'}
                     </span>
                   </td>
                   <td>{new Date(product.createdAt).toLocaleDateString()}</td>
                   <td>
-                    <div className="flex space-x-2">
+                    <div className="flex space-x-2 items-center">
+                      <button
+                        onClick={() => toggleAvailability(product as any, !((product as any).is_available))}
+                        className={`${(product as any).is_available ? 'text-red-600' : 'text-green-600'} px-2 py-1 rounded border`}
+                        title={(product as any).is_available ? 'Disable Product' : 'Enable Product'}
+                      >
+                        {(product as any).is_available ? 'Disable' : 'Enable'}
+                      </button>
                       <Link
                         to={`/kisok-sp-back-office/products/edit/${product.id || product._id}`}
                         className="p-2 text-[var(--primary)] hover:bg-[var(--gray-100)] rounded"

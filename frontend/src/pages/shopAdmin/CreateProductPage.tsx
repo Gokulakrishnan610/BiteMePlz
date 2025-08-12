@@ -68,7 +68,7 @@ const CreateProductPage: React.FC = () => {
       await api.post('/api/products/', createData);
       
       toast.success('Product created successfully');
-      navigate('/shop-admin/products');
+      navigate('/kisok-sp-back-office/products');
     } catch (error: any) {
       console.error('Error creating product:', error);
       

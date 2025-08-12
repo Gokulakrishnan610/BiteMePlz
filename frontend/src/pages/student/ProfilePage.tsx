@@ -115,18 +115,19 @@ const ProfilePage: React.FC = () => {
         const { data } = await api.get<MinimalOrderForSpending[]>("/api/orders/myorders")
         const orders = Array.isArray(data) ? data : []
 
+        const getPaid = (o: MinimalOrderForSpending) => Boolean(o.is_paid ?? o.isPaid)
         const getAmount = (o: MinimalOrderForSpending) => Number(o.total_price ?? o.totalPrice ?? 0)
         const getDate = (o: MinimalOrderForSpending) => new Date((o.createdAt ?? o.created_at) as string)
-        const getPaid = (o: MinimalOrderForSpending) => Boolean(o.is_paid ?? o.isPaid)
-        const verifiedPaid = orders.filter(getPaid)
-        setPaidOrders(verifiedPaid)
+
+        const paid = orders.filter(getPaid)
+        setPaidOrders(paid)
 
         // Also compute headline summary (Total + This Month) independent of filter
-        const totalAll = verifiedPaid.reduce((sum, o) => sum + getAmount(o), 0)
+        const totalAll = paid.reduce((sum, o) => sum + getAmount(o), 0)
         const now = new Date()
         const currentMonth = now.getMonth()
         const currentYear = now.getFullYear()
-        const thisMonthTotal = verifiedPaid.reduce((sum, o) => {
+        const thisMonthTotal = paid.reduce((sum, o) => {
           const d = getDate(o)
           if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
             return sum + getAmount(o)

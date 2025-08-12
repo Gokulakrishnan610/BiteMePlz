@@ -35,6 +35,8 @@ const EditProductPage: React.FC = () => {
   });
 
   const categories = [
+    { value: 'breakfast', label: 'Breakfast' },
+    { value: 'lunch', label: 'Lunch' },
     { value: 'food', label: 'Food' },
     { value: 'beverages', label: 'Beverages' },
     { value: 'snacks', label: 'Snacks' },
@@ -51,7 +53,7 @@ const EditProductPage: React.FC = () => {
         
         // Normalize the category to ensure it matches our enum values
         const normalizedCategory = data.category ? data.category.toLowerCase().trim() : 'others';
-        const validCategories = ['food', 'beverages', 'snacks', 'stationery', 'electronics', 'others'];
+        const validCategories = ['breakfast', 'lunch', 'food', 'beverages', 'snacks', 'stationery', 'electronics', 'others'];
         const finalCategory = validCategories.includes(normalizedCategory) ? normalizedCategory : 'others';
         
         setFormData({
@@ -110,7 +112,7 @@ const EditProductPage: React.FC = () => {
 
       
       toast.success('Product updated successfully');
-      navigate('/shop-admin/products');
+      navigate('/kisok-sp-back-office/products');
     } catch (error: any) {
       console.error('Error updating product:', error);
       console.error('Full error response:', error.response);
@@ -286,7 +288,7 @@ const EditProductPage: React.FC = () => {
           <div className="flex justify-end space-x-4">
             <button
               type="button"
-              onClick={() => navigate('/shop-admin/products')}
+              onClick={() => navigate('/kisok-sp-back-office/products')}
               className="btn-secondary"
             >
               Cancel

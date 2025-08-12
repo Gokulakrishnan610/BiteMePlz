@@ -73,6 +73,7 @@ class Shop(models.Model):
     is_open = models.BooleanField(default=True)
     final_validity_time = models.DateTimeField()
     next_opening_time = models.DateTimeField()
+    disabled_categories = models.JSONField(default=list)
     qr_validity_minutes = models.IntegerField(
         default=1,
         validators=[MinValueValidator(1), MaxValueValidator(60)]
@@ -97,6 +98,7 @@ class Shop(models.Model):
             'shop_admin': str(self.shop_admin.id),
             'is_active': self.is_active,
             'is_open': self.is_open,
+            'disabled_categories': self.disabled_categories,
             'final_validity_time': self.final_validity_time.isoformat() if self.final_validity_time else None,
             'next_opening_time': self.next_opening_time.isoformat() if self.next_opening_time else None,
             'qr_validity_minutes': self.qr_validity_minutes,

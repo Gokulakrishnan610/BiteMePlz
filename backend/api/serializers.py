@@ -64,11 +64,12 @@ class ShopSerializer(serializers.ModelSerializer):
     shop_admin = UserSerializer(read_only=True)
     shop_admin_id = serializers.UUIDField(write_only=True)
     image = serializers.CharField(required=False, allow_blank=True)
+    disabled_categories = serializers.ListField(child=serializers.CharField(), required=False)
 
     class Meta:
         model = Shop
         fields = ['id', 'name', 'description', 'location', 'image', 'shop_admin', 'shop_admin_id', 
-                 'is_active', 'is_open', 'final_validity_time', 'next_opening_time', 'qr_validity_minutes',
+                 'is_active', 'is_open', 'disabled_categories', 'final_validity_time', 'next_opening_time', 'qr_validity_minutes',
                  'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 

@@ -10,7 +10,7 @@ import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import Navbar from "../components/Navbar"
-import SimpleLoading from "../components/SimpleLoading"
+// import SimpleLoading from "../components/SimpleLoading"
 
 interface Shop {
   id: string
@@ -24,6 +24,7 @@ interface Shop {
   rating?: number
   delivery_time?: string
   delivery_fee?: number
+  disabled_categories?: string[]
 }
 
 interface Product {
@@ -52,6 +53,20 @@ const HomePage: React.FC = () => {
   const [shops, setShops] = useState<Shop[]>([])
   const [filteredShops, setFilteredShops] = useState<Shop[]>([])
   const [availableCategories, setAvailableCategories] = useState<string[]>(["All"])
+  // Derived list that respects shops' disabled_categories
+  const filteredAvailableCategories = useMemo(() => {
+    if (!availableCategories || availableCategories.length === 0) return ["All"]
+    const allowed = new Set<string>()
+    // Keep "All" always
+    if (availableCategories.includes("All")) allowed.add("All")
+    // Include a category if at least one shop has NOT disabled it
+    availableCategories.forEach((cat) => {
+      if (cat === "All") return
+      const anyShopAllows = shops.some((s) => !(s.disabled_categories || []).includes(cat.toLowerCase()))
+      if (anyShopAllows) allowed.add(cat)
+    })
+    return Array.from(allowed)
+  }, [availableCategories, shops])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
@@ -201,7 +216,10 @@ const HomePage: React.FC = () => {
           const shopIdsWithCategory = new Set(
             products.map((product: Product) => (product.shop && (product.shop as any).id) || product.shop),
           )
-          filtered = shops.filter((shop) => shopIdsWithCategory.has(shop.id))
+          // Exclude shops that have disabled this category
+          filtered = shops
+            .filter((shop) => shopIdsWithCategory.has(shop.id))
+            .filter((shop) => !((shop.disabled_categories || []).includes(selectedCategory.toLowerCase())))
         } catch (error) {
           console.error("Failed to filter shops by category:", error)
           filtered = shops.filter((shop) => {
@@ -344,7 +362,7 @@ const HomePage: React.FC = () => {
           }`}
         >
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            {availableCategories.map((category) => {
+            {filteredAvailableCategories.map((category) => {
               const IconComponent = getCategoryIcon(category)
               return (
                 <Button
@@ -401,10 +419,10 @@ const HomePage: React.FC = () => {
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-fr">
-                {displayedShops.map((shop, index) => {
+                {displayedShops.map((shop) => {
                   const timeUntilClosure = getTimeUntilClosure(shop.final_validity_time)
                   const isOpen = isShopOpen(shop)
-                  const cardDelay = Math.floor(index / 4) * 200 + (index % 4) * 100
+                  const cardDelay = 0
 
                   if (!shop.id) {
                     console.warn(`Shop ${shop.name} has no valid ID, skipping`)
@@ -418,7 +436,7 @@ const HomePage: React.FC = () => {
                       onClick={() => isOpen && handleShopClick(shop.id)}
                       className={`group transition-opacity duration-500 h-full ${
                         isOpen ? "" : "pointer-events-none opacity-60"
-                      } ${componentsLoaded >= 4 + Math.floor(index / 4) ? "opacity-100" : "opacity-0"}`}
+                      } ${componentsLoaded >= 4 ? "opacity-100" : "opacity-0"}`}
                       style={{ transitionDelay: `${cardDelay}ms` }}
                     >
                       <Card className="overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow duration-200 bg-white font-sans h-full flex flex-col">
@@ -503,7 +521,7 @@ const HomePage: React.FC = () => {
           {/* Mobile Category Filters */}
           <div className="px-4 pb-4">
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {availableCategories.map((category) => {
+              {filteredAvailableCategories.map((category) => {
                 const IconComponent = getCategoryIcon(category)
                 return (
                   <Button
@@ -619,7 +637,7 @@ const HomePage: React.FC = () => {
                 <div className="mb-6">
                   <h2 className="text-xl font-bold text-gray-900 mb-3">All Shops</h2>
                   <div className="grid grid-cols-2 gap-3">
-                    {displayedShops.map((shop, index) => {
+                    {displayedShops.map((shop) => {
                       const timeUntilClosure = getTimeUntilClosure(shop.final_validity_time)
                       const isOpen = isShopOpen(shop)
 

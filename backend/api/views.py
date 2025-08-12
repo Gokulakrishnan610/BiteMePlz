@@ -505,6 +505,18 @@ class ShopViewSet(viewsets.ModelViewSet):
         
         return shop
 
+    def update(self, request, *args, **kwargs):
+        """Allow partial updates (including single-field updates like disabled_categories) via PUT/PATCH."""
+        partial = True
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
+
+    def partial_update(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
     @action(detail=True, methods=['put', 'post'])
     def toggle(self, request, pk=None):
         shop = self.get_object()
