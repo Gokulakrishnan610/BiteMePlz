@@ -122,7 +122,7 @@ const TransactionsPage: React.FC = () => {
       let page = 1;
       let next: string | null = `/api/shops/?page=${page}`;
       while (next) {
-        const { data } = await api.get(next);
+        const { data }: { data: any } = await api.get(next);
         const shopsData = data.results || data;
         if (Array.isArray(shopsData)) {
           all.push(...shopsData);
@@ -149,7 +149,7 @@ const TransactionsPage: React.FC = () => {
           if (value && key !== 'shop') params.append(key, value.toString());
         });
 
-        const { data } = await api.get(`/api/transactions/shop/?shop_id=${filters.shop}&${params}`); // Fixed API call
+        const { data }: { data: any } = await api.get(`/api/transactions/shop/?shop_id=${filters.shop}&${params}`);
         const list = extractTransactions(data);
         setTransactions(list);
         
@@ -180,7 +180,7 @@ const TransactionsPage: React.FC = () => {
               if (value && key !== 'shop') params.append(key, value.toString());
             });
 
-            const { data } = await api.get(`/api/transactions/shop/?shop_id=${shop.id}&${params}`); // Changed to shop.id
+            const { data }: { data: any } = await api.get(`/api/transactions/shop/?shop_id=${shop.id}&${params}`);
             const list = extractTransactions(data).map((t: any) => ({
               ...t,
               shop: { _id: shop.id, name: shop.name },

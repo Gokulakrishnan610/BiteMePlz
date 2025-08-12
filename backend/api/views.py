@@ -10,6 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db import transaction
+from django.db.models import Q
 from django.core.files.storage import default_storage
 from django.core.serializers.json import DjangoJSONEncoder
 import json
@@ -1779,6 +1780,68 @@ class TransactionViewSet(viewsets.ModelViewSet):
         if self.request.user.role in ['admin', 'shopAdmin']:
             return Transaction.objects.all()
         return Transaction.objects.filter(user=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def shop(self, request):
+        """Get transactions for a specific shop"""
+        try:
+            shop_id = request.query_params.get('shop_id')
+            if not shop_id:
+                return Response({'error': 'shop_id parameter is required'}, status=400)
+
+            # Get shop transactions
+            transactions = Transaction.objects.filter(shop_id=shop_id).order_by('-created_at')
+
+            # Apply filters
+            transaction_type = request.query_params.get('type')
+            if transaction_type:
+                transactions = transactions.filter(type=transaction_type)
+
+            status_filter = request.query_params.get('status')
+            if status_filter:
+                transactions = transactions.filter(status=status_filter)
+
+            start_date = request.query_params.get('startDate')
+            if start_date:
+                transactions = transactions.filter(created_at__date__gte=start_date)
+
+            end_date = request.query_params.get('endDate')
+            if end_date:
+                transactions = transactions.filter(created_at__date__lte=end_date)
+
+            search = request.query_params.get('search')
+            if search:
+                transactions = transactions.filter(
+                    Q(user__name__icontains=search) |
+                    Q(description__icontains=search) |
+                    Q(order__order_id__icontains=search)
+                )
+
+            # Pagination
+            page = int(request.query_params.get('page', 1))
+            limit = int(request.query_params.get('limit', 50))
+            offset = (page - 1) * limit
+
+            total = transactions.count()
+            transactions = transactions[offset:offset + limit]
+
+            # Serialize with additional context
+            serializer = self.get_serializer(transactions, many=True)
+            data = serializer.data
+
+            # Add pagination info
+            response_data = {
+                'results': data,
+                'total': total,
+                'currentPage': page,
+                'totalPages': (total + limit - 1) // limit,
+                'hasNext': offset + limit < total,
+                'hasPrevious': page > 1
+            }
+
+            return Response(response_data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
 
 
 class ShopLogViewSet(viewsets.ModelViewSet):

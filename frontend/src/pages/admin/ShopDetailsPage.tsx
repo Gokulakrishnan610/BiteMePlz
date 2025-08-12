@@ -198,7 +198,7 @@ const ShopDetailsPage: React.FC = () => {
         if (value) params.append(key, value.toString());
       });
 
-      const { data } = await api.get(`/transactions/?shop_id=${id}&${params}`);
+      const { data } = await api.get(`/api/transactions/shop/?shop_id=${id}&${params}`);
       setTransactions(data.results || data.transactions || []);
     } catch (err) {
       toast.error('Failed to load transactions');
@@ -207,7 +207,7 @@ const ShopDetailsPage: React.FC = () => {
 
   const handleTransactionClick = async (transactionId: string) => {
     try {
-      const { data } = await api.get(`/transactions/${transactionId}/`);
+      const { data } = await api.get(`/api/transactions/${transactionId}/`);
       setSelectedTransaction(data);
     } catch (err) {
       toast.error('Failed to load transaction details');

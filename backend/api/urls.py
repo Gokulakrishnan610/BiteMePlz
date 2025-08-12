@@ -360,6 +360,8 @@ urlpatterns = [
     path('orders/<uuid:pk>/mark-item-bought/', OrderViewSet.as_view({'patch': 'mark_item_bought'}), name='order-mark-item-bought'),
     # Manual registration for multi_shop action
     path('orders/multi_shop/', OrderViewSet.as_view({'post': 'multi_shop'}), name='order-multi-shop'),
+    # Manual registration for shop transactions action
+    path('transactions/shop/', TransactionViewSet.as_view({'get': 'shop'}), name='transaction-shop'),
 ]
 
 urlpatterns += [

@@ -486,13 +486,13 @@ const CartPage: React.FC = () => {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
             {/* Cart Items */}
             <div className="lg:col-span-2 space-y-6">
               {Object.entries(getItemsByShop()).map(([shop_id, shopData]) => (
                 <Card key={shop_id} className="overflow-hidden">
                   {/* Shop Header */}
-                  <CardHeader className="bg-purple-600 text-white">
+                  <CardHeader className="bg-purple-600 text-white p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
                         <div className="bg-white/20 p-2 rounded-full mr-3">
@@ -515,19 +515,19 @@ const CartPage: React.FC = () => {
                   </CardHeader>
 
                   {/* Items */}
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="space-y-4">
                       {shopData.items.map((item, index) => (
                         <div
                           key={`${item.product_id}-${item.shop_id}`}
-                          className={`flex items-center justify-between py-6 h-32 ${index !== shopData.items.length - 1 ? "border-b border-gray-200" : ""}`}
+                          className={`flex items-center justify-between py-4 sm:py-6 gap-4 ${index !== shopData.items.length - 1 ? "border-b border-gray-200" : ""}`}
                         >
                           <div className="flex items-center flex-1 min-w-0">
                             <div className="relative flex-shrink-0">
                               <img
                                 src={item.image || "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"}
                                 alt={item.name}
-                                className="w-20 h-20 object-cover rounded-lg border border-gray-200"
+                                className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border border-gray-200"
                                 onError={(e) => {
                                   e.currentTarget.src = "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"
                                 }}
@@ -546,7 +546,7 @@ const CartPage: React.FC = () => {
                             </div>
                           </div>
 
-                          <div className="flex items-center space-x-4 flex-shrink-0">
+                          <div className="flex items-center space-x-2 sm:space-x-4 sm:flex-shrink-0">
                             {/* Quantity Controls */}
                             <div className="flex items-center bg-gray-100 rounded-lg border border-gray-200">
                               <button
@@ -554,13 +554,13 @@ const CartPage: React.FC = () => {
                                   const newQuantity = item.quantity - 1
                                   handleQuantityChange(item.product_id, item.shop_id, newQuantity)
                                 }}
-                                className="p-2 hover:bg-gray-200 transition-colors rounded-l-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="p-1.5 sm:p-2 hover:bg-gray-200 transition-colors rounded-l-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Decrease quantity"
                                 disabled={item.quantity <= 1}
                               >
                                 <Minus size={16} className="text-gray-600" />
                               </button>
-                              <span className="px-4 py-2 text-gray-900 font-semibold min-w-[3rem] text-center bg-white border-x border-gray-200">
+                              <span className="px-3 sm:px-4 py-1.5 sm:py-2 text-gray-900 font-semibold min-w-[2.5rem] sm:min-w-[3rem] text-center bg-white border-x border-gray-200 text-sm sm:text-base">
                                 {item.quantity}
                               </span>
                               <button
@@ -568,7 +568,7 @@ const CartPage: React.FC = () => {
                                   const newQuantity = item.quantity + 1
                                   handleQuantityChange(item.product_id, item.shop_id, newQuantity)
                                 }}
-                                className="p-2 hover:bg-gray-200 transition-colors rounded-r-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="p-1.5 sm:p-2 hover:bg-gray-200 transition-colors rounded-r-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Increase quantity"
                                 disabled={item.quantity >= item.stock}
                               >
@@ -576,7 +576,7 @@ const CartPage: React.FC = () => {
                               </button>
                             </div>
 
-                            <div className="text-right min-w-[80px]">
+                            <div className="hidden sm:block text-right min-w-[80px]">
                               <p className="font-bold text-gray-900 text-lg">₹{item.price * item.quantity}</p>
                             </div>
 
@@ -601,7 +601,7 @@ const CartPage: React.FC = () => {
 
             {/* Order Summary */}
             <div className="lg:col-span-1">
-              <Card className="sticky top-8">
+              <Card className="lg:sticky lg:top-8">
                 <CardHeader>
                   <CardTitle className="flex items-center text-xl">
                     <Package className="text-purple-600 mr-3" size={24} />
