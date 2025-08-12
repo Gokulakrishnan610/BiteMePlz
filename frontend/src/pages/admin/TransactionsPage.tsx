@@ -2,19 +2,13 @@ import React, { useEffect, useState } from 'react';
 import api from '../../api';
 import { 
   Receipt, 
-  Filter, 
   Download, 
   Eye, 
-  Calendar,
-  Search,
   RefreshCw,
   TrendingUp,
   TrendingDown,
   DollarSign,
-  Users,
-  X,
-  BarChart3,
-  PieChart
+  X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -114,7 +108,7 @@ const TransactionsPage: React.FC = () => {
 
   useEffect(() => {
     fetchTransactions();
-  }, [filters]);
+  }, [filters, shops]);
 
   const fetchshops = async () => {
     try {
@@ -166,6 +160,18 @@ const TransactionsPage: React.FC = () => {
           failedTransactions
         });
       } else {
+        // When showing all shops, wait until shop list is loaded
+        if (shops.length === 0) {
+          setTransactions([]);
+          setStats({
+            totalTransactions: 0,
+            totalAmount: 0,
+            successfulTransactions: 0,
+            failedTransactions: 0,
+          });
+          setLoading(false);
+          return;
+        }
         // Fetch transactions from all shops
         const allTransactions: Transaction[] = [];
         
