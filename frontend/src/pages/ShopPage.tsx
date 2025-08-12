@@ -915,7 +915,7 @@ const ShopPage: React.FC = () => {
                  >
                    View bag
                  </button>
-                    </div>
+               </div>
 
                {uniqueShops > 1 && (
                  <div className="border-t border-purple-500 pt-2 mt-2">
@@ -929,6 +929,36 @@ const ShopPage: React.FC = () => {
                 </Card>
          </div>
        )}
+
+      {/* Desktop/Laptop Cart Summary - Floating bottom-right */}
+      {currentShopCartCount > 0 && (
+        <div className="hidden md:flex fixed bottom-6 right-6 z-40">
+          <Card className="bg-purple-600 text-white border-0 shadow-xl">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-4">
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm md:text-base">
+                    {currentShopCartCount} item{currentShopCartCount !== 1 ? "s" : ""} • ₹{currentShopCartValue}
+                  </p>
+                  {uniqueShops > 1 ? (
+                    <p className="text-xs md:text-sm text-purple-100 truncate">
+                      From {uniqueShops} shops • Current: {currentShopCartCount} items (₹{currentShopCartValue})
+                    </p>
+                  ) : (
+                    <p className="text-xs md:text-sm text-purple-100 truncate">Items in your bag</p>
+                  )}
+                </div>
+                <Button
+                  onClick={handleGoToCart}
+                  className="bg-purple-700 hover:bg-purple-800 text-white px-4 py-2 rounded-lg font-semibold"
+                >
+                  View bag
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
 
 

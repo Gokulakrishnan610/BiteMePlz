@@ -455,79 +455,78 @@ const CartPage: React.FC = () => {
       <Navbar />
 
       <div className="pt-20 md:pt-32">
-        <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 py-4 sm:py-8">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 gap-4">
             <div className="flex items-center">
               <button
                 onClick={() => navigate(-1)}
-                className="flex items-center text-purple-600 hover:text-purple-700 transition-colors mr-4"
+                className="flex items-center text-purple-600 hover:text-purple-700 transition-colors mr-2 sm:mr-4"
               >
                 <ArrowLeft size={20} className="mr-2" />
                 <span className="font-medium">Back</span>
               </button>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Shopping Cart</h1>
-                <p className="text-gray-600 mt-1">
-                  {totalItems} item{totalItems !== 1 ? "s" : ""} • {getShopIds().length} shop
-                  {getShopIds().length !== 1 ? "s" : ""}
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Shopping Cart</h1>
+                <p className="text-gray-600 mt-1 text-sm sm:text-base">
+                  {totalItems} item{totalItems !== 1 ? "s" : ""} • {getShopIds().length} shop{getShopIds().length !== 1 ? "s" : ""}
                 </p>
               </div>
             </div>
-
             <Button
               onClick={handleClearCart}
               variant="outline"
               disabled={paymentInitiated}
-              className="flex items-center text-red-600 border-red-200 hover:bg-red-50 bg-transparent"
+              className="flex items-center text-red-600 border-red-200 hover:bg-red-50 bg-transparent px-3 py-2 sm:px-4 sm:py-2"
             >
               <Trash2 size={16} className="mr-2" />
               Clear Cart
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
             {/* Cart Items */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-4 sm:space-y-6">
               {Object.entries(getItemsByShop()).map(([shop_id, shopData]) => (
                 <Card key={shop_id} className="overflow-hidden">
                   {/* Shop Header */}
-                  <CardHeader className="bg-purple-600 text-white">
-                    <div className="flex items-center justify-between">
+                  <CardHeader className="bg-purple-600 text-white p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div className="flex items-center">
-                        <div className="bg-white/20 p-2 rounded-full mr-3">
+                        <div className="bg-white/20 p-2 rounded-full mr-2 sm:mr-3">
                           <ShoppingBag className="text-white" size={20} />
                         </div>
                         <div>
-                          <CardTitle className="text-white text-lg">{shopData.shop_name}</CardTitle>
-                          <p className="text-white/80 text-sm">
+                          <CardTitle className="text-white text-base sm:text-lg">{shopData.shop_name}</CardTitle>
+                          <p className="text-white/80 text-xs sm:text-sm">
                             {shopData.items.length} item{shopData.items.length !== 1 ? "s" : ""}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-white/80 text-sm">Shop Total</p>
-                        <p className="text-white font-bold text-lg">
-                          ₹{shopData.items.reduce((sum, item) => sum + item.price * item.quantity, 0)}
+                      <div className="text-right mt-2 sm:mt-0">
+                        <p className="text-white/80 text-xs sm:text-sm">Shop Total</p>
+                        <p className="text-white font-bold text-base sm:text-lg">
+                          {shopData.items.reduce((sum, item) => sum + item.price * item.quantity, 0)}
                         </p>
                       </div>
                     </div>
                   </CardHeader>
 
                   {/* Items */}
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
+                  <CardContent className="p-3 sm:p-6">
+                    <div className="space-y-3 sm:space-y-4">
                       {shopData.items.map((item, index) => (
                         <div
                           key={`${item.product_id}-${item.shop_id}`}
-                          className={`flex items-center justify-between py-6 h-32 ${index !== shopData.items.length - 1 ? "border-b border-gray-200" : ""}`}
+                          className={`flex items-center justify-between py-4 sm:py-6 xs:h-32 ${index !== shopData.items.length - 1 ? "border-b border-gray-200" : ""}`}
                         >
-                          <div className="flex items-center flex-1 min-w-0">
+                          {/* Product Name */}
+                          <div className="flex-1 min-w-0 flex items-center">
                             <div className="relative flex-shrink-0">
                               <img
                                 src={item.image || "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"}
                                 alt={item.name}
-                                className="w-20 h-20 object-cover rounded-lg border border-gray-200"
+                                className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border border-gray-200"
                                 onError={(e) => {
                                   e.currentTarget.src = "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"
                                 }}
@@ -538,16 +537,14 @@ const CartPage: React.FC = () => {
                                 </Badge>
                               )}
                             </div>
-
-                            <div className="ml-4 flex-1 min-w-0">
-                              <h4 className="font-semibold text-gray-900 text-base truncate">{item.name}</h4>
-                              <p className="text-purple-600 font-semibold text-lg">₹{item.price}</p>
-                              <p className="text-gray-500 text-sm">Stock: {item.stock} available</p>
+                            <div className="ml-2 sm:ml-4 flex-1 min-w-0">
+                              <h4 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{item.name}</h4>
+                              <p className="text-purple-600 font-semibold text-base sm:text-lg">₹{item.price}</p>
+                              <p className="text-gray-500 text-xs sm:text-sm">Stock: {item.stock} available</p>
                             </div>
                           </div>
-
-                          <div className="flex items-center space-x-4 flex-shrink-0">
-                            {/* Quantity Controls */}
+                          {/* Quantity Controls and Delete Button */}
+                          <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 ml-2">
                             <div className="flex items-center bg-gray-100 rounded-lg border border-gray-200">
                               <button
                                 onClick={() => {
@@ -560,7 +557,7 @@ const CartPage: React.FC = () => {
                               >
                                 <Minus size={16} className="text-gray-600" />
                               </button>
-                              <span className="px-4 py-2 text-gray-900 font-semibold min-w-[3rem] text-center bg-white border-x border-gray-200">
+                              <span className="px-3 sm:px-4 py-2 text-gray-900 font-semibold min-w-[2.5rem] text-center bg-white border-x border-gray-200">
                                 {item.quantity}
                               </span>
                               <button
@@ -575,12 +572,6 @@ const CartPage: React.FC = () => {
                                 <Plus size={16} className="text-gray-600" />
                               </button>
                             </div>
-
-                            <div className="text-right min-w-[80px]">
-                              <p className="font-bold text-gray-900 text-lg">₹{item.price * item.quantity}</p>
-                            </div>
-
-                            {/* Delete Button */}
                             <Button
                               onClick={() => handleDirectDelete(item.product_id, item.shop_id, item.name)}
                               variant="outline"
@@ -591,6 +582,10 @@ const CartPage: React.FC = () => {
                               <Trash2 size={16} />
                             </Button>
                           </div>
+                          {/* Item Total */}
+                          <div className="text-right min-w-[60px] sm:min-w-[80px] ml-2">
+                            <p className="font-bold text-gray-900 text-base sm:text-lg">₹{item.price * item.quantity}</p>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -600,10 +595,10 @@ const CartPage: React.FC = () => {
             </div>
 
             {/* Order Summary */}
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 mt-6 lg:mt-0">
               <Card className="sticky top-8">
                 <CardHeader>
-                  <CardTitle className="flex items-center text-xl">
+                  <CardTitle className="flex items-center text-lg sm:text-xl">
                     <Package className="text-purple-600 mr-3" size={24} />
                     Order Summary
                   </CardTitle>
@@ -619,11 +614,11 @@ const CartPage: React.FC = () => {
                       <span className="font-bold text-lg">₹{remainingBalance}</span>
                     </div>
                     {remainingBalance === 0 ? (
-                      <p className="text-white/80 text-sm mt-2">No balance available. Use Razorpay to pay.</p>
+                      <p className="text-white/80 text-xs sm:text-sm mt-2">No balance available. Use Razorpay to pay.</p>
                     ) : (
                       remainingBalance < getTotalPrice() && (
-                        <p className="text-white/80 text-sm mt-2">
-                          Need ₹{getTotalPrice() - remainingBalance} more for balance payment
+                        <p className="text-white/80 text-xs sm:text-sm mt-2">
+                          Need {getTotalPrice() - remainingBalance} more for balance payment
                         </p>
                       )
                     )}
@@ -647,7 +642,7 @@ const CartPage: React.FC = () => {
                   <div className="space-y-3">
                     <div className="flex justify-between text-gray-600">
                       <span>Subtotal ({totalItems} items)</span>
-                      <span>₹{getTotalPrice()}</span>
+                      <span>{getTotalPrice()}</span>
                     </div>
                     <div className="flex justify-between text-gray-600">
                       <span>Delivery Fee</span>
