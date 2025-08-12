@@ -580,7 +580,12 @@ const HomePage: React.FC = () => {
                       const timeUntilClosure = getTimeUntilClosure(shop.final_validity_time)
                       const isOpen = isShopOpen(shop)
                       return (
-                        <Link key={shop.id} to={`/shop/${shop.id}`} onClick={() => handleShopClick(shop.id)}>
+                        <Link
+                          key={shop.id}
+                          to={isOpen ? `/shop/${shop.id}` : "#"}
+                          onClick={() => isOpen && handleShopClick(shop.id)}
+                          className={isOpen ? "" : "pointer-events-none opacity-60"}
+                        >
                           <Card className="overflow-hidden hover:shadow-lg transition-all duration-200 border-0 shadow-md">
                             <div className="flex">
                               <div className="relative w-32 h-32 flex-shrink-0">
