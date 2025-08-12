@@ -565,7 +565,7 @@ const ProfilePage: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Button
-                  onClick={() => navigate("/orders")}
+                  onClick={() => navigate("/orders", { replace: true })}
                   variant="outline"
                   className="h-16 border-gray-200 hover:border-purple-300 hover:bg-purple-50 text-gray-700 hover:text-purple-700 transition-all duration-200"
                 >

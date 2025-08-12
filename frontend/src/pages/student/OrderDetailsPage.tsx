@@ -185,7 +185,7 @@ const OrderDetailsPage: React.FC = () => {
       setDeleting(true);
       await api.delete(`/api/orders/${(order._id || order.id)}/`);
       toast.success('Order deleted successfully');
-      navigate('/orders');
+      navigate('/orders', { replace: true });
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to delete order');
       setDeleting(false);
@@ -234,9 +234,7 @@ const OrderDetailsPage: React.FC = () => {
                 <CardContent className="p-8 text-center">
                   <AlertCircle className="mx-auto text-red-500 mb-4" size={48} />
                   <p className="text-red-600 mb-4 text-lg">{error}</p>
-                  <Link to="/orders">
-                    <Button className="bg-purple-600 hover:bg-purple-700">Back to Orders</Button>
-                  </Link>
+                  <Button onClick={() => navigate('/orders', { replace: true })} className="bg-purple-600 hover:bg-purple-700">Back to Orders</Button>
                 </CardContent>
               </Card>
             </div>
@@ -255,10 +253,10 @@ const OrderDetailsPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 py-8">
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
-            <Link to="/orders" className="flex items-center text-purple-600 hover:text-purple-700 transition-colors">
+            <button onClick={() => navigate('/orders', { replace: true })} className="flex items-center text-purple-600 hover:text-purple-700 transition-colors">
               <ArrowLeft size={20} className="mr-2" />
               <span className="font-medium">Back to Orders</span>
-            </Link>
+            </button>
             {canDelete && (
               <Button onClick={handleDelete} disabled={deleting} variant="destructive" className="flex items-center">
                 <Trash2 size={20} className="mr-2" />

@@ -27,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import Navbar from "../../components/Navbar"
+import { useWallet } from "../../context/WalletContext"
 
 declare global {
   interface Window {
@@ -62,6 +63,7 @@ const CartPage: React.FC = () => {
   };
 
   const { user } = useAuth()
+  const { balance, refreshBalance } = useWallet()
   const navigate = useNavigate()
   const [paymentInitiated, setPaymentInitiated] = useState(false)
   const [timeLeft, setTimeLeft] = useState(180) // 3 minutes in seconds
@@ -69,32 +71,19 @@ const CartPage: React.FC = () => {
   const [timer, setTimer] = useState<NodeJS.Timeout | null>(null)
   const [showDisclaimer, setShowDisclaimer] = useState(false)
   const [showPaymentOptions, setShowPaymentOptions] = useState(false)
-  const [remainingBalance, setRemainingBalance] = useState(0)
+  // Use shared wallet context balance instead of duplicating local state
   // removed unused shopInfo state
   const [isLoading, setIsLoading] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<{ product: string; shop_id: string; name: string } | null>(null)
 
   useEffect(() => {
-    // Fetch user's remaining balance
-    const fetchData = async () => {
-      try {
-        const balanceRes = await api.get("/api/users/profile")
-        setRemainingBalance(balanceRes.data.balance || 0)
-      } catch (error) {
-        console.error("Failed to fetch balance:", error)
-        setRemainingBalance(0)
-      }
-    }
-    if (user) {
-      fetchData()
-    }
     return () => {
       if (timer) {
         clearInterval(timer)
       }
     }
-  }, [user, timer])
+  }, [timer])
 
   // Debug: Log all cart items and their IDs before payment
   useEffect(() => {
@@ -134,8 +123,8 @@ const CartPage: React.FC = () => {
   }
 
   const handleBalancePayment = async () => {
-    if (remainingBalance < getTotalPrice()) {
-      const shortfall = getTotalPrice() - remainingBalance;
+    if (balance < getTotalPrice()) {
+      const shortfall = getTotalPrice() - balance;
       toast.error(`Insufficient balance. You need ₹${shortfall} more.`);
       return;
     }
@@ -185,11 +174,11 @@ const CartPage: React.FC = () => {
       const orderResponse = await api.post(endpoint, requestData);
       clearCart();
       toast.success("Payment successful! Your order has been placed.");
-
+      try { await refreshBalance(); } catch {}
       if (shopIds.length > 1) {
-        navigate(`/order/${orderResponse.data.orders[0]._id}`);
+        navigate(`/order/${orderResponse.data.orders[0]._id}`, { replace: true });
       } else {
-        navigate(`/order/${orderResponse.data.order._id}`);
+        navigate(`/order/${orderResponse.data.order._id}`, { replace: true });
       }
     } catch (error: any) {
       // silent catch, user sees toast
@@ -296,7 +285,8 @@ const CartPage: React.FC = () => {
             // debug removed
             clearCart();
             toast.success("Payment successful! Your order has been placed.");
-            navigate(`/order/${orderId}`);
+            try { await refreshBalance(); } catch {}
+            navigate(`/order/${orderId}`, { replace: true });
           } catch (error: any) {
             // silent catch, user sees toast
             toast.error(error.response?.data?.message || "Payment verification failed");
@@ -610,20 +600,20 @@ const CartPage: React.FC = () => {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Wallet Balance */}
-                  <div className="bg-purple-600 rounded-lg p-4 text-white">
+                   <div className="bg-purple-600 rounded-lg p-4 text-white">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
                         <Wallet className="mr-3" size={20} />
                         <span className="font-medium">Wallet Balance</span>
                       </div>
-                      <span className="font-bold text-lg">₹{remainingBalance}</span>
+                       <span className="font-bold text-lg">₹{balance}</span>
                     </div>
-                    {remainingBalance === 0 ? (
+                     {balance === 0 ? (
                       <p className="text-white/80 text-sm mt-2">No balance available. Use Razorpay to pay.</p>
                     ) : (
-                      remainingBalance < getTotalPrice() && (
+                       balance < getTotalPrice() && (
                         <p className="text-white/80 text-sm mt-2">
-                          Need ₹{getTotalPrice() - remainingBalance} more for balance payment
+                           Need ₹{getTotalPrice() - balance} more for balance payment
                         </p>
                       )
                     )}
@@ -706,10 +696,10 @@ const CartPage: React.FC = () => {
                 <CardContent className="space-y-4">
                   <Button
                     onClick={handleBalancePayment}
-                    disabled={remainingBalance < getTotalPrice() || isLoading}
+                    disabled={balance < getTotalPrice() || isLoading}
                     variant="outline"
                     className={`w-full p-6 h-auto ${
-                      remainingBalance >= getTotalPrice() && !isLoading
+                      balance >= getTotalPrice() && !isLoading
                         ? "border-purple-600 text-purple-600 hover:bg-purple-50"
                         : "opacity-50 cursor-not-allowed"
                     }`}
@@ -721,15 +711,15 @@ const CartPage: React.FC = () => {
                         </div>
                         <div className="text-left">
                           <p className="font-semibold text-lg">Use Balance</p>
-                          <p className="text-sm text-gray-600">Available: ₹{remainingBalance}</p>
+                          <p className="text-sm text-gray-600">Available: ₹{balance}</p>
                         </div>
                       </div>
-                      {remainingBalance === 0 ? (
+                      {balance === 0 ? (
                         <Badge variant="destructive" className="text-xs">
                           No Balance
                         </Badge>
                       ) : (
-                        remainingBalance < getTotalPrice() && (
+                        balance < getTotalPrice() && (
                           <Badge variant="destructive" className="text-xs">
                             Insufficient
                           </Badge>
