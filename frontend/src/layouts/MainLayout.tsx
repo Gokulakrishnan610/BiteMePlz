@@ -1,14 +1,14 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Footer from '../components/Footer';
 import { CartProvider } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
 const MainLayout: React.FC = () => {
-  const { user } = useAuth();
+  useAuth();
+  const location = useLocation();
   
-  // Only show Header for admin and shopAdmin users, not for regular students
-  const shouldShowHeader = user && (user.role === 'admin' || user.role === 'shopAdmin');
+  // Note: Header visibility handled within individual pages/components if needed
 
   return (
     <CartProvider>
@@ -16,7 +16,9 @@ const MainLayout: React.FC = () => {
         <main className="flex-grow">
           <Outlet />
         </main>
-        <Footer />
+        <div className={location.pathname.startsWith('/shop/') ? 'hidden md:block' : ''}>
+          <Footer />
+        </div>
       </div>
     </CartProvider>
   );
