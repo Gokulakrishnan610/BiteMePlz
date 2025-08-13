@@ -947,6 +947,22 @@ const ShopPage: React.FC = () => {
        )}
 
 
+       {/* Desktop Cart Floating Button */}
+       {currentShopCartCount > 0 && (
+         <div className="hidden md:block fixed bottom-8 right-8 z-40">
+           <button
+             onClick={handleGoToCart}
+             className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2"
+           >
+             <ShoppingBag size={18} />
+             <span className="font-semibold">View bag</span>
+             <span className="bg-white/20 rounded-full px-2 py-0.5 text-sm">{currentShopCartCount}</span>
+             <span className="ml-2 text-sm text-purple-100">₹{currentShopCartValue}</span>
+           </button>
+         </div>
+       )}
+
+
 
                     {/* Mobile Search Bar - Always Visible */}
        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
