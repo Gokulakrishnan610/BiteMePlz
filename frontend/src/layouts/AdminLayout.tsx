@@ -48,24 +48,24 @@ const AdminLayout: React.FC = () => {
       <div className="lg:hidden fixed top-4 left-4 z-30">
         <button
           onClick={toggleSidebar}
-          className="p-3 rounded-xl bg-[var(--card-bg)] border border-[var(--border-color)] shadow-md hover:bg-[var(--hover-bg)] transition"
+          className="p-3 rounded-xl bg-white border border-gray-200 shadow-md hover:bg-gray-50 transition"
         >
-          {isSidebarOpen ? <X size={24} className="text-[var(--primary-text)]" /> : <Menu size={24} className="text-[var(--primary-text)]" />}
+          {isSidebarOpen ? <X size={24} className="text-gray-900" /> : <Menu size={24} className="text-gray-900" />}
         </button>
       </div>
 
       {/* Sidebar Overlay for Mobile */}
       {isSidebarOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-10 lg:hidden" onClick={closeSidebar}></div>
+        <div className="fixed inset-0 bg-gray-900 z-10 lg:hidden" onClick={closeSidebar}></div>
       )}
 
       {/* Sidebar */}
-      <aside className={`w-72 bg-[var(--sidebar-bg)] fixed inset-y-0 left-0 z-20 transform transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-xl ${
+      <aside className={`w-72 sm:w-80 bg-white fixed inset-y-0 left-0 z-20 transform transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-xl ${
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
 
         {/* Logo */}
-        <div className="p-6 border-b border-[var(--border-color)]">
+        <div className="p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
             <img
               src="https://students.rajalakshmi.org/images/rec_logo.png"
@@ -77,14 +77,14 @@ const AdminLayout: React.FC = () => {
 
         {/* Shop Selector for Admin */}
         {user?.role === 'admin' && (
-          <div className="p-4 border-b border-[var(--border-color)]">
-            <label className="block text-sm font-medium text-[var(--secondary-text)] mb-2">
+          <div className="p-4 border-b border-gray-200">
+            <label className="block text-sm font-medium text-gray-600 mb-2">
               Access Shop Admin
             </label>
             <select
               value={selectedShop?.id || ''}
               onChange={(e) => handleShopChange(e.target.value)}
-              className="w-full p-2 text-sm border border-[var(--border-color)] rounded-lg bg-[var(--card-bg)] text-[var(--primary-text)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-purple)]"
+              className="w-full p-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
               disabled={loading}
             >
               <option value="">Select a shop...</option>
@@ -95,8 +95,8 @@ const AdminLayout: React.FC = () => {
               ))}
             </select>
             {selectedShop && (
-              <div className="mt-2 p-2 bg-[var(--accent-purple)] bg-opacity-10 rounded-lg">
-                <p className="text-xs text-[var(--accent-purple)] font-medium">
+              <div className="mt-2 p-2 bg-purple-50 rounded-lg border border-purple-200">
+                <p className="text-xs text-purple-700 font-medium">
                   Accessing: {selectedShop.name}
                 </p>
               </div>
@@ -112,7 +112,7 @@ const AdminLayout: React.FC = () => {
             <>
               {/* Section: Main */}
               <div>
-                <h3 className="text-xs text-[var(--muted-text)] uppercase font-semibold px-3 mb-2 tracking-wide">
+                <h3 className="text-xs text-gray-500 uppercase font-semibold px-3 mb-2 tracking-wide">
                   Main
                 </h3>
                 <div className="space-y-2">
@@ -124,7 +124,7 @@ const AdminLayout: React.FC = () => {
 
               {/* Section: Financial Management */}
               <div>
-                <h3 className="text-xs text-[var(--muted-text)] uppercase font-semibold px-3 mb-2 tracking-wide">
+                <h3 className="text-xs text-gray-500 uppercase font-semibold px-3 mb-2 tracking-wide">
                   Financial
                 </h3>
                 <div className="space-y-2">
@@ -136,11 +136,11 @@ const AdminLayout: React.FC = () => {
 
               {/* Section: System */}
               <div>
-                <h3 className="text-xs text-[var(--muted-text)] uppercase font-semibold px-3 mb-2 tracking-wide">
+                <h3 className="text-xs text-gray-500 uppercase font-semibold px-3 mb-2 tracking-wide">
                   System
                 </h3>
                 <div className="space-y-2">
-                  <SidebarLink to="/kisok-ac-back-office/shop-logs" icon={FileText} active={is_active('/kisok-ac-back-office/shop-logs')} closeSidebar={closeSidebar} label="shop Logs" />
+                  <SidebarLink to="/kisok-ac-back-office/shop-logs" icon={FileText} active={isPathActive('/kisok-ac-back-office/shop-logs')} closeSidebar={closeSidebar} label="shop Logs" />
                 </div>
               </div>
             </>
@@ -149,7 +149,7 @@ const AdminLayout: React.FC = () => {
             <>
               {/* Section: Shop Admin */}
               <div>
-                <h3 className="text-xs text-[var(--muted-text)] uppercase font-semibold px-3 mb-2 tracking-wide">
+                <h3 className="text-xs text-gray-500 uppercase font-semibold px-3 mb-2 tracking-wide">
                   {selectedShop?.name} - Admin
                 </h3>
                 <div className="space-y-2">
@@ -165,10 +165,10 @@ const AdminLayout: React.FC = () => {
         </nav>
 
         {/* Logout */}
-        <div className="absolute bottom-0 w-full p-4 border-t border-[var(--border-color)] bg-[var(--sidebar-bg)]">
+        <div className="absolute bottom-0 w-full p-4 border-t border-gray-200 bg-white">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center p-3 text-sm font-medium rounded-xl text-[var(--error)] hover:bg-red-500/10 hover:border-red-500/30 transition"
+            className="w-full flex items-center p-3 text-sm font-medium rounded-xl text-red-600 hover:bg-red-50 hover:border-red-200 transition"
           >
             <LogOut size={20} className="mr-3" />
             Logout
@@ -177,30 +177,31 @@ const AdminLayout: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:ml-72">
-        <header className="z-10 shadow bg-[var(--header-bg)] px-6 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-xl font-semibold text-[var(--primary-text)]">
+      <div className="flex-1 flex flex-col lg:ml-72 xl:ml-80">
+        <header className="z-10 shadow bg-white px-4 sm:px-6 py-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">
                 {isShopAdminMode ? `${selectedShop?.name} - Shop Admin` : 'Admin Dashboard'}
               </h2>
-              <p className="text-sm text-[var(--muted-text)]">
+              <p className="text-sm text-gray-600 truncate">
                 {isShopAdminMode ? 'Managing shop operations' : 'Manage your campus kiosk system'}
               </p>
             </div>
             {isShopAdminMode && (
               <button
                 onClick={() => handleShopChange('')}
-                className="flex items-center px-3 py-2 text-sm bg-[var(--accent-purple)] text-white rounded-lg hover:bg-[var(--accent-violet)] transition"
+                className="w-full sm:w-auto flex items-center justify-center px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
               >
                 <Building size={16} className="mr-2" />
-                Exit Shop Mode
+                <span className="hidden sm:inline">Exit Shop Mode</span>
+                <span className="sm:hidden">Exit</span>
               </button>
             )}
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div className="fade-in">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 xl:p-8">
+          <div className="fade-in max-w-full">
             <Outlet />
           </div>
         </main>
@@ -228,8 +229,8 @@ const SidebarLink = ({
     onClick={closeSidebar}
     className={`flex items-center px-4 py-2 rounded-xl text-sm font-medium transition-all ${
       active
-        ? 'bg-[var(--accent-purple)] text-white shadow-md'
-        : 'text-[var(--primary-text)] hover:bg-[var(--hover-bg)]'
+        ? 'bg-purple-600 text-white shadow-md'
+        : 'text-gray-700 hover:bg-gray-100'
     }`}
   >
     <Icon size={20} className="mr-3" />

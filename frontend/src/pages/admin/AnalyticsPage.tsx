@@ -580,31 +580,33 @@ const AnalyticsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Real-time Advanced Analytics</h1>
-        <div className="flex gap-2">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
+        <h1 className="text-xl sm:text-2xl font-bold">Real-time Advanced Analytics</h1>
+        <div className="flex flex-col sm:flex-row gap-2">
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="btn-secondary flex items-center"
+            className="btn-secondary flex items-center justify-center w-full sm:w-auto"
           >
             <RefreshCw size={20} className={`mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Refreshing...' : 'Refresh'}
+            <span className="hidden sm:inline">{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+            <span className="sm:hidden">{refreshing ? '...' : 'Refresh'}</span>
           </button>
           <button
             onClick={exportAnalyticsData}
-            className="btn-primary flex items-center"
+            className="btn-primary flex items-center justify-center w-full sm:w-auto"
           >
             <Download size={20} className="mr-2" />
-            Export CSV
+            <span className="hidden sm:inline">Export CSV</span>
+            <span className="sm:hidden">Export</span>
           </button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="card p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="card p-3 sm:p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <div>
             <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
               shop
@@ -665,8 +667,8 @@ const AnalyticsPage: React.FC = () => {
       </div>
 
       {/* Tab Navigation */}
-      <div className="border-b border-[var(--gray-200)]">
-        <nav className="flex space-x-8">
+      <div className="border-b border-[var(--gray-200)] overflow-x-auto">
+        <nav className="flex space-x-4 sm:space-x-8 min-w-max">
           {[
             { id: 'overview', label: 'Overview', icon: BarChart3 },
             { id: 'trends', label: 'Trends', icon: TrendingUp },
@@ -676,14 +678,16 @@ const AnalyticsPage: React.FC = () => {
             <button
               key={id}
               onClick={() => setActiveTab(id as any)}
-              className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                 activeTab === id
                   ? 'border-[var(--primary)] text-[var(--primary)]'
                   : 'border-transparent text-[var(--gray-500)] hover:text-[var(--gray-700)]'
               }`}
             >
-              <Icon size={20} className="mr-2" />
-              {label}
+              <Icon size={18} className="sm:hidden mr-1" />
+              <Icon size={20} className="hidden sm:block mr-2" />
+              <span className="hidden sm:inline">{label}</span>
+              <span className="sm:hidden">{label.charAt(0)}</span>
             </button>
           ))}
         </nav>

@@ -766,77 +766,50 @@ const CartPage: React.FC = () => {
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <p className="text-red-600 text-lg">
-                  All payments are final and non-refundable, so please review your order before confirming. Ensure a stable internet connection during payment. For any issues, contact support with your transaction details. By continuing, you agree to our digital purchase terms.
-                  </p>
-                  <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded mb-2">
-                    <strong>Refund Policy:</strong><br/>
-                    <span>
-                      <ul className="list-disc pl-5 mt-1">
-                        <li>If you pay using <b>wallet balance</b> and your order expires without being verified, your amount will be refunded automatically to your wallet.</li>
-                        <li>If you pay using <b>Razorpay</b> or other payment gateways and your order expires, <b>the amount will <u>not</u> be refunded</b>.</li>
-                        <li>If your order is verified, no refund is processed for any payment method.</li>
-                      </ul>
-                    </span>
-                  </div>
-                  <div className="space-y-3">
-                      {getShopIds().length > 1 ? (
-                      <>
-                        <div className="flex items-start">
-                          <CheckCircle className="text-green-600 mr-3 mt-1 flex-shrink-0" size={16} />
-                          <p className="text-gray-600">You have items from {getShopIds().length} different shops</p>
-                        </div>
-                        <div className="flex items-start">
-                          <CheckCircle className="text-green-600 mr-3 mt-1 flex-shrink-0" size={16} />
-                          <p className="text-gray-600">
-                            After payment, you will receive a single QR code that includes all shop orders
-                          </p>
-                        </div>
-                        <div className="flex items-start">
-                          <CheckCircle className="text-green-600 mr-3 mt-1 flex-shrink-0" size={16} />
-                          <p className="text-gray-600">
-                            Show the same QR to each respective shop; it contains shop name and item details
-                          </p>
-                        </div>
-                        <div className="flex items-start">
-                          <CheckCircle className="text-green-600 mr-3 mt-1 flex-shrink-0" size={16} />
-                          <p className="text-gray-600">QR code is valid for 20 minutes</p>
-                        </div>
-                        <div className="flex items-start">
-                          <CheckCircle className="text-green-600 mr-3 mt-1 flex-shrink-0" size={16} />
-                          <p className="text-gray-600">
-                            Orders are valid until each shop's closing time on the same day
-                          </p>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex items-start">
-                          <CheckCircle className="text-green-600 mr-3 mt-1 flex-shrink-0" size={16} />
-                          <p className="text-gray-600">
-                            After payment, you will receive a QR code valid for 20 minutes
-                          </p>
-                        </div>
-                        <div className="flex items-start">
-                          <CheckCircle className="text-green-600 mr-3 mt-1 flex-shrink-0" size={16} />
-                          <p className="text-gray-600">The QR code must be shown to shop staff for verification</p>
-                        </div>
-                        <div className="flex items-start">
-                          <CheckCircle className="text-green-600 mr-3 mt-1 flex-shrink-0" size={16} />
-                          <p className="text-gray-600">
-                            Orders are valid until the shop's closing time on the same day
-                          </p>
-                        </div>
-                      </>
-                    )}
+                <CardContent className="space-y-4">
+                  {/* Important Information */}
+                  <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
                     <div className="flex items-start">
-                      <CheckCircle className="text-green-600 mr-3 mt-1 flex-shrink-0" size={16} />
-                      <p className="text-gray-600">All wallet balances will be reset to zero at the end of the day</p>
+                      <AlertCircle className="text-amber-600 mr-2 mt-0.5 flex-shrink-0" size={16} />
+                      <div className="text-xs sm:text-sm text-amber-900">
+                        <p className="font-semibold mb-1">Important Information</p>
+                        <ul className="list-disc list-inside space-y-0.5 sm:space-y-1">
+                          <li>Ensure you have a stable internet connection during payment.</li>
+                          <li>For any issues, contact support with your transaction details.</li>
+                          <li>By continuing, you agree to our digital purchase terms.</li>
+                        </ul>
+                      </div>
                     </div>
+                  </div>
+
+                  {/* Refund Policy */}
+                  <div className="rounded-md border border-red-200 bg-red-50 p-3">
                     <div className="flex items-start">
-                      <CheckCircle className="text-green-600 mr-3 mt-1 flex-shrink-0" size={16} />
-                      <p className="text-gray-600">Payment must be completed within 3 minutes</p>
+                      <AlertCircle className="text-red-600 mr-2 mt-0.5 flex-shrink-0" size={16} />
+                      <div className="text-xs sm:text-sm text-red-900">
+                        <p className="font-semibold mb-1">Refund Policy</p>
+                        <ul className="list-disc list-inside space-y-0.5 sm:space-y-1">
+                          <li>If your order expires without verification (any payment method, including Wallet Balance, Razorpay, or other gateways), the refund will be processed only to your website wallet.</li>
+                          <li>Wallet balances reset to zero at the end of the day — use them before shop closing.</li>
+                          <li>Once your order is verified, no refund will be processed.</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Order & QR Code Rules */}
+                  <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+                    <div className="flex items-start">
+                      <AlertCircle className="text-blue-600 mr-2 mt-0.5 flex-shrink-0" size={16} />
+                      <div className="text-xs sm:text-sm text-blue-900">
+                        <p className="font-semibold mb-1">Order & QR Code Rules</p>
+                        <ul className="list-disc list-inside space-y-0.5 sm:space-y-1">
+                          <li>After payment, you will receive a QR code valid for 20 minutes.</li>
+                          <li>Show the QR code to the shop staff for verification.</li>
+                          <li>Orders remain valid until the shop’s closing time on the same day.</li>
+                          <li>Payment must be completed within 3 minutes after starting checkout.</li>
+                        </ul>
+                      </div>
                     </div>
                   </div>
                   <div className="flex justify-end space-x-4">

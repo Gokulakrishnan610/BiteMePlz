@@ -316,83 +316,84 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setMaintenanceMode }) => 
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)] p-6">
+    <div className="min-h-screen bg-[var(--background)] p-3 sm:p-4 lg:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <div className="flex items-center mb-4">
-          <button
-            onClick={() => navigate('/')}
-            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 mr-2"
-            title="Go back"
-          >
-            <ArrowLeft size={20} className="text-gray-700 dark:text-gray-300" />
-          </button>
-          <h1 className="text-2xl font-bold">Real-time Admin Dashboard</h1>
-        </div>
-            <p className="text-[var(--secondary-text)] mt-2">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start space-y-4 sm:space-y-0 mb-6 sm:mb-8">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center mb-3 sm:mb-4">
+              <button
+                onClick={() => navigate('/')}
+                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 mr-2"
+                title="Go back"
+              >
+                <ArrowLeft size={20} className="text-gray-700 dark:text-gray-300" />
+              </button>
+              <h1 className="text-xl sm:text-2xl font-bold truncate">Real-time Admin Dashboard</h1>
+            </div>
+            <p className="text-[var(--secondary-text)] mt-2 text-sm sm:text-base">
               Monitor system performance and user activity
             </p>
           </div>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex items-center gap-2 px-4 py-2 bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] disabled:opacity-50"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Refreshing...' : 'Refresh'}
+            <span className="hidden sm:inline">{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+            <span className="sm:hidden">{refreshing ? '...' : 'Refresh'}</span>
           </button>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-[var(--card)] p-6 rounded-lg shadow-sm">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
+          <div className="bg-[var(--card)] p-3 sm:p-4 lg:p-6 rounded-lg shadow-sm">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[var(--secondary-text)] text-sm">Total Users</p>
-                <p className="text-2xl font-bold text-[var(--primary-text)]">{stats.totalUsers}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-[var(--secondary-text)] text-xs sm:text-sm truncate">Total Users</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-[var(--primary-text)] truncate">{stats.totalUsers}</p>
               </div>
-              <Users className="w-8 h-8 text-[var(--primary)]" />
+              <Users className="w-6 h-6 sm:w-8 sm:h-8 text-[var(--primary)] flex-shrink-0" />
             </div>
           </div>
 
-          <div className="bg-[var(--card)] p-6 rounded-lg shadow-sm">
+          <div className="bg-[var(--card)] p-3 sm:p-4 lg:p-6 rounded-lg shadow-sm">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[var(--secondary-text)] text-sm">Total shops</p>
-                <p className="text-2xl font-bold text-[var(--primary-text)]">{stats.totalshops}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-[var(--secondary-text)] text-xs sm:text-sm truncate">Total Shops</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-[var(--primary-text)] truncate">{stats.totalshops}</p>
               </div>
-              <Store className="w-8 h-8 text-[var(--primary)]" />
+              <Store className="w-6 h-6 sm:w-8 sm:h-8 text-[var(--primary)] flex-shrink-0" />
             </div>
           </div>
 
-          <div className="bg-[var(--card)] p-6 rounded-lg shadow-sm">
+          <div className="bg-[var(--card)] p-3 sm:p-4 lg:p-6 rounded-lg shadow-sm">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[var(--secondary-text)] text-sm">Total Orders</p>
-                <p className="text-2xl font-bold text-[var(--primary-text)]">{stats.totalOrders}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-[var(--secondary-text)] text-xs sm:text-sm truncate">Total Orders</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-[var(--primary-text)] truncate">{stats.totalOrders}</p>
               </div>
-                              <ShoppingBag className="w-8 h-8 text-[var(--primary)]" />
+              <ShoppingBag className="w-6 h-6 sm:w-8 sm:h-8 text-[var(--primary)] flex-shrink-0" />
             </div>
           </div>
 
-          <div className="bg-[var(--card)] p-6 rounded-lg shadow-sm">
+          <div className="bg-[var(--card)] p-3 sm:p-4 lg:p-6 rounded-lg shadow-sm">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[var(--secondary-text)] text-sm">Total Revenue</p>
-                <p className="text-2xl font-bold text-[var(--primary-text)]">₹{stats.totalRevenue.toFixed(2)}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-[var(--secondary-text)] text-xs sm:text-sm truncate">Total Revenue</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-[var(--primary-text)] truncate">₹{stats.totalRevenue.toFixed(2)}</p>
               </div>
-              <DollarSign className="w-8 h-8 text-[var(--primary)]" />
+              <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-[var(--primary)] flex-shrink-0" />
             </div>
           </div>
         </div>
 
         {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Daily Stats Chart */}
-          <div className="bg-[var(--card)] p-6 rounded-lg shadow-sm">
-            <h3 className="text-lg font-semibold mb-4">Daily Activity</h3>
+          <div className="bg-[var(--card)] p-3 sm:p-4 lg:p-6 rounded-lg shadow-sm">
+            <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Daily Activity</h3>
             <Line
               data={{
                 labels: stats.dailyStats.map(stat => stat.date),
@@ -433,8 +434,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setMaintenanceMode }) => 
           </div>
 
           {/* Transaction Types Chart */}
-          <div className="bg-[var(--card)] p-6 rounded-lg shadow-sm">
-            <h3 className="text-lg font-semibold mb-4">Transaction Types</h3>
+          <div className="bg-[var(--card)] p-3 sm:p-4 lg:p-6 rounded-lg shadow-sm">
+            <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Transaction Types</h3>
             <Doughnut
               data={{
                 labels: stats.transactionTypes.map(t => t.type),
@@ -465,25 +466,25 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setMaintenanceMode }) => 
         </div>
 
         {/* shop Performance */}
-        <div className="bg-[var(--card)] p-6 rounded-lg shadow-sm mb-8">
-          <h3 className="text-lg font-semibold mb-4">shop Performance</h3>
+        <div className="bg-[var(--card)] p-3 sm:p-4 lg:p-6 rounded-lg shadow-sm mb-6 sm:mb-8">
+          <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Shop Performance</h3>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-full">
               <thead>
                 <tr className="border-b border-[var(--border)]">
-                  <th className="text-left py-2">shop</th>
-                  <th className="text-right py-2">Orders</th>
-                  <th className="text-right py-2">Revenue</th>
-                  <th className="text-right py-2">Avg Order</th>
+                  <th className="text-left py-2 px-2 text-sm">Shop</th>
+                  <th className="text-right py-2 px-2 text-sm">Orders</th>
+                  <th className="text-right py-2 px-2 text-sm">Revenue</th>
+                  <th className="text-right py-2 px-2 text-sm">Avg Order</th>
                 </tr>
               </thead>
               <tbody>
                 {stats.shopPerformance.map((shop, index) => (
                   <tr key={index} className="border-b border-[var(--border)]">
-                    <td className="py-2">{shop.shopName}</td>
-                    <td className="text-right py-2">{shop.orders}</td>
-                    <td className="text-right py-2">₹{shop.revenue.toFixed(2)}</td>
-                    <td className="text-right py-2">₹{shop.avgOrderValue.toFixed(2)}</td>
+                    <td className="py-2 px-2 text-sm truncate max-w-24">{shop.shopName}</td>
+                    <td className="text-right py-2 px-2 text-sm">{shop.orders}</td>
+                    <td className="text-right py-2 px-2 text-sm">₹{shop.revenue.toFixed(2)}</td>
+                    <td className="text-right py-2 px-2 text-sm">₹{shop.avgOrderValue.toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -492,29 +493,27 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setMaintenanceMode }) => 
         </div>
 
         {/* Recent Orders */}
-        <div className="bg-[var(--card)] p-6 rounded-lg shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">Recent Orders</h3>
+        <div className="bg-[var(--card)] p-3 sm:p-4 lg:p-6 rounded-lg shadow-sm">
+          <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Recent Orders</h3>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-full">
               <thead>
                 <tr className="border-b border-[var(--border)]">
-                  <th className="text-left py-2">Order ID</th>
-                  <th className="text-left py-2">shop</th>
-                  <th className="text-left py-2">Customer</th>
-                  <th className="text-right py-2">Amount</th>
-                  <th className="text-left py-2">Date</th>
+                  <th className="text-left py-2 px-2 text-sm">Order ID</th>
+                  <th className="text-left py-2 px-2 text-sm">Shop</th>
+                  <th className="text-left py-2 px-2 text-sm">Customer</th>
+                  <th className="text-right py-2 px-2 text-sm">Amount</th>
+                  <th className="text-left py-2 px-2 text-sm">Date</th>
                 </tr>
               </thead>
               <tbody>
                 {stats.recentOrders.map((order) => (
                   <tr key={order._id} className="border-b border-[var(--border)]">
-                    <td className="py-2">{order._id.slice(-8)}</td>
-                    <td className="py-2">{order.shop?.name || 'Unknown'}</td>
-                    <td className="py-2">{order.user?.name || 'Unknown'}</td>
-                    <td className="text-right py-2">₹{order.totalPrice?.toFixed(2) || '0.00'}</td>
-                    <td className="py-2">
-                      {new Date(order.createdAt).toLocaleDateString()}
-                    </td>
+                    <td className="py-2 px-2 text-sm font-mono">{order._id.slice(-8)}</td>
+                    <td className="py-2 px-2 text-sm truncate max-w-20">{order.shop?.name || 'Unknown'}</td>
+                    <td className="py-2 px-2 text-sm truncate max-w-24">{order.user?.name || 'Unknown'}</td>
+                    <td className="text-right py-2 px-2 text-sm">₹{order.totalPrice?.toFixed(2) || '0.00'}</td>
+                    <td className="py-2 px-2 text-sm">{new Date(order.createdAt).toLocaleDateString()}</td>
                   </tr>
                 ))}
               </tbody>

@@ -313,34 +313,35 @@ const ShopDetailsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+        <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0">
           <Link
             to="/kisok-ac-back-office/shops"
-            className="flex items-center text-[var(--primary)] hover:underline mr-4"
+            className="flex items-center text-[var(--primary)] hover:underline mr-0 sm:mr-4 w-fit"
           >
             <ArrowLeft size={20} className="mr-2" />
-            Back to shops
+            <span className="hidden sm:inline">Back to shops</span>
+            <span className="sm:hidden">Back</span>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold">{shop.name}</h1>
-            <p className="text-[var(--gray-600)]">{shop.location}</p>
+            <h1 className="text-xl sm:text-2xl font-bold">{shop.name}</h1>
+            <p className="text-[var(--gray-600)] text-sm sm:text-base">{shop.location}</p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <span className={`badge ${shop.is_active ? 'badge-success' : 'badge-error'}`}>
+          <span className={`badge text-xs ${shop.is_active ? 'badge-success' : 'badge-error'}`}>
             {shop.is_active ? 'Active' : 'Inactive'}
           </span>
-          <span className={`badge ${shop.is_open ? 'badge-success' : 'badge-error'}`}>
+          <span className={`badge text-xs ${shop.is_open ? 'badge-success' : 'badge-error'}`}>
             {shop.is_open ? 'Open' : 'Closed'}
           </span>
         </div>
       </div>
 
       {/* Tab Navigation */}
-      <div className="border-b border-[var(--gray-200)]">
-        <nav className="flex space-x-8">
+      <div className="border-b border-[var(--gray-200)] overflow-x-auto">
+        <nav className="flex space-x-4 sm:space-x-8 min-w-max">
           {[
             { id: 'overview', label: 'Overview', icon: Store },
             { id: 'transactions', label: 'Transactions', icon: ShoppingBag },
@@ -349,14 +350,16 @@ const ShopDetailsPage: React.FC = () => {
             <button
               key={id}
               onClick={() => setActiveTab(id as any)}
-              className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                 activeTab === id
                   ? 'border-[var(--primary)] text-[var(--primary)]'
                   : 'border-transparent text-[var(--gray-500)] hover:text-[var(--gray-700)]'
               }`}
             >
-              <Icon size={20} className="mr-2" />
-              {label}
+              <Icon size={18} className="sm:hidden mr-1" />
+              <Icon size={20} className="hidden sm:block mr-2" />
+              <span className="hidden sm:inline">{label}</span>
+              <span className="sm:hidden">{label.charAt(0)}</span>
             </button>
           ))}
         </nav>
@@ -364,42 +367,46 @@ const ShopDetailsPage: React.FC = () => {
 
       {/* Tab Content */}
       {activeTab === 'overview' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
           <div className="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-            <div className="p-6 flex items-center">
-              <Package size={40} className="mr-4" />
-              <div>
-                <p className="text-lg font-semibold">Total Products</p>
-                <p className="text-3xl font-bold">{analytics?.totalProducts || 0}</p>
+            <div className="p-3 sm:p-4 lg:p-6 flex items-center">
+              <Package size={24} className="sm:hidden mr-2 sm:mr-4 flex-shrink-0" />
+              <Package size={40} className="hidden sm:block mr-4 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm sm:text-lg font-semibold truncate">Total Products</p>
+                <p className="text-2xl sm:text-3xl font-bold">{analytics?.totalProducts || 0}</p>
               </div>
             </div>
           </div>
 
           <div className="card bg-gradient-to-br from-green-500 to-green-600 text-white">
-            <div className="p-6 flex items-center">
-              <ShoppingBag size={40} className="mr-4" />
-              <div>
-                <p className="text-lg font-semibold">Total Orders</p>
-                <p className="text-3xl font-bold">{analytics?.orderStats.totalOrders || 0}</p>
+            <div className="p-3 sm:p-4 lg:p-6 flex items-center">
+              <ShoppingBag size={24} className="sm:hidden mr-2 sm:mr-4 flex-shrink-0" />
+              <ShoppingBag size={40} className="hidden sm:block mr-4 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm sm:text-lg font-semibold truncate">Total Orders</p>
+                <p className="text-2xl sm:text-3xl font-bold">{analytics?.orderStats.totalOrders || 0}</p>
               </div>
             </div>
           </div>
 
           <div className="card bg-gradient-to-br from-purple-500 to-purple-600 text-white">
-            <div className="p-6 flex items-center">
-              <TrendingUp size={40} className="mr-4" />
-              <div>
-                <p className="text-lg font-semibold">Total Revenue</p>
-                <p className="text-3xl font-bold">₹{analytics?.orderStats.totalRevenue || 0}</p>
+            <div className="p-3 sm:p-4 lg:p-6 flex items-center">
+              <TrendingUp size={24} className="sm:hidden mr-2 sm:mr-4 flex-shrink-0" />
+              <TrendingUp size={40} className="hidden sm:block mr-4 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm sm:text-lg font-semibold truncate">Total Revenue</p>
+                <p className="text-2xl sm:text-3xl font-bold">₹{analytics?.orderStats.totalRevenue || 0}</p>
               </div>
             </div>
           </div>
 
           <div className="card bg-gradient-to-br from-red-500 to-red-600 text-white">
-            <div className="p-6 flex items-center">
-              <AlertCircle size={40} className="mr-4" />
-              <div>
-                <p className="text-lg font-semibold">Out of Stock</p>
+            <div className="p-3 sm:p-4 lg:p-6 flex items-center">
+              <AlertCircle size={24} className="sm:hidden mr-2 sm:mr-4 flex-shrink-0" />
+              <AlertCircle size={40} className="hidden sm:block mr-4 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm sm:text-lg font-semibold truncate">Out of Stock</p>
                 <p className="text-3xl font-bold">{analytics?.outOfStock || 0}</p>
               </div>
             </div>
@@ -410,8 +417,8 @@ const ShopDetailsPage: React.FC = () => {
       {activeTab === 'transactions' && (
         <div className="space-y-6">
           {/* Filters */}
-          <div className="card p-4">
-            <div className="flex flex-wrap gap-4 items-end">
+          <div className="card p-3 sm:p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 items-end">
               <div>
                 <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
                   Type
@@ -472,10 +479,11 @@ const ShopDetailsPage: React.FC = () => {
 
               <button
                 onClick={exportTransactions}
-                className="btn-secondary flex items-center"
+                className="btn-secondary flex items-center justify-center w-full sm:w-auto"
               >
                 <Download size={20} className="mr-2" />
-                Export CSV
+                <span className="hidden sm:inline">Export CSV</span>
+                <span className="sm:hidden">Export</span>
               </button>
             </div>
           </div>
@@ -483,21 +491,21 @@ const ShopDetailsPage: React.FC = () => {
           {/* Transactions Table */}
           <div className="card">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-full">
                 <thead>
                   <tr>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                    <th>User</th>
-                    <th>Order</th>
-                    <th>Actions</th>
+                    <th className="text-left py-2 px-2 text-sm">Date</th>
+                    <th className="text-left py-2 px-2 text-sm">Type</th>
+                    <th className="text-left py-2 px-2 text-sm">Amount</th>
+                    <th className="text-left py-2 px-2 text-sm">Status</th>
+                    <th className="text-left py-2 px-2 text-sm hidden md:table-cell">User</th>
+                    <th className="text-left py-2 px-2 text-sm hidden lg:table-cell">Order</th>
+                    <th className="text-left py-2 px-2 text-sm">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {transactions.map((transaction) => (
-                    <tr key={transaction._id}>
+                    <tr key={transaction._id} className="border-b border-[var(--border)]">
                       <td>{new Date(transaction.createdAt).toLocaleString()}</td>
                       <td>
                         <span className={`badge ${

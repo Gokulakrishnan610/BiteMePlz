@@ -16,6 +16,7 @@ interface Order {
   };
   items: Array<{
     product: {
+      _id?: string;
       name: string;
       price: number;
     };
@@ -374,8 +375,9 @@ const ScanQRPage: React.FC = () => {
                         </div>
                         {item.quantity > 0 && order.status !== 'verified' && (
                           <button
-                            onClick={() => handleMarkItemBought(item.product._id)}
-                            className="px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
+                            onClick={() => item.product._id && handleMarkItemBought(item.product._id)}
+                            disabled={!item.product._id}
+                            className="px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             Mark as Bought
                           </button>
@@ -406,7 +408,7 @@ const ScanQRPage: React.FC = () => {
                 >
                   Scan Another Order
                 </button>
-                {!order.status === 'verified' && (
+                {order.status !== 'verified' && (
                   <button
                     onClick={handleVerifyOrder}
                     className="flex-1 btn-primary"

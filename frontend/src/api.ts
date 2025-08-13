@@ -1,10 +1,28 @@
 import axios from 'axios';
 
-// Create a custom axios instance with base URL
+function resolveApiBaseUrl(): string {
+  // For mobile development, use relative URLs to work with Vite proxy
+  // This ensures API calls go through the proxy to the backend
+  return '';
+}
+
+// Create a custom axios instance with dynamic base URL
 const api = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: resolveApiBaseUrl(),
   timeout: 10000,
 });
+
+export function setApiBaseUrl(newUrl: string) {
+  if (!newUrl || typeof newUrl !== 'string') return;
+  api.defaults.baseURL = newUrl;
+  try {
+    localStorage.setItem('API_BASE_URL', newUrl);
+  } catch {}
+}
+
+export function getApiBaseUrl(): string {
+  return api.defaults.baseURL || resolveApiBaseUrl();
+}
 
 // Request interceptor to automatically attach token and session ID
 api.interceptors.request.use(

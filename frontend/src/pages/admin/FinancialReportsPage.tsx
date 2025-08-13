@@ -186,30 +186,32 @@ const FinancialReportsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Financial Reports</h1>
-        <div className="flex gap-2">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
+        <h1 className="text-xl sm:text-2xl font-bold">Financial Reports</h1>
+        <div className="flex flex-col sm:flex-row gap-2">
           <button
             onClick={fetchFinancialData}
-            className="btn-secondary flex items-center"
+            className="btn-secondary flex items-center justify-center w-full sm:w-auto"
           >
             <RefreshCw size={20} className="mr-2" />
-            Refresh
+            <span className="hidden sm:inline">Refresh</span>
+            <span className="sm:hidden">Refresh</span>
           </button>
           <button
             onClick={exportFinancialReport}
-            className="btn-primary flex items-center"
+            className="btn-primary flex items-center justify-center w-full sm:w-auto"
           >
             <Download size={20} className="mr-2" />
-            Export Report
+            <span className="hidden sm:inline">Export Report</span>
+            <span className="sm:hidden">Export</span>
           </button>
         </div>
       </div>
 
       {/* Date Range Filter */}
-      <div className="card p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+      <div className="card p-3 sm:p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 items-end">
           <div>
             <label className="block text-sm font-medium text-[var(--gray-700)] mb-1">
               Start Date
@@ -242,43 +244,47 @@ const FinancialReportsPage: React.FC = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         <div className="card bg-gradient-to-br from-green-500 to-green-600 text-white">
-          <div className="p-6 flex items-center">
-            <DollarSign size={40} className="mr-4" />
-            <div>
-              <p className="text-lg font-semibold">Total Revenue</p>
-              <p className="text-3xl font-bold">₹{totals.totalRevenue.toFixed(2)}</p>
+          <div className="p-3 sm:p-4 lg:p-6 flex items-center">
+            <DollarSign size={24} className="sm:hidden mr-2 sm:mr-4 flex-shrink-0" />
+            <DollarSign size={40} className="hidden sm:block mr-4 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm sm:text-lg font-semibold truncate">Total Revenue</p>
+              <p className="text-2xl sm:text-3xl font-bold">₹{totals.totalRevenue.toFixed(2)}</p>
             </div>
           </div>
         </div>
 
         <div className="card bg-gradient-to-br from-red-500 to-red-600 text-white">
-          <div className="p-6 flex items-center">
-            <TrendingDown size={40} className="mr-4" />
-            <div>
-              <p className="text-lg font-semibold">Total Refunds</p>
-              <p className="text-3xl font-bold">₹{totals.totalRefunds.toFixed(2)}</p>
+          <div className="p-3 sm:p-4 lg:p-6 flex items-center">
+            <TrendingDown size={24} className="sm:hidden mr-2 sm:mr-4 flex-shrink-0" />
+            <TrendingDown size={40} className="hidden sm:block mr-4 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm sm:text-lg font-semibold truncate">Total Refunds</p>
+              <p className="text-2xl sm:text-3xl font-bold">₹{totals.totalRefunds.toFixed(2)}</p>
             </div>
           </div>
         </div>
 
         <div className="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-          <div className="p-6 flex items-center">
-            <TrendingUp size={40} className="mr-4" />
-            <div>
-              <p className="text-lg font-semibold">Net Revenue</p>
-              <p className="text-3xl font-bold">₹{totals.netRevenue.toFixed(2)}</p>
+          <div className="p-3 sm:p-4 lg:p-6 flex items-center">
+            <TrendingUp size={24} className="sm:hidden mr-2 sm:mr-4 flex-shrink-0" />
+            <TrendingUp size={40} className="hidden sm:block mr-4 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm sm:text-lg font-semibold truncate">Net Revenue</p>
+              <p className="text-2xl sm:text-3xl font-bold">₹{totals.netRevenue.toFixed(2)}</p>
             </div>
           </div>
         </div>
 
         <div className="card bg-gradient-to-br from-purple-500 to-purple-600 text-white">
-          <div className="p-6 flex items-center">
-            <FileText size={40} className="mr-4" />
-            <div>
-              <p className="text-lg font-semibold">Total Transactions</p>
-              <p className="text-3xl font-bold">{totals.totalTransactions}</p>
+          <div className="p-3 sm:p-4 lg:p-6 flex items-center">
+            <FileText size={24} className="sm:hidden mr-2 sm:mr-4 flex-shrink-0" />
+            <FileText size={40} className="hidden sm:block mr-4 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm sm:text-lg font-semibold truncate">Total Transactions</p>
+              <p className="text-2xl sm:text-3xl font-bold">{totals.totalTransactions}</p>
             </div>
           </div>
         </div>

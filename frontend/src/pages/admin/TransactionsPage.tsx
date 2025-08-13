@@ -271,73 +271,79 @@ const TransactionsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">All Transactions</h1>
-        <div className="flex gap-2">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
+        <h1 className="text-xl sm:text-2xl font-bold">All Transactions</h1>
+        <div className="flex flex-col sm:flex-row gap-2">
           <button
             onClick={fetchTransactions}
-            className="btn-secondary flex items-center"
+            className="btn-secondary flex items-center justify-center w-full sm:w-auto"
           >
             <RefreshCw size={20} className="mr-2" />
-            Refresh
+            <span className="hidden sm:inline">Refresh</span>
+            <span className="sm:hidden">Refresh</span>
           </button>
           <button
             onClick={exportTransactions}
-            className="btn-primary flex items-center"
+            className="btn-primary flex items-center justify-center w-full sm:w-auto"
           >
             <Download size={20} className="mr-2" />
-            Export CSV
+            <span className="hidden sm:inline">Export CSV</span>
+            <span className="sm:hidden">Export</span>
           </button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         <div className="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-          <div className="p-6 flex items-center">
-            <Receipt size={40} className="mr-4" />
-            <div>
-              <p className="text-lg font-semibold">Total Transactions</p>
-              <p className="text-3xl font-bold">{stats.totalTransactions}</p>
+          <div className="p-3 sm:p-4 lg:p-6 flex items-center">
+            <Receipt size={24} className="sm:hidden mr-2 sm:mr-4 flex-shrink-0" />
+            <Receipt size={40} className="hidden sm:block mr-4 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm sm:text-lg font-semibold truncate">Total Transactions</p>
+              <p className="text-2xl sm:text-3xl font-bold">{stats.totalTransactions}</p>
             </div>
           </div>
         </div>
 
         <div className="card bg-gradient-to-br from-green-500 to-green-600 text-white">
-          <div className="p-6 flex items-center">
-            <DollarSign size={40} className="mr-4" />
-            <div>
-              <p className="text-lg font-semibold">Total Amount</p>
-              <p className="text-3xl font-bold">₹{stats.totalAmount}</p>
+          <div className="p-3 sm:p-4 lg:p-6 flex items-center">
+            <DollarSign size={24} className="sm:hidden mr-2 sm:mr-4 flex-shrink-0" />
+            <DollarSign size={40} className="hidden sm:block mr-4 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm sm:text-lg font-semibold truncate">Total Amount</p>
+              <p className="text-2xl sm:text-3xl font-bold">₹{stats.totalAmount}</p>
             </div>
           </div>
         </div>
 
         <div className="card bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">
-          <div className="p-6 flex items-center">
-            <TrendingUp size={40} className="mr-4" />
-            <div>
-              <p className="text-lg font-semibold">Successful</p>
-              <p className="text-3xl font-bold">{stats.successfulTransactions}</p>
+          <div className="p-3 sm:p-4 lg:p-6 flex items-center">
+            <TrendingUp size={24} className="sm:hidden mr-2 sm:mr-4 flex-shrink-0" />
+            <TrendingUp size={40} className="hidden sm:block mr-4 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm sm:text-lg font-semibold truncate">Successful</p>
+              <p className="text-2xl sm:text-3xl font-bold">{stats.successfulTransactions}</p>
             </div>
           </div>
         </div>
 
         <div className="card bg-gradient-to-br from-red-500 to-red-600 text-white">
-          <div className="p-6 flex items-center">
-            <TrendingDown size={40} className="mr-4" />
-            <div>
-              <p className="text-lg font-semibold">Failed</p>
-              <p className="text-3xl font-bold">{stats.failedTransactions}</p>
+          <div className="p-3 sm:p-4 lg:p-6 flex items-center">
+            <TrendingDown size={24} className="sm:hidden mr-2 sm:mr-4 flex-shrink-0" />
+            <TrendingDown size={40} className="hidden sm:block mr-4 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm sm:text-lg font-semibold truncate">Failed</p>
+              <p className="text-2xl sm:text-3xl font-bold">{stats.failedTransactions}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="card p-4">
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+      <div className="card p-3 sm:p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 items-end">
           <div>
             <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
               shop

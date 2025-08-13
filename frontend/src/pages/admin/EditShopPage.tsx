@@ -145,19 +145,20 @@ const EditShopPage: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="flex items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center mb-4 sm:mb-6 space-y-2 sm:space-y-0">
         <button
           onClick={() => navigate('/admin/shops')}
-          className="flex items-center text-[var(--primary)] hover:underline mr-4"
+          className="flex items-center text-[var(--primary)] hover:underline mr-0 sm:mr-4 w-fit"
         >
           <ArrowLeft size={20} className="mr-2" />
-          Back to shops
+          <span className="hidden sm:inline">Back to shops</span>
+          <span className="sm:hidden">Back</span>
         </button>
-        <h1 className="text-2xl font-bold">Edit shop</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">Edit Shop</h1>
       </div>
 
       <div className="card">
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-6">
           <div className="space-y-4">
             <h2 className="text-xl font-semibold flex items-center">
               <Store size={24} className="mr-2 text-[var(--primary)]" />
@@ -292,26 +293,26 @@ const EditShopPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex justify-end space-x-4">
+          <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-4">
             <button
               type="button"
               onClick={() => navigate('/admin/shops')}
-              className="btn-secondary"
+              className="btn-secondary w-full sm:w-auto"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="btn-primary"
+              className="btn-primary w-full sm:w-auto"
             >
               {saving ? (
-                <span className="flex items-center">
+                <span className="flex items-center justify-center">
                   <span className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></span>
                   Updating...
                 </span>
               ) : (
-                'Update shop'
+                'Update Shop'
               )}
             </button>
           </div>

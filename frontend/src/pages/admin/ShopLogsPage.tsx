@@ -219,30 +219,32 @@ const ShopLogsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">shop Activity Logs</h1>
-        <div className="flex gap-2">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
+        <h1 className="text-xl sm:text-2xl font-bold">Shop Activity Logs</h1>
+        <div className="flex flex-col sm:flex-row gap-2">
           <button
             onClick={fetchLogs}
-            className="btn-secondary flex items-center"
+            className="btn-secondary flex items-center justify-center w-full sm:w-auto"
           >
             <RefreshCw size={20} className="mr-2" />
-            Refresh
+            <span className="hidden sm:inline">Refresh</span>
+            <span className="sm:hidden">Refresh</span>
           </button>
           <button
             onClick={exportLogs}
-            className="btn-primary flex items-center"
+            className="btn-primary flex items-center justify-center w-full sm:w-auto"
           >
             <Download size={20} className="mr-2" />
-            Export CSV
+            <span className="hidden sm:inline">Export CSV</span>
+            <span className="sm:hidden">Export</span>
           </button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="card p-4">
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+      <div className="card p-3 sm:p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 items-end">
           <div>
             <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
               shop
@@ -334,56 +336,57 @@ const ShopLogsPage: React.FC = () => {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-full">
                 <thead>
                   <tr>
-                    <th>Date & Time</th>
-                    <th>shop</th>
-                    <th>Action</th>
-                    <th>Performed By</th>
-                    <th>Description</th>
-                    <th>Actions</th>
+                    <th className="text-left py-2 px-2 text-sm">Date & Time</th>
+                    <th className="text-left py-2 px-2 text-sm hidden md:table-cell">Shop</th>
+                    <th className="text-left py-2 px-2 text-sm">Action</th>
+                    <th className="text-left py-2 px-2 text-sm hidden lg:table-cell">Performed By</th>
+                    <th className="text-left py-2 px-2 text-sm hidden xl:table-cell">Description</th>
+                    <th className="text-left py-2 px-2 text-sm">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {logs.map((log) => (
-                    <tr key={log.id}>
-                      <td>
+                    <tr key={log.id} className="border-b border-[var(--border)]">
+                      <td className="py-2 px-2">
                         <div className="flex items-center">
-                          <Calendar size={16} className="mr-2 text-[var(--muted-text)]" />
-                          <div>
-                            <div className="font-medium">
+                          <Calendar size={16} className="mr-2 text-[var(--muted-text)] flex-shrink-0" />
+                          <div className="min-w-0">
+                            <div className="font-medium text-sm">
                               {new Date(log.created_at).toLocaleDateString()}
                             </div>
-                            <div className="text-sm text-[var(--muted-text)]">
+                            <div className="text-xs text-[var(--muted-text)]">
                               {new Date(log.created_at).toLocaleTimeString()}
                             </div>
                           </div>
                         </div>
                       </td>
-                      <td className="font-medium">{log.shop?.name || 'Unknown'}</td>
-                      <td>
-                        <span className={`badge ${actionColors[log.action] || 'badge-secondary'} flex items-center w-fit`}>
+                      <td className="py-2 px-2 hidden md:table-cell text-sm font-medium">{log.shop?.name || 'Unknown'}</td>
+                      <td className="py-2 px-2">
+                        <span className={`badge ${actionColors[log.action] || 'badge-secondary'} flex items-center w-fit text-xs`}>
                           {getActionIcon(log.action)}
-                          <span className="ml-1">{actionLabels[log.action] || log.action}</span>
+                          <span className="ml-1 truncate">{actionLabels[log.action] || log.action}</span>
                         </span>
                       </td>
-                      <td>
+                      <td className="py-2 px-2 hidden lg:table-cell">
                         <div className="flex items-center">
-                          <User size={16} className="mr-2 text-[var(--muted-text)]" />
-                          <div>
-                            <div className="font-medium">{log.performed_by?.name || 'Unknown'}</div>
-                            <div className="text-sm text-[var(--muted-text)] capitalize">
+                          <User size={16} className="mr-2 text-[var(--muted-text)] flex-shrink-0" />
+                          <div className="min-w-0">
+                            <div className="font-medium text-sm truncate">{log.performed_by?.name || 'Unknown'}</div>
+                            <div className="text-xs text-[var(--muted-text)] capitalize truncate">
                               {log.performed_by?.role || 'Unknown'}
                             </div>
                           </div>
                         </div>
                       </td>
-                      <td className="max-w-xs truncate">{JSON.stringify(log.details)}</td>
-                      <td>
+                      <td className="py-2 px-2 hidden xl:table-cell text-sm max-w-xs truncate">{JSON.stringify(log.details)}</td>
+                      <td className="py-2 px-2">
                         <button
                           onClick={() => handleLogClick(log)}
                           className="p-2 text-[var(--accent-purple)] hover:bg-[var(--hover-bg)] hover:text-[var(--accent-violet)] rounded transition-all duration-200"
+                          title="View Details"
                         >
                           <Eye size={18} />
                         </button>
