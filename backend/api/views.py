@@ -24,6 +24,7 @@ from .utils import convert_uuids_to_str_recursive
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from .authentication import ParentSessionAuthentication  # use dedicated module
+import time
 
 
 class UUIDEncoder(DjangoJSONEncoder):
@@ -144,66 +145,84 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def sub_shop_admins(self, request):
-        """Get all sub-shop admins for the current user's shop"""
-        if request.user.role != 'shopAdmin':
-            return Response({'error': 'Only shop admins can access this endpoint'}, status=status.HTTP_403_FORBIDDEN)
-        
-        if not request.user.shop:
-            return Response({'error': 'No shop associated with this user'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Get all users associated with this shop
-        sub_admins = User.objects.filter(shop=request.user.shop, role='shopAdmin', is_sub_admin=True)
+        """Get sub-shop admins for a shop.
+        - shopAdmin: own shop
+        - admin: must provide shop_id query param
+        """
+        if request.user.role == 'shopAdmin':
+            if not request.user.shop:
+                return Response({'error': 'No shop associated with this user'}, status=status.HTTP_400_BAD_REQUEST)
+            target_shop = request.user.shop
+        elif request.user.role == 'admin':
+            shop_id = request.query_params.get('shop_id') or request.query_params.get('shop')
+            if not shop_id:
+                return Response({'error': 'shop_id query parameter is required for admins'}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                target_shop = Shop.objects.get(id=shop_id)
+            except Shop.DoesNotExist:
+                return Response({'error': 'Shop not found'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response({'error': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+
+        sub_admins = User.objects.filter(shop=target_shop, role='shopAdmin', is_sub_admin=True)
         serializer = UserSerializer(sub_admins, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=['post'])
     def sub_shop_admin(self, request):
-        """Create a sub-shop admin for the current user's shop"""
-        if request.user.role != 'shopAdmin':
-            return Response({'error': 'Only shop admins can access this endpoint'}, status=status.HTTP_403_FORBIDDEN)
-        
-        if not request.user.shop:
-            return Response({'error': 'No shop associated with this user'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Extract data from request
+        """Create a sub-shop admin (shopAdmin: own shop, admin: must provide shop_id)."""
+        if request.user.role == 'shopAdmin':
+            if not request.user.shop:
+                return Response({'error': 'No shop associated with this user'}, status=status.HTTP_400_BAD_REQUEST)
+            target_shop = request.user.shop
+            parent_admin = request.user
+        elif request.user.role == 'admin':
+            shop_id = request.data.get('shop_id') or request.data.get('shop')
+            if not shop_id:
+                return Response({'error': 'shop_id is required for admins'}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                target_shop = Shop.objects.get(id=shop_id)
+            except Shop.DoesNotExist:
+                return Response({'error': 'Shop not found'}, status=status.HTTP_404_NOT_FOUND)
+            parent_admin = None
+        else:
+            return Response({'error': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+
         name = request.data.get('name')
         email = request.data.get('email')
         password = request.data.get('password')
-        
-        # Validate required fields
+
         if not all([name, email, password]):
             return Response({'error': 'Name, email, and password are required'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Check if user already exists
+
         if User.objects.filter(email=email).exists():
             return Response({'error': 'A user with this email already exists'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Create sub-shop admin user
+
         user_data = {
             'name': name,
             'email': email,
             'password': password,
             'confirm_password': password,
             'role': 'shopAdmin',
-            'roll_no': f'SUB_ADMIN_{email.split("@")[0]}'
+            'roll_no': f'SUB_ADMIN_{email.split('@')[0]}_{int(time.time())}'
         }
-        
+
         user_serializer = UserRegistrationSerializer(data=user_data)
         if not user_serializer.is_valid():
-            return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Create user
-        user = user_serializer.save()
-        # Set sub-admin flags and link to shop and parent admin
-        user.is_verified = True
-        user.is_sub_admin = True
-        user.parent_admin = request.user
-        user.shop = request.user.shop
-        user.save()
-        return Response({
-            'message': 'Sub-shop admin created successfully',
-            'user': UserSerializer(user).data
-        }, status=status.HTTP_201_CREATED)
+            print(f"Serializer errors: {user_serializer.errors}")  # Debug print
+            return Response({'error': 'Validation failed', 'details': user_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = user_serializer.save()
+            user.is_verified = True
+            user.is_sub_admin = True
+            user.parent_admin = parent_admin
+            user.shop = target_shop
+            user.save()
+            return Response({'message': 'Sub-shop admin created successfully', 'user': UserSerializer(user).data}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            print(f"Error creating user: {str(e)}")  # Debug print
+            return Response({'error': f'Failed to create sub-shop admin: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
     def forgot_password(self, request):

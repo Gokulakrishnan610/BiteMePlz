@@ -1,8 +1,12 @@
 from celery import shared_task
 from django.utils import timezone
 from api.models import Order, Transaction, Product
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
+try:
+    from asgiref.sync import async_to_sync  # type: ignore
+    from channels.layers import get_channel_layer  # type: ignore
+    _channels_available = True
+except Exception:
+    _channels_available = False
 from django.db import transaction as db_transaction
 from django.conf import settings
 
@@ -125,20 +129,21 @@ def expire_orders_and_handle_refund():
                         p = Product.objects.select_for_update().get(id=pid)
                         p.stock = p.stock + qty
                         p.save()
-                        # Broadcast stock update
-                        try:
-                            channel_layer = get_channel_layer()
-                            async_to_sync(channel_layer.group_send)(
-                                'stock_updates',
-                                {
-                                    'type': 'stock_update',
-                                    'product_id': str(p.id),
-                                    'shop_id': str(p.shop.id),
-                                    'stock': int(p.stock),
-                                },
-                            )
-                        except Exception:
-                            pass
+                        # Broadcast stock update if channels present
+                        if _channels_available:
+                            try:
+                                channel_layer = get_channel_layer()
+                                async_to_sync(channel_layer.group_send)(
+                                    'stock_updates',
+                                    {
+                                        'type': 'stock_update',
+                                        'product_id': str(p.id),
+                                        'shop_id': str(p.shop.id),
+                                        'stock': int(p.stock),
+                                    },
+                                )
+                            except Exception:
+                                pass
                     except Product.DoesNotExist:
                         pass
             except Exception:

@@ -6,7 +6,7 @@ import { useAdminShop } from '../context/AdminShopContext';
 import {
   BarChart3, Store, Users, LogOut, Menu, X,
   Receipt, TrendingUp, DollarSign,
-  FileText, Package, ShoppingBag, QrCode, Building
+  FileText, Package, ShoppingBag, QrCode, Building, UserPlus
 } from 'lucide-react';
 
 const AdminLayout: React.FC = () => {
@@ -158,6 +158,7 @@ const AdminLayout: React.FC = () => {
                   <SidebarLink to="/kisok-ac-back-office/shop-admin/orders" icon={ShoppingBag} active={isPathActive('/kisok-ac-back-office/shop-admin/orders')} closeSidebar={closeSidebar} label="Orders" />
                   <SidebarLink to="/kisok-ac-back-office/shop-admin/transactions" icon={Receipt} active={isPathActive('/kisok-ac-back-office/shop-admin/transactions')} closeSidebar={closeSidebar} label="Transactions" />
                   <SidebarLink to="/kisok-ac-back-office/shop-admin/scan" icon={QrCode} active={isPathActive('/kisok-ac-back-office/shop-admin/scan')} closeSidebar={closeSidebar} label="Scan QR" />
+                  <SidebarLink to="/kisok-ac-back-office/shop-admin/sub-admins" icon={UserPlus} active={isPathActive('/kisok-ac-back-office/shop-admin/sub-admins')} closeSidebar={closeSidebar} label="Sub-Admins" />
                 </div>
               </div>
             </>

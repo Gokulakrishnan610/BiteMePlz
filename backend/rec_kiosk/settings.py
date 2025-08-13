@@ -25,7 +25,6 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_extensions',
     'api',
-    'channels',
 ]
 
 MIDDLEWARE = [
@@ -57,18 +56,22 @@ TEMPLATES = [
     },
 ]
 
-# ASGI/Channels
-ASGI_APPLICATION = 'rec_kiosk.asgi.application'
-
-# Channels (Redis) layer config
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            'hosts': [('127.0.0.1', 6379)],
+# Optionally enable Channels when installed (skipped for quick demos)
+try:
+    import channels  # type: ignore
+    INSTALLED_APPS += ['channels']
+    ASGI_APPLICATION = 'rec_kiosk.asgi.application'
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [('127.0.0.1', 6379)],
+            },
         },
-    },
-}
+    }
+except Exception:
+    # Fall back to classic WSGI-only without websockets
+    WSGI_APPLICATION = 'rec_kiosk.wsgi.application'
 
 # Database
 DATABASES = {

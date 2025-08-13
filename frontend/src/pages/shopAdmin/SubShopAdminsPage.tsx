@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../api';
 import { useAuth } from '../../context/AuthContext';
+import { useAdminShop } from '../../context/AdminShopContext';
 import { 
   Users, 
   Plus, 
@@ -24,7 +25,8 @@ import {
   Copy,
   Star,
   TrendingUp,
-  Activity
+  Activity,
+  Store
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -47,6 +49,7 @@ interface CreateSubAdminForm {
 
 const SubShopAdminsPage: React.FC = () => {
   const { user } = useAuth();
+  const { selectedShop } = useAdminShop();
   const [subAdmins, setSubAdmins] = useState<SubShopAdmin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,10 +70,24 @@ const SubShopAdminsPage: React.FC = () => {
     fetchSubAdmins();
   }, []);
 
+  useEffect(() => {
+    // Refetch when selected shop changes (for admin users)
+    if (user?.role === 'admin' && selectedShop) {
+      fetchSubAdmins();
+    }
+  }, [selectedShop]);
+
   const fetchSubAdmins = async () => {
     try {
       setLoading(true);
-              const response = await api.get('/api/users/sub_shop_admins/');
+      let url = '/api/users/sub_shop_admins/';
+      
+      // If user is admin and has a selected shop, include shop_id
+      if (user?.role === 'admin' && selectedShop) {
+        url += `?shop_id=${selectedShop.id}`;
+      }
+      
+      const response = await api.get(url);
       setSubAdmins(response.data);
     } catch (error: any) {
       console.error('Error fetching sub-shop admins:', error);
@@ -100,17 +117,28 @@ const SubShopAdminsPage: React.FC = () => {
 
     try {
       setCreating(true);
-              await api.post('/api/users/sub_shop_admin/', {
+      const payload: any = {
         name: formData.name,
         email: formData.email,
         password: formData.password
-      });
+      };
+      
+      // If user is admin and has a selected shop, include shop_id
+      if (user?.role === 'admin' && selectedShop) {
+        payload.shop_id = selectedShop.id;
+      }
+      
+      await api.post('/api/users/sub_shop_admin/', payload);
       toast.success('Sub-shop admin created successfully! 🎉');
       setFormData({ name: '', email: '', password: '', confirmPassword: '' });
       setShowCreateForm(false);
       fetchSubAdmins();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to create sub-shop admin');
+      console.error('Error creating sub-admin:', error.response?.data);
+      const errorMessage = error.response?.data?.details 
+        ? `Validation failed: ${JSON.stringify(error.response.data.details)}`
+        : error.response?.data?.error || error.response?.data?.message || 'Failed to create sub-shop admin';
+      toast.error(errorMessage);
     } finally {
       setCreating(false);
     }
@@ -199,6 +227,26 @@ const SubShopAdminsPage: React.FC = () => {
             <Activity size={16} />
             Try Again
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if admin user hasn't selected a shop
+  if (user?.role === 'admin' && !selectedShop) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center max-w-md">
+          <div className="relative mb-6">
+            <Store className="mx-auto text-purple-500 mb-4" size={48} />
+            <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
+              <div className="w-12 h-1 bg-purple-500 rounded-full"></div>
+            </div>
+          </div>
+          <h2 className="text-xl font-semibold text-[var(--primary-text)] mb-2">Select a Shop</h2>
+          <p className="text-[var(--secondary-text)] mb-4">
+            Please select a shop from the dropdown above to manage its sub-admins.
+          </p>
         </div>
       </div>
     );

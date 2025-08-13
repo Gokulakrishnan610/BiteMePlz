@@ -6,4 +6,8 @@ class ApiConfig(AppConfig):
     name = 'api'
 
     def ready(self):
-        import api.tasks 
+        # Import tasks lazily; avoid hard dependency on optional channels
+        try:
+            import api.tasks  # noqa: F401
+        except Exception:
+            pass

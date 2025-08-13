@@ -157,6 +157,7 @@ function App() {
               <Route path="shop-admin/orders" element={<ShopAdminOrdersPage />} />
               <Route path="shop-admin/transactions" element={<ShopAdminTransactionsPage />} />
               <Route path="shop-admin/scan" element={<ShopAdminScanQRPage />} />
+              <Route path="shop-admin/sub-admins" element={<SubShopAdminsPage />} />
             </Route>
             
             {/* shop Admin Routes */}

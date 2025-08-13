@@ -10,8 +10,12 @@ from .utils import convert_uuids_to_str_recursive
 from datetime import timedelta
 
 from .models import User, Shop, Product, Order, Transaction, ShopLog, StudentAnalytics
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
+try:
+    from asgiref.sync import async_to_sync  # type: ignore
+    from channels.layers import get_channel_layer  # type: ignore
+    _channels_available = True
+except Exception:
+    _channels_available = False
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -271,21 +275,22 @@ class OrderSerializer(serializers.ModelSerializer):
             order.save()
             print(f"OrderSerializer create - order_items saved to order: {order.order_items}")
 
-            # Broadcast stock changes
-            try:
-                channel_layer = get_channel_layer()
-                for item in processed_order_items:
-                    async_to_sync(channel_layer.group_send)(
-                        'stock_updates',
-                        {
-                            'type': 'stock_update',
-                            'product_id': item['product_id'],
-                            'shop_id': str(order.shop.id),
-                            'stock': int(Product.objects.get(id=item['product_id']).stock),
-                        },
-                    )
-            except Exception:
-                pass
+            # Broadcast stock changes if channels present
+            if _channels_available:
+                try:
+                    channel_layer = get_channel_layer()
+                    for item in processed_order_items:
+                        async_to_sync(channel_layer.group_send)(
+                            'stock_updates',
+                            {
+                                'type': 'stock_update',
+                                'product_id': item['product_id'],
+                                'shop_id': str(order.shop.id),
+                                'stock': int(Product.objects.get(id=item['product_id']).stock),
+                            },
+                        )
+                except Exception:
+                    pass
 
             return order
 
@@ -443,21 +448,22 @@ class MultiShopOrderSerializer(serializers.ModelSerializer):
             order.save()
             print(f"MultiShopOrderSerializer create - order_items saved to order: {order.order_items}")
 
-            # Broadcast stock changes
-            try:
-                channel_layer = get_channel_layer()
-                for item in processed_order_items:
-                    async_to_sync(channel_layer.group_send)(
-                        'stock_updates',
-                        {
-                            'type': 'stock_update',
-                            'product_id': item['product_id'],
-                            'shop_id': str(order.shop.id),
-                            'stock': int(Product.objects.get(id=item['product_id']).stock),
-                        },
-                    )
-            except Exception:
-                pass
+            # Broadcast stock changes if channels present
+            if _channels_available:
+                try:
+                    channel_layer = get_channel_layer()
+                    for item in processed_order_items:
+                        async_to_sync(channel_layer.group_send)(
+                            'stock_updates',
+                            {
+                                'type': 'stock_update',
+                                'product_id': item['product_id'],
+                                'shop_id': str(order.shop.id),
+                                'stock': int(Product.objects.get(id=item['product_id']).stock),
+                            },
+                        )
+                except Exception:
+                    pass
 
             return order
 
