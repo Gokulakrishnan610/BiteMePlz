@@ -1,8 +1,12 @@
 import axios from 'axios';
 
 function resolveApiBaseUrl(): string {
-  // For mobile development, use relative URLs to work with Vite proxy
-  // This ensures API calls go through the proxy to the backend
+  // For production, use the deployed backend URL
+  // For development, use relative URLs to work with Vite proxy
+  if (import.meta.env.PROD) {
+    return 'https://kisokrec.onrender.com';
+  }
+  // For development, use relative URLs to work with Vite proxy
   return '';
 }
 
