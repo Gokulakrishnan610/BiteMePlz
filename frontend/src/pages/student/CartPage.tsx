@@ -14,7 +14,7 @@ import {
   Plus,
   Minus,
   ArrowLeft,
-  CheckCircle,
+  // CheckCircle,
   Package,
   Shield,
   Zap,
@@ -606,7 +606,7 @@ const CartPage: React.FC = () => {
                         <Wallet className="mr-3" size={20} />
                         <span className="font-medium">Wallet Balance</span>
                       </div>
-                       <span className="font-bold text-lg">₹{balance}</span>
+                      <span className="font-bold text-lg">₹{Number(balance || 0).toFixed(2)}</span>
                     </div>
                      {balance === 0 ? (
                       <p className="text-white/80 text-sm mt-2">No balance available. Use Razorpay to pay.</p>
@@ -711,7 +711,7 @@ const CartPage: React.FC = () => {
                         </div>
                         <div className="text-left">
                           <p className="font-semibold text-lg">Use Balance</p>
-                          <p className="text-sm text-gray-600">Available: ₹{balance}</p>
+                          <p className="text-sm text-gray-600">Available: ₹{Number(balance || 0).toFixed(2)}</p>
                         </div>
                       </div>
                       {balance === 0 ? (

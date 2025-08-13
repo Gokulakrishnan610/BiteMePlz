@@ -17,7 +17,7 @@ const Wallet: React.FC = () => {
   return (
     <div className="flex items-center space-x-2 bg-[var(--card-bg)] px-4 py-2 rounded-lg border border-[var(--border-color)] hover:border-[var(--accent-purple)] transition-colors duration-200">
       <WalletIcon size={20} className="text-[var(--accent-purple)]" />
-      <span className="font-medium text-[var(--primary-text)]">₹{balance}</span>
+      <span className="font-medium text-[var(--primary-text)]">₹{Number(balance || 0).toFixed(2)}</span>
     </div>
   );
 };

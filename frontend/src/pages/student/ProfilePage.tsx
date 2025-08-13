@@ -8,12 +8,12 @@ import { User, AlertCircle, ArrowLeft, Mail, Shield, Wallet, Calendar, CreditCar
 // Charts
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
+  // LineChart,
+  // Line,
+  // XAxis,
+  // YAxis,
   Tooltip,
-  CartesianGrid,
+  // CartesianGrid,
   PieChart,
   Pie,
   Cell,
@@ -23,6 +23,7 @@ import { Card, CardContent } from "../../components/ui/card"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import Navbar from "../../components/Navbar"
+import { useWallet } from "../../context/WalletContext"
 
 interface UserProfile {
   _id: string
@@ -69,6 +70,7 @@ interface SpendingDetails {
 
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate()
+  const { balance } = useWallet()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -95,7 +97,7 @@ const ProfilePage: React.FC = () => {
     const fetchProfile = async () => {
       try {
         const timeoutPromise = new Promise(resolve => setTimeout(resolve, 300))
-        const profilePromise = api.get("/api/users/profile")
+        const profilePromise = api.get("/api/users/profile/")
         const [_, { data }] = await Promise.all([timeoutPromise, profilePromise])
         setProfile(data)
         setLoading(false)
@@ -439,7 +441,7 @@ const ProfilePage: React.FC = () => {
               <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl p-6 text-white">
                 <div className="text-center">
                   <p className="text-purple-100 text-sm mb-2">Current Balance</p>
-                  <p className="text-4xl font-bold">₹{profile.balance || 0}</p>
+                  <p className="text-4xl font-bold">₹{(Number(balance) || 0).toFixed(2)}</p>
                   <p className="text-purple-100 text-sm mt-2">Use for quick payments</p>
                 </div>
               </div>

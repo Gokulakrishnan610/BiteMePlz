@@ -56,6 +56,15 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
   useEffect(() => {
     fetchBalance();
+    // Auto-refresh on tab focus/visibility change to keep balance fresh across pages
+    const onFocus = () => { fetchBalance().catch(() => {}); };
+    const onVisibility = () => { if (document.visibilityState === 'visible') fetchBalance().catch(() => {}); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
     // only refetch on auth changes; avoid loops on lastError
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, token]);

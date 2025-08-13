@@ -61,7 +61,7 @@ const HoveredLink = ({ children, href, ...rest }: HoveredLinkProps) => {
             <div className="flex items-center flex-shrink-0">
                 <Link to="/" className="flex items-center">
                 <img
-                    src="/rec%20college.png"
+                    src="/images/rec%20college.png"
                     alt="REC Logo"
                     className="w-14 h-14 sm:w-16 sm:h-16 md:w-18 md:h-18 lg:w-16 lg:h-16 xl:w-18 xl:h-18 object-contain"
                 />
@@ -116,7 +116,7 @@ const HoveredLink = ({ children, href, ...rest }: HoveredLinkProps) => {
             {/* Mobile Logo */}
             <Link to="/" className="flex items-center">
                 <img
-                src="/rec%20college.png"
+                src="/images/rec%20college.png"
                 alt="REC Logo"
                 className="w-12 h-12 sm:w-14 sm:h-14 object-contain"
                 />

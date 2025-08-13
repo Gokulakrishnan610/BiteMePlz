@@ -492,7 +492,7 @@ const OrderDetailsPage: React.FC = () => {
                         <p className="text-sm text-gray-600 mb-1">Current Wallet Balance</p>
                         <div className="flex items-center">
                           <Wallet size={16} className="mr-2 text-gray-500" />
-                          <p className="font-medium text-gray-900">₹{balance}</p>
+                          <p className="font-medium text-gray-900">₹{Number(balance || 0).toFixed(2)}</p>
                         </div>
                       </div>
 
