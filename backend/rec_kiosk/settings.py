@@ -10,7 +10,8 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here'
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 # Render dynamically assigns host
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+AALLOWED_HOSTS = ["kisokrec.onrender.com", "localhost", "127.0.0.1"]
+
 
 # Apps
 INSTALLED_APPS = [
@@ -74,12 +75,12 @@ except Exception:
     WSGI_APPLICATION = 'rec_kiosk.wsgi.application'
 
 # Database: Use DATABASE_URL if set (Render), otherwise SQLite
+import os
 DATABASES = {
-    'default': dj_database_url.config(
-        default=f"sqlite:///{os.path.join(BASE_DIR, 'db.sqlite3')}",
-        conn_max_age=600,
-        ssl_require=False
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join('/tmp', 'db.sqlite3'),
+    }
 }
 
 # Password validation
@@ -136,6 +137,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
+    "https://kisokrec.onrender.com",
 ]
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https?://localhost:\d+$",
