@@ -1,0 +1,50 @@
+[
+  {
+    "model": "api.product",
+    "pk": 1,
+    "fields": {
+      "name": "Tea",
+      "description": "Hot tea",
+      "price": "10.00",
+      "stock": 100,
+      "category": 1,
+      "shop": 1,
+      "is_active": true,
+      "image": "",
+      "created_at": "2025-08-13T22:50:17.105818",
+      "updated_at": "2025-08-13T22:50:17.105819"
+    }
+  },
+  {
+    "model": "api.product",
+    "pk": 2,
+    "fields": {
+      "name": "Coffee",
+      "description": "Hot coffee",
+      "price": "15.00",
+      "stock": 80,
+      "category": 1,
+      "shop": 1,
+      "is_active": true,
+      "image": "",
+      "created_at": "2025-08-13T22:50:17.105824",
+      "updated_at": "2025-08-13T22:50:17.105825"
+    }
+  },
+  {
+    "model": "api.product",
+    "pk": 3,
+    "fields": {
+      "name": "Samosa",
+      "description": "Crispy samosa",
+      "price": "20.00",
+      "stock": 50,
+      "category": 2,
+      "shop": 1,
+      "is_active": true,
+      "image": "",
+      "created_at": "2025-08-13T22:50:17.105826",
+      "updated_at": "2025-08-13T22:50:17.105827"
+    }
+  }
+]

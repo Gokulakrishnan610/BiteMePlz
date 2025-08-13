@@ -1,0 +1,26 @@
+[
+  {
+    "model": "api.category",
+    "pk": 1,
+    "fields": {
+      "name": "Beverages",
+      "description": "Hot and cold beverages",
+      "shop": 1,
+      "is_active": true,
+      "created_at": "2025-08-13T22:50:17.105796",
+      "updated_at": "2025-08-13T22:50:17.105797"
+    }
+  },
+  {
+    "model": "api.category",
+    "pk": 2,
+    "fields": {
+      "name": "Snacks",
+      "description": "Quick snacks and refreshments",
+      "shop": 1,
+      "is_active": true,
+      "created_at": "2025-08-13T22:50:17.105808",
+      "updated_at": "2025-08-13T22:50:17.105815"
+    }
+  }
+]

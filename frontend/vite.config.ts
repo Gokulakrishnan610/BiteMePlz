@@ -1,31 +1,55 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import mkcert from 'vite-plugin-mkcert'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    mkcert()
+    VitePWA({
+      registerType: 'autoUpdate',
+      manifest: {
+        name: 'REC Kiosk',
+        short_name: 'Kiosk',
+        description: 'REC Kiosk Webapp',
+        theme_color: '#6a1b9a',
+        background_color: '#ffffff',
+        display: 'standalone',
+        start_url: '/',
+        icons: [
+          {
+            src: '/vite.svg',
+            sizes: '192x192',
+            type: 'image/svg+xml',
+          },
+          {
+            src: '/vite.svg',
+            sizes: '512x512',
+            type: 'image/svg+xml',
+          },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        navigateFallback: '/index.html',
+      },
+    })
   ],
-  server: {
-    host: true,
-    port: 5173,
+  optimizeDeps: {
+    exclude: ['lucide-react'],
   },
-  build: {
-    outDir: 'dist',
-    sourcemap: false,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          router: ['react-router-dom'],
-          charts: ['recharts', 'react-chartjs-2'],
-        },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/media': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
       },
     },
   },
   define: {
-    __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
-  },
-})
+    'process.env': {}
+  }
+});
