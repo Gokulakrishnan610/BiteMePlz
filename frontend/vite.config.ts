@@ -32,7 +32,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         navigateFallback: '/index.html',
       },
-    })
+    }),
   ],
   optimizeDeps: {
     exclude: ['lucide-react'],
@@ -40,11 +40,17 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target:
+          process.env.NODE_ENV === 'production'
+            ? 'https://kisokrec.onrender.com'
+            : 'http://localhost:8000',
         changeOrigin: true,
       },
       '/media': {
-        target: 'http://localhost:8000',
+        target:
+          process.env.NODE_ENV === 'production'
+            ? 'https://kisokrec.onrender.com'
+            : 'http://localhost:8000',
         changeOrigin: true,
       },
     },
@@ -54,6 +60,10 @@ export default defineConfig({
     sourcemap: false,
   },
   define: {
-    'process.env': {}
-  }
+    'process.env': {},
+  },
+  preview: {
+    allowedHosts: ['rec-kiosk-1.onrender.com'], // <-- add your Render frontend host here
+    port: 4173,
+  },
 });
