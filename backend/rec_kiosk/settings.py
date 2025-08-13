@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_extensions',
     'api',
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -56,7 +57,18 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'rec_kiosk.wsgi.application'
+# ASGI/Channels
+ASGI_APPLICATION = 'rec_kiosk.asgi.application'
+
+# Channels (Redis) layer config
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('127.0.0.1', 6379)],
+        },
+    },
+}
 
 # Database
 DATABASES = {

@@ -1736,18 +1736,37 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['put'])
     def cancel(self, request, pk=None):
-        """Cancel an order"""
+        """Cancel an order and restock items when unpaid"""
         order = self.get_object()
-        
+
         if order.is_paid:
             return Response({'error': 'Cannot cancel a paid order'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         if order.status == 'cancelled':
             return Response({'error': 'Order is already cancelled'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        order.status = 'cancelled'
-        order.save()
-        
+
+        from django.db import transaction as db_transaction
+        from .models import Product as _Product
+        with db_transaction.atomic():
+            # Restock items for unpaid order
+            try:
+                for it in (order.order_items or []):
+                    pid = it.get('product_id')
+                    qty = int(it.get('quantity') or 0)
+                    if not pid or qty <= 0:
+                        continue
+                    try:
+                        p = _Product.objects.select_for_update().get(id=pid)
+                        p.stock = p.stock + qty
+                        p.save()
+                    except _Product.DoesNotExist:
+                        pass
+            except Exception:
+                pass
+
+            order.status = 'cancelled'
+            order.save()
+
         return Response({'message': 'Order cancelled successfully'})
 
     @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])

@@ -3,11 +3,15 @@ from django.contrib.auth import authenticate
 import uuid
 from django.utils import timezone
 from decimal import Decimal
+from django.db import transaction
+from django.db.models import F
 
 from .utils import convert_uuids_to_str_recursive
 from datetime import timedelta
 
 from .models import User, Shop, Product, Order, Transaction, ShopLog, StudentAnalytics
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -213,59 +217,77 @@ class OrderSerializer(serializers.ModelSerializer):
         else:
             validated_data['expires_at'] = qr_expiry
 
-        # Create the order
-        # Ensure validated_order_items is fully JSON serializable before saving
-        serializable_order_items_data = convert_uuids_to_str_recursive(validated_order_items)
-        order = Order.objects.create(order_items=serializable_order_items_data, **validated_data)
-        print(f"OrderSerializer create - order created: {order}")
+        # Create the order and perform stock deductions atomically with row-level locks
+        with transaction.atomic():
+            # Ensure validated_order_items is fully JSON serializable before saving
+            serializable_order_items_data = convert_uuids_to_str_recursive(validated_order_items)
+            order = Order.objects.create(order_items=serializable_order_items_data, **validated_data)
+            print(f"OrderSerializer create - order created: {order}")
 
-        # Process order items and calculate total price
-        processed_order_items = []
-        for item_data in validated_order_items:
-            print(f"OrderSerializer create - processing item_data: {item_data}")
-            product_id = item_data.get('product_id')
-            quantity = item_data.get('quantity')
-            
-            if not product_id or not quantity:
-                raise serializers.ValidationError("Product ID and quantity are required for each order item.")
-            
-            try:
-                product = Product.objects.get(id=product_id)
-                print(f"OrderSerializer create - product found: {product.name}")
-            except Product.DoesNotExist:
-                raise serializers.ValidationError(f"Product with ID {product_id} does not exist.")
-            
-            if product.stock < quantity:
-                raise serializers.ValidationError(f"Not enough stock for product {product.name}. Available: {product.stock}, Requested: {quantity}")
-            
-            # Deduct stock
-            product.stock -= quantity
-            product.save()
-            print(f"OrderSerializer create - product stock updated for {product.name}. New stock: {product.stock}")
+            processed_order_items = []
+            for item_data in validated_order_items:
+                print(f"OrderSerializer create - processing item_data: {item_data}")
+                product_id = item_data.get('product_id')
+                quantity = item_data.get('quantity')
 
-            # Add product details to the order item for storage in JSONField
-            incoming_price = item_data.get('price')
+                if not product_id or not quantity:
+                    raise serializers.ValidationError("Product ID and quantity are required for each order item.")
+
+                try:
+                    # Lock the row to prevent concurrent modifications
+                    product = Product.objects.select_for_update().get(id=product_id)
+                    print(f"OrderSerializer create - product found: {product.name}")
+                except Product.DoesNotExist:
+                    raise serializers.ValidationError(f"Product with ID {product_id} does not exist.")
+
+                if product.stock < quantity:
+                    raise serializers.ValidationError(f"Not enough stock for product {product.name}. Available: {product.stock}, Requested: {quantity}")
+
+                # Safe in-DB decrement to avoid race conditions
+                updated = Product.objects.filter(id=product.id, stock__gte=quantity).update(stock=F('stock') - quantity)
+                if updated != 1:
+                    raise serializers.ValidationError(f"Not enough stock for product {product.name}.")
+                print(f"OrderSerializer create - product stock updated for {product.name}. New stock: {product.stock - quantity}")
+
+                # Add product details to the order item for storage in JSONField
+                incoming_price = item_data.get('price')
+                try:
+                    unit_price = Decimal(str(incoming_price)) if incoming_price is not None else product.price
+                except Exception:
+                    unit_price = product.price
+                print(f"[OrderSerializer] item save: product={product.name}, qty={quantity}, unit_price={unit_price}")
+                processed_order_items.append({
+                    'product_id': str(product.id),
+                    'name': product.name,
+                    'image': product.image,
+                    'is_bought': False,
+                    'price': str(unit_price),
+                    'quantity': quantity,
+                    'shop_id': str(product.shop.id),
+                    'shop_name': product.shop.name,
+                })
+
+            order.order_items = processed_order_items
+            order.save()
+            print(f"OrderSerializer create - order_items saved to order: {order.order_items}")
+
+            # Broadcast stock changes
             try:
-                unit_price = Decimal(str(incoming_price)) if incoming_price is not None else product.price
+                channel_layer = get_channel_layer()
+                for item in processed_order_items:
+                    async_to_sync(channel_layer.group_send)(
+                        'stock_updates',
+                        {
+                            'type': 'stock_update',
+                            'product_id': item['product_id'],
+                            'shop_id': str(order.shop.id),
+                            'stock': int(Product.objects.get(id=item['product_id']).stock),
+                        },
+                    )
             except Exception:
-                unit_price = product.price
-            print(f"[OrderSerializer] item save: product={product.name}, qty={quantity}, unit_price={unit_price}")
-            processed_order_items.append({
-                'product_id': str(product.id),
-                'name': product.name,
-                'image': product.image,
-                'is_bought': False,
-                'price': str(unit_price),
-                'quantity': quantity,
-                'shop_id': str(product.shop.id),
-                'shop_name': product.shop.name,
-            })
-        
-        order.order_items = processed_order_items
-        order.save()
-        print(f"OrderSerializer create - order_items saved to order: {order.order_items}")
+                pass
 
-        return order
+            return order
 
 
 class MultiShopOrderSerializer(serializers.ModelSerializer):
@@ -367,59 +389,77 @@ class MultiShopOrderSerializer(serializers.ModelSerializer):
         else:
             validated_data['expires_at'] = qr_expiry
 
-        # Create the order
-        # Ensure validated_order_items is fully JSON serializable before saving
-        serializable_order_items_data = convert_uuids_to_str_recursive(validated_order_items)
-        order = Order.objects.create(order_items=serializable_order_items_data, **validated_data)
-        print(f"MultiShopOrderSerializer create - order created: {order}")
+        # Create the order and perform stock deductions atomically with row-level locks
+        with transaction.atomic():
+            # Ensure validated_order_items is fully JSON serializable before saving
+            serializable_order_items_data = convert_uuids_to_str_recursive(validated_order_items)
+            order = Order.objects.create(order_items=serializable_order_items_data, **validated_data)
+            print(f"MultiShopOrderSerializer create - order created: {order}")
 
-        # Process order items and calculate total price
-        processed_order_items = []
-        for item_data in validated_order_items:
-            print(f"MultiShopOrderSerializer create - processing item_data: {item_data}")
-            product_id = item_data.get('product_id')
-            quantity = item_data.get('quantity')
-            
-            if not product_id or not quantity:
-                raise serializers.ValidationError("Product ID and quantity are required for each order item.")
-            
-            try:
-                product = Product.objects.get(id=product_id)
-                print(f"MultiShopOrderSerializer create - product found: {product.name}")
-            except Product.DoesNotExist:
-                raise serializers.ValidationError(f"Product with ID {product_id} does not exist.")
-            
-            if product.stock < quantity:
-                raise serializers.ValidationError(f"Not enough stock for product {product.name}. Available: {product.stock}, Requested: {quantity}")
-            
-            # Deduct stock
-            product.stock -= quantity
-            product.save()
-            print(f"MultiShopOrderSerializer create - product stock updated for {product.name}. New stock: {product.stock}")
+            processed_order_items = []
+            for item_data in validated_order_items:
+                print(f"MultiShopOrderSerializer create - processing item_data: {item_data}")
+                product_id = item_data.get('product_id')
+                quantity = item_data.get('quantity')
 
-            # Add product details to the order item for storage in JSONField
-            incoming_price = item_data.get('price')
+                if not product_id or not quantity:
+                    raise serializers.ValidationError("Product ID and quantity are required for each order item.")
+
+                try:
+                    # Lock the row to prevent concurrent modifications
+                    product = Product.objects.select_for_update().get(id=product_id)
+                    print(f"MultiShopOrderSerializer create - product found: {product.name}")
+                except Product.DoesNotExist:
+                    raise serializers.ValidationError(f"Product with ID {product_id} does not exist.")
+
+                if product.stock < quantity:
+                    raise serializers.ValidationError(f"Not enough stock for product {product.name}. Available: {product.stock}, Requested: {quantity}")
+
+                # Safe in-DB decrement to avoid race conditions
+                updated = Product.objects.filter(id=product.id, stock__gte=quantity).update(stock=F('stock') - quantity)
+                if updated != 1:
+                    raise serializers.ValidationError(f"Not enough stock for product {product.name}.")
+                print(f"MultiShopOrderSerializer create - product stock updated for {product.name}. New stock: {product.stock - quantity}")
+
+                # Add product details to the order item for storage in JSONField
+                incoming_price = item_data.get('price')
+                try:
+                    unit_price = Decimal(str(incoming_price)) if incoming_price is not None else product.price
+                except Exception:
+                    unit_price = product.price
+                print(f"[MultiShopOrderSerializer] item save: product={product.name}, qty={quantity}, unit_price={unit_price}")
+                processed_order_items.append({
+                    'product_id': str(product.id),
+                    'name': product.name,
+                    'image': product.image,
+                    'is_bought': False,
+                    'price': str(unit_price),
+                    'quantity': quantity,
+                    'shop_id': str(product.shop.id),
+                    'shop_name': product.shop.name,
+                })
+
+            order.order_items = processed_order_items
+            order.save()
+            print(f"MultiShopOrderSerializer create - order_items saved to order: {order.order_items}")
+
+            # Broadcast stock changes
             try:
-                unit_price = Decimal(str(incoming_price)) if incoming_price is not None else product.price
+                channel_layer = get_channel_layer()
+                for item in processed_order_items:
+                    async_to_sync(channel_layer.group_send)(
+                        'stock_updates',
+                        {
+                            'type': 'stock_update',
+                            'product_id': item['product_id'],
+                            'shop_id': str(order.shop.id),
+                            'stock': int(Product.objects.get(id=item['product_id']).stock),
+                        },
+                    )
             except Exception:
-                unit_price = product.price
-            print(f"[MultiShopOrderSerializer] item save: product={product.name}, qty={quantity}, unit_price={unit_price}")
-            processed_order_items.append({
-                'product_id': str(product.id),
-                'name': product.name,
-                'image': product.image,
-                'is_bought': False,
-                'price': str(unit_price),
-                'quantity': quantity,
-                'shop_id': str(product.shop.id),
-                'shop_name': product.shop.name,
-            })
-        
-        order.order_items = processed_order_items
-        order.save()
-        print(f"MultiShopOrderSerializer create - order_items saved to order: {order.order_items}")
+                pass
 
-        return order
+            return order
 
 
 class TransactionSerializer(serializers.ModelSerializer):

@@ -1,6 +1,8 @@
 from celery import shared_task
 from django.utils import timezone
-from api.models import Order, Transaction
+from api.models import Order, Transaction, Product
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.db import transaction as db_transaction
 from django.conf import settings
 
@@ -23,9 +25,25 @@ def expire_orders_and_handle_refund():
 
     for order in expired_orders:
         with db_transaction.atomic():
-            # Mark order as expired
+            # Mark order as expired and RESTOCK all items since order not verified
             order.status = 'expired'
             order.save()
+            try:
+                for it in (order.order_items or []):
+                    product_id = it.get('product_id')
+                    qty = int(it.get('quantity') or 0)
+                    if not product_id or qty <= 0:
+                        continue
+                    try:
+                        p = Product.objects.select_for_update().get(id=product_id)
+                        p.stock = p.stock + qty
+                        p.save()
+                    except Product.DoesNotExist:
+                        # If product gone, skip restock
+                        pass
+            except Exception:
+                # Do not fail the expiry if restock loop errors; continue with refund logic
+                pass
 
             # Determine original payment method
             try:
@@ -88,3 +106,42 @@ def expire_orders_and_handle_refund():
                         description=f'Order {order.order_id} expired; no wallet refund (non-balance payment).',
                         metadata={'reason': 'expired_no_refund'}
                     )
+
+    # Also expire and restock reserved, unpaid orders whose reservation expired
+    reserved = Order.objects.filter(
+        is_paid=False,
+        status='pending',
+        qr_valid_until__lt=now
+    )
+    for order in reserved:
+        with db_transaction.atomic():
+            try:
+                for it in (order.order_items or []):
+                    pid = it.get('product_id')
+                    qty = int(it.get('quantity') or 0)
+                    if not pid or qty <= 0:
+                        continue
+                    try:
+                        p = Product.objects.select_for_update().get(id=pid)
+                        p.stock = p.stock + qty
+                        p.save()
+                        # Broadcast stock update
+                        try:
+                            channel_layer = get_channel_layer()
+                            async_to_sync(channel_layer.group_send)(
+                                'stock_updates',
+                                {
+                                    'type': 'stock_update',
+                                    'product_id': str(p.id),
+                                    'shop_id': str(p.shop.id),
+                                    'stock': int(p.stock),
+                                },
+                            )
+                        except Exception:
+                            pass
+                    except Product.DoesNotExist:
+                        pass
+            except Exception:
+                pass
+            order.status = 'expired'
+            order.save()

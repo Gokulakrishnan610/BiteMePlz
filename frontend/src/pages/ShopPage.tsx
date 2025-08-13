@@ -30,6 +30,7 @@ import api from "../api"
 import { useCart } from "../context/CartContext"
 import { useAuth } from "../context/AuthContext"
 import toast from "react-hot-toast"
+// no-op alias imports removed
 
 interface Product {
   id: string
@@ -82,6 +83,31 @@ const ShopPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<"relevance" | "price" | "stock">("relevance")
   const mobileSearchRef = useRef<HTMLInputElement>(null)
   const [favoriteProductIds, setFavoriteProductIds] = useState<Set<string>>(new Set())
+  // Live stock updates via WebSocket
+  useEffect(() => {
+    if (!id) return
+    let ws: WebSocket | null = null
+    try {
+      const loc = window.location
+      const wsProto = loc.protocol === 'https:' ? 'wss' : 'ws'
+      // Connect directly to backend ASGI server (default port 8000 during dev)
+      ws = new WebSocket(`${wsProto}://${loc.hostname}:8000/ws/stock/`)
+      ws.onmessage = (ev) => {
+        try {
+          const data = JSON.parse(ev.data)
+          if (data && data.type === 'stock_update') {
+            const { product_id, stock, shop_id } = data
+            if (shop_id && product_id && shop_id === id) {
+              setProducts((prev) => prev.map((p) => (p.id === product_id ? { ...p, stock: Number(stock) } : p)))
+            }
+          }
+        } catch {}
+      }
+    } catch {}
+    return () => {
+      try { ws && ws.close() } catch {}
+    }
+  }, [id])
   const favoritesStorageKey = useMemo(() => (user ? `favorites_${user._id}` : 'favorites_guest'), [user])
   useEffect(() => {
     try {
