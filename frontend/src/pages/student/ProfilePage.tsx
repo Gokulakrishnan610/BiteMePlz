@@ -443,19 +443,21 @@ const ProfilePage: React.FC = () => {
                   <p className="text-purple-100 text-sm mt-2">Use for quick payments</p>
                 </div>
               </div>
-              {/* Embedded Spending Summary */}
+              {/* Embedded Spending Summary (click to reveal month) */}
               <div className="mt-6">
                 <h4 className="text-sm font-medium text-gray-900 mb-3">Spending</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-xl bg-gray-50">
-                    <p className="text-sm text-gray-500 mb-1">Total Spent</p>
-                    <p className="text-2xl font-bold text-gray-900">₹{spending.total.toFixed(2)}</p>
+                <details className="bg-gray-50 rounded-xl group">
+                  <summary className="p-4 cursor-pointer list-none flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Total Spent</span>
+                    <span className="text-2xl font-bold text-gray-900">₹{spending.total.toFixed(2)}</span>
+                  </summary>
+                  <div className="px-4 pb-4">
+                    <div className="p-3 rounded-lg bg-white border">
+                      <p className="text-sm text-gray-500 mb-1">This Month</p>
+                      <p className="text-xl font-semibold text-gray-900">₹{spending.thisMonth.toFixed(2)}</p>
+                    </div>
                   </div>
-                  <div className="p-4 rounded-xl bg-gray-50">
-                    <p className="text-sm text-gray-500 mb-1">This Month</p>
-                    <p className="text-2xl font-bold text-gray-900">₹{spending.thisMonth.toFixed(2)}</p>
-                  </div>
-                </div>
+                </details>
               </div>
             </div>
           </div>
@@ -484,54 +486,31 @@ const ProfilePage: React.FC = () => {
                   <p className="text-2xl font-bold text-gray-900">{spendingDetails.ordersCount}</p>
                 </div>
                 <div className="p-4 rounded-xl bg-gray-50">
-                  <p className="text-sm text-gray-500 mb-1">Avg Spent</p>
-                  <p className="text-2xl font-bold text-gray-900">₹{spendingDetails.averageOrderValue.toFixed(2)}</p>
-                </div>
-
-                <div className="p-4 rounded-xl bg-gray-50">
                   <p className="text-sm text-gray-500 mb-1">Last 7 Days</p>
                   <p className="text-2xl font-bold text-gray-900">₹{spendingDetails.last7Days.toFixed(2)}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-gray-50">
-                  <p className="text-sm text-gray-500 mb-1">Last 30 Days</p>
-                  <p className="text-2xl font-bold text-gray-900">₹{spendingDetails.last30Days.toFixed(2)}</p>
                 </div>
               </div>
 
               {/* Charts */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <div className="h-64 border rounded-xl p-3">
-                  <p className="text-sm text-gray-600 mb-2">Daily spend (last 30 days)</p>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={[...(spendingDetails.perDay || [])].slice().reverse()}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="date"
-                        tickFormatter={(d: string) =>
-                          new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
-                        }
-                      />
-                      <YAxis />
-                      <Tooltip
-                        formatter={(v: any) => [`₹${Number(v).toFixed(2)}`, 'Amount']}
-                        labelFormatter={(d: any) => new Date(d).toLocaleDateString()}
-                      />
-                      <Line type="monotone" dataKey="amount" stroke="#7c3aed" strokeWidth={2} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-
+              <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-6">
                 <div className="h-64 border rounded-xl p-3">
                   <p className="text-sm text-gray-600 mb-2">Top items share</p>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={spendingDetails.topItems} dataKey="amount" nameKey="item" outerRadius={80} label>
+                      <Pie
+                        data={spendingDetails.topItems}
+                        dataKey="amount"
+                        nameKey="item"
+                        outerRadius={90}
+                      >
                         {spendingDetails.topItems.map((_, idx) => (
                           <Cell key={`cell-${idx}`} fill={["#7c3aed", "#6366f1", "#22c55e", "#f59e0b", "#ef4444"][idx % 5]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(v: any, _n: any, e: any) => [`₹${Number(v).toFixed(2)}`, (e && e.payload && e.payload.item) || 'Item']} />
-                      <Legend />
+                      <Tooltip
+                        formatter={(v: any, _n: any, e: any) => [`₹${Number(v).toFixed(2)}`, (e && e.payload && e.payload.item) || 'Item']}
+                      />
+                      <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: 12 }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -541,17 +520,20 @@ const ProfilePage: React.FC = () => {
               <div className="mt-6">
                 <h4 className="text-md font-semibold text-gray-900 mb-2">Per day (last 30 days)</h4>
                 {spendingDetails.perDay && spendingDetails.perDay.length > 0 ? (
-                  <ul className="divide-y divide-gray-100 border rounded-xl">
-                    {spendingDetails.perDay.slice(0, 14).map((d) => (
-                      <li key={d.date} className="flex items-center justify-between p-3">
-                        <div className="text-gray-700">
-                          <p className="font-medium">{new Date(d.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>
-                          <p className="text-xs text-gray-500">Orders: {d.orders}</p>
-                        </div>
-                        <span className="font-medium text-gray-900">₹{d.amount.toFixed(2)}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="border rounded-xl overflow-hidden">
+                    {/* Show 3 rows before scroll */}
+                    <ul className="divide-y divide-gray-100 max-h-48 sm:max-h-56 overflow-y-auto">
+                      {spendingDetails.perDay.map((d) => (
+                        <li key={d.date} className="flex items-center justify-between p-3">
+                          <div className="text-gray-700">
+                            <p className="font-medium">{new Date(d.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>
+                            <p className="text-xs text-gray-500">Orders: {d.orders}</p>
+                          </div>
+                          <span className="font-medium text-gray-900">₹{d.amount.toFixed(2)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 ) : (
                   <p className="text-sm text-gray-500">No data yet</p>
                 )}

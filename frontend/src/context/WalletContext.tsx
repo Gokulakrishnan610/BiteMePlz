@@ -40,8 +40,10 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const response = await api.get('/api/users/profile');
-      setBalance(response.data.balance || 0);
+      const response = await api.get('/api/users/profile/');
+      const raw = (response.data?.balance ?? 0);
+      const numeric = typeof raw === 'number' ? raw : Number(raw);
+      setBalance(Number.isFinite(numeric) ? numeric : 0);
     } catch (error: any) {
       console.error('Failed to fetch balance:', error);
       const errorMessage = error.response?.data?.message || 'Failed to fetch balance';
@@ -54,7 +56,9 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
   useEffect(() => {
     fetchBalance();
-  }, [user, token, lastError]);
+    // only refetch on auth changes; avoid loops on lastError
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, token]);
 
   const refreshBalance = async () => {
     await fetchBalance();
