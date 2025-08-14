@@ -7,7 +7,7 @@ import api from "../api"
 import { Package, ArrowLeft, AlertCircle, Plus, Minus, ShoppingCart, Star, MapPin } from "lucide-react"
 import { useCart } from "../context/CartContext"
 import { useAuth } from "../context/AuthContext"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"

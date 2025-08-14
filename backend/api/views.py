@@ -1712,15 +1712,43 @@ class OrderViewSet(viewsets.ModelViewSet):
         except Exception as e:
             pass  # Non-fatal, don't block verification
 
-        # Create transaction for verification
-        Transaction.objects.create(
-            user=order.user,
-            shop=order.shop,
-            order=order,
-            amount=order.total_price,
-            type='verification',
-            description=f'Order verification for {order.order_id}'
-        )
+        # Create transaction for verification, recording who verified
+        try:
+            verifier = getattr(request, 'user', None)
+            verified_by = None
+            if getattr(verifier, 'is_authenticated', False):
+                verified_by = {
+                    'id': str(getattr(verifier, 'id', '')),
+                    'name': getattr(verifier, 'name', getattr(verifier, 'username', '')),
+                    'email': getattr(verifier, 'email', ''),
+                    'role': getattr(verifier, 'role', ''),
+                    'shop': {
+                        'id': str(getattr(getattr(verifier, 'shop', None), 'id', '')) if getattr(verifier, 'shop', None) else None,
+                        'name': getattr(getattr(verifier, 'shop', None), 'name', None) if getattr(verifier, 'shop', None) else None,
+                    }
+                }
+            Transaction.objects.create(
+                user=order.user,
+                shop=order.shop,
+                order=order,
+                amount=order.total_price,
+                type='verification',
+                description=f'Order verification for {order.order_id}',
+                metadata={
+                    'verified_by': verified_by,
+                    'verified_at': timezone.now().isoformat(),
+                }
+            )
+        except Exception:
+            # Fail-safe: still create a minimal record
+            Transaction.objects.create(
+                user=order.user,
+                shop=order.shop,
+                order=order,
+                amount=order.total_price,
+                type='verification',
+                description=f'Order verification for {order.order_id}'
+            )
 
         return Response(OrderSerializer(order).data)
 

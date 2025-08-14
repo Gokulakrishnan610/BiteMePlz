@@ -4,7 +4,7 @@ import api from '../../api';
 import { ShoppingBag, Eye, CheckCircle, XCircle, Clock, RefreshCw, AlertCircle, Calendar, X, ArrowUpDown } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useAdminShop } from '../../context/AdminShopContext';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import Loader from '../../components/Loader';
 
 interface Order {

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api';
 import { Store, Clock } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import ImageUpload from '../../components/ImageUpload';
 
 const CreateShopPage: React.FC = () => {

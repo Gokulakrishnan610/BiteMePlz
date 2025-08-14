@@ -3,7 +3,7 @@ import api from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import { useAdminShop } from '../../context/AdminShopContext';
 import { QrCode, CheckCircle, XCircle, AlertCircle, RefreshCw, Building } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import QRScanner from '../../components/QRScanner';
 
 interface OrderItemDto {
@@ -273,7 +273,7 @@ const ScanQRPage: React.FC = () => {
                         </button>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-4">
-                        <QRScanner onScanSuccess={handleScan} onScanError={handleError} autoStart preferBackCamera />
+                        <QRScanner onScanSuccess={handleScan} onScanError={handleError} />
                       </div>
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                         <div className="flex items-start">

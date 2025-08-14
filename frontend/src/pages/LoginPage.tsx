@@ -3,7 +3,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { LogIn, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import LoadingScreen from '../components/LoadingScreen';
 
 const LoginPage: React.FC = () => {

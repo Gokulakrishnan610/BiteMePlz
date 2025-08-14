@@ -29,7 +29,7 @@ import Navbar from "../components/Navbar"
 import api from "../api"
 import { useCart } from "../context/CartContext"
 import { useAuth } from "../context/AuthContext"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 // no-op alias imports removed
 
 interface Product {
@@ -92,7 +92,7 @@ const ShopPage: React.FC = () => {
       const wsProto = loc.protocol === 'https:' ? 'wss' : 'ws'
       // Connect to backend WebSocket server
       const wsUrl = import.meta.env.PROD 
-        ? 'wss://kisokrec.onrender.com/ws/stock/'
+        ? 'wss://kioskrec.onrender.com/ws/stock/'
         : `${wsProto}://${loc.hostname}:8000/ws/stock/`
       ws = new WebSocket(wsUrl)
       ws.onmessage = (ev) => {

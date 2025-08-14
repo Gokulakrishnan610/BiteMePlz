@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api';
 import { Store, Clock, ArrowLeft } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import ImageUpload from '../../components/ImageUpload';
 
 interface shop {

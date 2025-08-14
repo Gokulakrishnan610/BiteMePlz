@@ -22,7 +22,7 @@ import {
 import { useCart } from "../../context/CartContext"
 import { useAuth } from "../../context/AuthContext"
 import api from "../../api"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus, Eye, EyeOff, Zap, Mail, Lock, User, CreditCard } from 'lucide-react';
 import api from '../api';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();

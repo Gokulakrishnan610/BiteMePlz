@@ -44,14 +44,14 @@ export default defineConfig({
       '/api': {
         target:
           process.env.NODE_ENV === 'production'
-            ? 'https://kisokrec.onrender.com'
+            ? 'https://kioskrec.onrender.com'
             : 'http://localhost:8000',
         changeOrigin: true,
       },
       '/media': {
         target:
           process.env.NODE_ENV === 'production'
-            ? 'https://kisokrec.onrender.com'
+            ? 'https://kioskrec.onrender.com'
             : 'http://localhost:8000',
         changeOrigin: true,
       },
@@ -65,7 +65,7 @@ export default defineConfig({
     'process.env': {},
   },
   preview: {
-    allowedHosts: ['kisokrec.onrender.com'], // <-- add your Render frontend host here
+    allowedHosts: ['kioskrec.onrender.com'], // <-- add your Render frontend host here
     port: 4173,
   },
 });

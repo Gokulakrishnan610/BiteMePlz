@@ -15,7 +15,7 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 ChartJS.register(
   CategoryScale,

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowLeft, Shield, Key, CheckCircle } from 'lucide-react';
 import api from '../api';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate();

@@ -8,12 +8,10 @@ import {
   Package, 
   ShoppingBag, 
   AlertCircle,
-  Calendar,
-  Filter,
   Download,
   Eye
 } from 'lucide-react';
-import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import { Line, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -26,7 +24,7 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 ChartJS.register(
   CategoryScale,
@@ -199,7 +197,8 @@ const ShopDetailsPage: React.FC = () => {
       });
 
       const { data } = await api.get(`/api/transactions/shop/?shop_id=${id}&${params}`);
-      setTransactions(data.results || data.transactions || []);
+      const list = data.results || data.transactions || [];
+      setTransactions(list);
     } catch (err) {
       toast.error('Failed to load transactions');
     }

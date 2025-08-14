@@ -26,7 +26,7 @@ import {
   TimeScale
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 ChartJS.register(
   CategoryScale,

@@ -15,7 +15,7 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import { ResponsiveContainer, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip, Legend as RechartsLegend, Bar as RechartsBar } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 

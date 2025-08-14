@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
 import { Store, Plus, Edit, Trash2, Eye, Clock, MapPin } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import ConfirmDialog from '../../components/ConfirmDialog';
 
 interface shop {

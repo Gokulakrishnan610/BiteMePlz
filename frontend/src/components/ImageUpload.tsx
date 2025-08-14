@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { Upload, X, Image as ImageIcon, AlertTriangle, Link as LinkIcon, FileImage } from 'lucide-react';
 import api from '../api';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 interface ImageUploadProps {
   onImageUpload: (imagePath: string) => void;

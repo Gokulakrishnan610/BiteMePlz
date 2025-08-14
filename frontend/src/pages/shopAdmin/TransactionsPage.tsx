@@ -2,19 +2,15 @@ import React, { useEffect, useState } from 'react';
 import api from '../../api';
 import { 
   Receipt, 
-  Filter, 
   Download, 
   Eye, 
-  Calendar,
-  Search,
   RefreshCw,
   TrendingUp,
   TrendingDown,
   DollarSign,
   Users,
   X,
-  BarChart3,
-  PieChart
+  BarChart3
 } from 'lucide-react';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import {
@@ -31,7 +27,7 @@ import {
 } from 'chart.js';
 import { useAuth } from '../../context/AuthContext';
 import { useAdminShop } from '../../context/AdminShopContext';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 ChartJS.register(
   CategoryScale,
@@ -190,7 +186,10 @@ const TransactionsPage: React.FC = () => {
       
       // Calculate real stats from normalized data
       const totalTransactions = normalized.length;
-      const totalAmount = normalized.reduce((sum: number, t: Transaction) => sum + t.amount, 0) || 0;
+      // Amount should include only successful payments
+      const totalAmount = normalized
+        .filter((t: Transaction) => t.type === 'payment' && t.status === 'success')
+        .reduce((sum: number, t: Transaction) => sum + t.amount, 0) || 0;
       const successfulTransactions = normalized.filter((t: Transaction) => t.status === 'success').length || 0;
       const failedTransactions = normalized.filter((t: Transaction) => t.status === 'failed').length || 0;
       const averageTransactionValue = totalTransactions > 0 ? totalAmount / totalTransactions : 0;
@@ -206,7 +205,10 @@ const TransactionsPage: React.FC = () => {
         
         const { data: previousData }: { data: any } = await api.get(`/api/transactions/shop/?shop_id=${effectiveShopId}&${previousParams}`);
         const previousList = extractTransactions(previousData);
-        const previousAmount = previousList.reduce((sum: number, t: Transaction) => sum + t.amount, 0) || 0;
+      // For growth calc, also use successful payments only
+      const previousAmount = previousList
+        .filter((t: Transaction) => t.type === 'payment' && t.status === 'success')
+        .reduce((sum: number, t: Transaction) => sum + t.amount, 0) || 0;
         const growthRate = previousAmount > 0 ? ((totalAmount - previousAmount) / previousAmount) * 100 : 0;
         
         setStats({
@@ -742,6 +744,7 @@ const TransactionsPage: React.FC = () => {
                         <th>Type</th>
                         <th>Amount</th>
                         <th>Status</th>
+                        <th>Verified By</th>
                         <th>User</th>
                         <th>Order</th>
                         <th>Actions</th>
@@ -771,6 +774,17 @@ const TransactionsPage: React.FC = () => {
                             }`}>
                               {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
                             </span>
+                          </td>
+                          <td className="text-[var(--secondary-text)]">
+                            {transaction.type === 'verification' && (transaction as any).metadata?.verified_by ? (
+                              <>
+                                {(transaction as any).metadata.verified_by.name || 'Unknown'}
+                                {(transaction as any).metadata.verified_by.role ? ` (${(transaction as any).metadata.verified_by.role})` : ''}
+                                {(transaction as any).metadata.verified_by.shop?.name ? ` • ${(transaction as any).metadata.verified_by.shop.name}` : ''}
+                              </>
+                            ) : (
+                              '-'
+                            )}
                           </td>
                           <td>
                             <div>
@@ -1031,6 +1045,21 @@ const TransactionsPage: React.FC = () => {
                   <label className="block text-sm font-medium text-[var(--secondary-text)]">Description</label>
                   <p className="mt-1 text-[var(--primary-text)]">{selectedTransaction.description}</p>
                 </div>
+
+                {selectedTransaction.type === 'verification' && (selectedTransaction as any).metadata?.verified_by && (
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--secondary-text)]">Verified By</label>
+                    <p className="mt-1 text-[var(--primary-text)]">
+                      {(selectedTransaction as any).metadata.verified_by.name || 'Unknown'}
+                      {(selectedTransaction as any).metadata.verified_by.role && (
+                        <> ({(selectedTransaction as any).metadata.verified_by.role})</>
+                      )}
+                      {(selectedTransaction as any).metadata.verified_by.shop?.name && (
+                        <> • {(selectedTransaction as any).metadata.verified_by.shop.name}</>
+                      )}
+                    </p>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-[var(--secondary-text)]">User</label>

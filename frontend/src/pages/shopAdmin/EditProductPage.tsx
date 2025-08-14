@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useAdminShop } from '../../context/AdminShopContext';
 import api from '../../api';
 import { AlertCircle } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import Loader from '../../components/Loader';
 import ImageUpload from '../../components/ImageUpload';
 

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import { useAdminShop } from '../../context/AdminShopContext';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import ImageUpload from '../../components/ImageUpload';
 
 const CreateProductPage: React.FC = () => {

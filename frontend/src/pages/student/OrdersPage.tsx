@@ -6,7 +6,7 @@ import { Link, useNavigate } from "react-router-dom"
 import api from "../../api"
 import { Package, AlertCircle, Trash2, ArrowLeft, Clock, CheckCircle, XCircle } from "lucide-react"
 import QRCode from "react-qr-code"
-import toast from "react-hot-toast"
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"

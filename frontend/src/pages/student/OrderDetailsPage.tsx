@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../api';
 import { ArrowLeft, AlertCircle, QrCode, Trash2, Clock, Wallet } from 'lucide-react';
 import QRCode from 'react-qr-code';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import { useWallet } from '../../context/WalletContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';

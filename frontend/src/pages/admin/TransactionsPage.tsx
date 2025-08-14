@@ -10,7 +10,7 @@ import {
   DollarSign,
   X
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 interface Transaction {
   _id: string;
@@ -149,7 +149,10 @@ const TransactionsPage: React.FC = () => {
         
         // Calculate stats
         const totalTransactions = list.length || 0;
-        const totalAmount = list.reduce((sum: number, t: Transaction) => sum + toNumber(t.amount), 0) || 0;
+        // Amount should include only successful payments
+        const totalAmount = list
+          .filter((t: Transaction) => t.type === 'payment' && t.status === 'success')
+          .reduce((sum: number, t: Transaction) => sum + toNumber(t.amount), 0) || 0;
         const successfulTransactions = list.filter((t: Transaction) => t.status === 'success').length || 0;
         const failedTransactions = list.filter((t: Transaction) => t.status === 'failed').length || 0;
         
@@ -204,7 +207,10 @@ const TransactionsPage: React.FC = () => {
         
         // Calculate stats
         const totalTransactions = allTransactions.length;
-        const totalAmount = allTransactions.reduce((sum, t) => sum + toNumber(t.amount), 0);
+        // Amount should include only successful payments
+        const totalAmount = allTransactions
+          .filter((t) => t.type === 'payment' && t.status === 'success')
+          .reduce((sum, t) => sum + toNumber(t.amount), 0);
         const successfulTransactions = allTransactions.filter(t => t.status === 'success').length;
         const failedTransactions = allTransactions.filter(t => t.status === 'failed').length;
         
@@ -445,6 +451,7 @@ const TransactionsPage: React.FC = () => {
                   <th>Type</th>
                   <th>Amount</th>
                   <th>Status</th>
+                  <th>Verified By</th>
                   <th>User</th>
                   <th>Order</th>
                   <th>Actions</th>
@@ -475,6 +482,17 @@ const TransactionsPage: React.FC = () => {
                       }`}>
                         {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
                       </span>
+                    </td>
+                    <td className="text-[var(--secondary-text)]">
+                      {transaction.type === 'verification' && (transaction as any).metadata?.verified_by ? (
+                        <>
+                          {(transaction as any).metadata.verified_by.name || 'Unknown'}
+                          {(transaction as any).metadata.verified_by.role ? ` (${(transaction as any).metadata.verified_by.role})` : ''}
+                          {(transaction as any).metadata.verified_by.shop?.name ? ` • ${(transaction as any).metadata.verified_by.shop.name}` : ''}
+                        </>
+                      ) : (
+                        '-'
+                      )}
                     </td>
                     <td>
                       <div>
@@ -558,6 +576,21 @@ const TransactionsPage: React.FC = () => {
                   <label className="block text-sm font-medium text-[var(--secondary-text)]">Description</label>
                   <p className="mt-1 text-[var(--primary-text)]">{selectedTransaction.description}</p>
                 </div>
+
+                {selectedTransaction.type === 'verification' && selectedTransaction.metadata?.verified_by && (
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--secondary-text)]">Verified By</label>
+                    <p className="mt-1 text-[var(--primary-text)]">
+                      {selectedTransaction.metadata.verified_by.name || 'Unknown'}
+                      {selectedTransaction.metadata.verified_by.role && (
+                        <> ({selectedTransaction.metadata.verified_by.role})</>
+                      )}
+                      {selectedTransaction.metadata.verified_by.shop?.name && (
+                        <> • {selectedTransaction.metadata.verified_by.shop.name}</>
+                      )}
+                    </p>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-[var(--secondary-text)]">User</label>

@@ -4,7 +4,7 @@ import api from '../../api';
 import { Package, Plus, Edit, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useAdminShop } from '../../context/AdminShopContext';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import Loader from '../../components/Loader';
 import { Product } from '../../types';
 
