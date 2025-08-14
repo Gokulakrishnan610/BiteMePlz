@@ -398,7 +398,7 @@ urlpatterns = [
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('orders/<uuid:pk>/pay/', OrderViewSet.as_view({'put': 'pay'}), name='order-pay'),
-    path('orders/scan-qr-code/', OrderViewSet.as_view({'get': 'scan_qr_code'}), name='order-scan-qr-code'),
+    path('orders/scan-qr-code/', OrderViewSet.as_view({'get': 'scan_qr_code', 'post': 'scan_qr_code'}), name='order-scan-qr-code'),
     path('orders/<uuid:pk>/mark-item-bought/', OrderViewSet.as_view({'patch': 'mark_item_bought'}), name='order-mark-item-bought'),
     # Manual registration for multi_shop action
     path('orders/multi_shop/', OrderViewSet.as_view({'post': 'multi_shop'}), name='order-multi-shop'),

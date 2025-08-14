@@ -1375,28 +1375,70 @@ class OrderViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get', 'post'])
     def scan_qr_code(self, request):
-        """Scan a QR code and return the associated order details."""
-        qr_code_data = request.data.get('qr_code_data')
-        if not qr_code_data:
-            return Response({'error': 'QR code data is required'}, status=status.HTTP_400_BAD_REQUEST)
+        """Scan a QR string/payload and return the associated order details.
 
+        Accepts either:
+        - qr_code_data: full QR JSON payload string
+        - order_id: a direct order id like "ORD-XXXX"
+        Works with GET (query params) and POST (JSON/form body).
+        """
         try:
-            # QR code data is a JSON string, so parse it
-            qr_payload = json.loads(qr_code_data)
-            order_id = qr_payload.get('order_id')
+            # Support both GET and POST sources
+            raw_qr = request.data.get('qr_code_data') or request.query_params.get('qr_code_data')
+            explicit_order_id = request.data.get('order_id') or request.query_params.get('order_id')
+
+            order_id = None
+            if explicit_order_id:
+                order_id = str(explicit_order_id).strip()
+            elif raw_qr:
+                # Try parse JSON payload to extract order_id
+                try:
+                    payload = json.loads(raw_qr)
+                    if isinstance(payload, dict) and payload.get('order_id'):
+                        order_id = str(payload.get('order_id')).strip()
+                    else:
+                        # Walk nested structures to find first order_id
+                        def collect_first_order_id(node):
+                            if not node:
+                                return None
+                            if isinstance(node, dict):
+                                if 'order_id' in node:
+                                    return str(node['order_id']).strip()
+                                for v in node.values():
+                                    found = collect_first_order_id(v)
+                                    if found:
+                                        return found
+                            if isinstance(node, list):
+                                for v in node:
+                                    found = collect_first_order_id(v)
+                                    if found:
+                                        return found
+                            return None
+                        order_id = collect_first_order_id(payload)
+                except Exception:
+                    # Fallback: attempt to regex order_id from plain string
+                    import re
+                    m = re.search(r'"order_id"\s*:\s*"([^"]+)"', raw_qr)
+                    if m:
+                        order_id = m.group(1)
 
             if not order_id:
-                return Response({'error': 'Order ID not found in QR code data'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': 'Order ID not found in QR data'}, status=status.HTTP_400_BAD_REQUEST)
 
-            order = Order.objects.get(order_id=order_id)
+            # Lookup by order_id or UUID
+            try:
+                order = Order.objects.get(order_id=order_id)
+            except Order.DoesNotExist:
+                # Try UUID lookup via primary key
+                try:
+                    order = Order.objects.get(id=order_id)
+                except Exception:
+                    return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+
             serializer = self.get_serializer(order)
             return Response(serializer.data)
-        except Order.DoesNotExist:
-            return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
-        except json.JSONDecodeError:
-            return Response({'error': 'Invalid QR code data format'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
