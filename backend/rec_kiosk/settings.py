@@ -30,6 +30,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
+    'api.middleware.CustomCORSMiddleware',  # Custom CORS middleware
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # For serving static files
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -130,7 +131,7 @@ REST_FRAMEWORK = {
     'UNAUTHENTICATED_USER': None,
 }
 
-# CORS
+# CORS Configuration
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
@@ -141,6 +142,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://rec-kiosk-1.onrender.com",
     "https://super-conkies-906020.netlify.app",
 ]
+
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https?://localhost:\d+$",
     r"^https?://rec-kiosk-1\.onrender\.com$",
@@ -150,48 +152,26 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 CORS_ALLOW_METHODS = ["DELETE", "GET", "OPTIONS", "PATCH", "POST", "PUT"]
 CORS_ALLOW_HEADERS = [
     "accept", "accept-encoding", "authorization", "content-type", "dnt", "origin",
-    "user-agent", "x-csrftoken", "x-requested-with",
-    "x-parent-session-id", "X-Parent-Session-ID"
-]
-CORS_EXPOSE_HEADERS = ["x-parent-session-id", "X-Parent-Session-ID"]
-CORS_PREFLIGHT_MAX_AGE = 86400
-
-# Additional CORS settings for better compatibility
-CORS_ALLOW_ALL_ORIGINS = False  # Keep this False for security
-CORS_REPLACE_HTTPS_REFERER = True
-
-# Additional CORS settings for better compatibility with modern browsers
-CORS_ALLOW_CREDENTIALS = True
-CORS_ORIGIN_ALLOW_ALL = False
-CORS_ORIGIN_WHITELIST = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:3000",
-    "https://kisokrec.onrender.com",
-    "https://rec-kiosk-1.onrender.com",
-    "https://super-conkies-906020.netlify.app",
-]
-
-# Additional CORS settings for better compatibility
-CORS_ALLOW_HEADERS = [
-    "accept", "accept-encoding", "authorization", "content-type", "dnt", "origin",
     "user-agent", "x-csrftoken", "x-requested-with", "x-parent-session-id", 
     "X-Parent-Session-ID", "cache-control", "pragma"
 ]
 
-# Ensure CORS headers are properly set
 CORS_EXPOSE_HEADERS = [
     "x-parent-session-id", "X-Parent-Session-ID", "content-type", "content-length"
 ]
 
-# Additional CORS debugging and compatibility settings
-CORS_URLS_REGEX = r'^.*$'  # Apply CORS to all URLs
 CORS_PREFLIGHT_MAX_AGE = 86400
+CORS_URLS_REGEX = r'^.*$'  # Apply CORS to all URLs
+CORS_REPLACE_HTTPS_REFERER = True
 
-# Ensure CORS middleware is properly configured
+# Security: Keep these False
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ORIGIN_ALLOW_ALL = False
-CORS_ALLOW_CREDENTIALS = True
+
+# Debug CORS issues
+if DEBUG:
+    CORS_ORIGIN_ALLOW_ALL = True  # Temporarily allow all origins in debug mode
+    print("DEBUG: CORS_ORIGIN_ALLOW_ALL set to True for debugging")
 
 # JWT
 from datetime import timedelta

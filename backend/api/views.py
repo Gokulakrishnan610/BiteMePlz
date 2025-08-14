@@ -482,6 +482,11 @@ class ShopViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
+        # Add CORS debugging
+        if self.action == 'list':
+            print(f"DEBUG: Shop list called from origin: {self.request.META.get('HTTP_ORIGIN')}")
+            print(f"DEBUG: Request headers: {dict(self.request.headers)}")
+        
         user = getattr(self.request, 'user', None)
         if getattr(user, 'is_authenticated', False):
             if getattr(user, 'role', None) == 'admin':
@@ -716,6 +721,10 @@ class ShopViewSet(viewsets.ModelViewSet):
     def debug(self, request):
         """Debug endpoint to check shops data"""
         try:
+            # Add CORS debugging
+            print(f"DEBUG: Debug endpoint called from origin: {request.META.get('HTTP_ORIGIN')}")
+            print(f"DEBUG: Request headers: {dict(request.headers)}")
+            
             all_shops = Shop.objects.all()
             active_shops = Shop.objects.filter(is_active=True)
             open_shops = Shop.objects.filter(is_open=True)
@@ -738,11 +747,18 @@ class ShopViewSet(viewsets.ModelViewSet):
                     } for shop in all_shops
                 ],
                 'user_authenticated': is_auth_flag,
-                'user_role': role
+                'user_role': role,
+                'cors_debug': {
+                    'origin': request.META.get('HTTP_ORIGIN'),
+                    'headers': dict(request.headers)
+                }
             }
 
-            return Response(debug_data)
+            response = Response(debug_data)
+            print(f"DEBUG: Response headers: {dict(response.headers)}")
+            return response
         except Exception as e:
+            print(f"DEBUG: Error in debug endpoint: {str(e)}")
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -752,6 +768,12 @@ class ProductViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        # Add CORS debugging
+        if self.action == 'list':
+            print(f"DEBUG: Product list called from origin: {self.request.META.get('HTTP_ORIGIN')}")
+            print(f"DEBUG: Request headers: {dict(self.request.headers)}")
+            print(f"DEBUG: Query params: {self.request.query_params}")
+        
         shop_id = self.request.query_params.get('shop_id') or self.request.query_params.get('shop')
         # For mutation/detail actions, don't filter by is_available so we can update disabled items
         if getattr(self, 'action', None) in ['retrieve', 'update', 'partial_update', 'destroy']:
