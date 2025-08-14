@@ -65,7 +65,7 @@ export default defineConfig({
     'process.env': {},
   },
   preview: {
-    allowedHosts: ['rec-kiosk-1.onrender.com'], // <-- add your Render frontend host here
+    allowedHosts: ['kisokrec.onrender.com'], // <-- add your Render frontend host here
     port: 4173,
   },
 });

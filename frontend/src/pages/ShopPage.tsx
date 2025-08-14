@@ -90,8 +90,11 @@ const ShopPage: React.FC = () => {
     try {
       const loc = window.location
       const wsProto = loc.protocol === 'https:' ? 'wss' : 'ws'
-      // Connect directly to backend ASGI server (default port 8000 during dev)
-      ws = new WebSocket(`${wsProto}://${loc.hostname}:8000/ws/stock/`)
+      // Connect to backend WebSocket server
+      const wsUrl = import.meta.env.PROD 
+        ? 'wss://kisokrec.onrender.com/ws/stock/'
+        : `${wsProto}://${loc.hostname}:8000/ws/stock/`
+      ws = new WebSocket(wsUrl)
       ws.onmessage = (ev) => {
         try {
           const data = JSON.parse(ev.data)
