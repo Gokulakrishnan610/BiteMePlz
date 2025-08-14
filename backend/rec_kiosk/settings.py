@@ -139,10 +139,12 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "https://kisokrec.onrender.com",
     "https://rec-kiosk-1.onrender.com",
+    "https://super-conkies-906020.netlify.app",
 ]
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https?://localhost:\d+$",
-    r"^https?://rec-kiosk-1\.onrender\.com$",  
+    r"^https?://rec-kiosk-1\.onrender\.com$",
+    r"^https?://.*\.netlify\.app$",  # Allow all Netlify subdomains
 ]
 
 CORS_ALLOW_METHODS = ["DELETE", "GET", "OPTIONS", "PATCH", "POST", "PUT"]
@@ -153,6 +155,43 @@ CORS_ALLOW_HEADERS = [
 ]
 CORS_EXPOSE_HEADERS = ["x-parent-session-id", "X-Parent-Session-ID"]
 CORS_PREFLIGHT_MAX_AGE = 86400
+
+# Additional CORS settings for better compatibility
+CORS_ALLOW_ALL_ORIGINS = False  # Keep this False for security
+CORS_REPLACE_HTTPS_REFERER = True
+
+# Additional CORS settings for better compatibility with modern browsers
+CORS_ALLOW_CREDENTIALS = True
+CORS_ORIGIN_ALLOW_ALL = False
+CORS_ORIGIN_WHITELIST = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+    "https://kisokrec.onrender.com",
+    "https://rec-kiosk-1.onrender.com",
+    "https://super-conkies-906020.netlify.app",
+]
+
+# Additional CORS settings for better compatibility
+CORS_ALLOW_HEADERS = [
+    "accept", "accept-encoding", "authorization", "content-type", "dnt", "origin",
+    "user-agent", "x-csrftoken", "x-requested-with", "x-parent-session-id", 
+    "X-Parent-Session-ID", "cache-control", "pragma"
+]
+
+# Ensure CORS headers are properly set
+CORS_EXPOSE_HEADERS = [
+    "x-parent-session-id", "X-Parent-Session-ID", "content-type", "content-length"
+]
+
+# Additional CORS debugging and compatibility settings
+CORS_URLS_REGEX = r'^.*$'  # Apply CORS to all URLs
+CORS_PREFLIGHT_MAX_AGE = 86400
+
+# Ensure CORS middleware is properly configured
+CORS_ORIGIN_ALLOW_ALL = False
+CORS_ALLOW_CREDENTIALS = True
 
 # JWT
 from datetime import timedelta
