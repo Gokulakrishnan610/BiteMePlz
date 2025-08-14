@@ -72,7 +72,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const { data } = await api.post('/api/users/login/', { email, password });
+      const { data } = await api.post('/api/users/login/', { email: email.trim().toLowerCase(), password });
 
       if (!data._id || !data.name || !data.email || !data.role || !data.token) {
         throw new Error('Invalid response from server');

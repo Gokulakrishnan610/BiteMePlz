@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { LogIn, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import api from '../api';
 import toast from 'react-hot-toast';
 import LoadingScreen from '../components/LoadingScreen';
 
@@ -39,6 +40,15 @@ const LoginPage: React.FC = () => {
       setShowPostLoginAnimation(true);
     } catch (err: any) {
       const message = err?.message || 'Invalid email or password';
+      // If account not verified, try resending OTP by email to help the user
+      if (message.toLowerCase().includes('verify')) {
+        try {
+          await api.post('/api/users/resend-otp-by-email/', { email });
+          toast.success('Verification OTP sent to your email. Please check your inbox.');
+        } catch (e: any) {
+          // Fall back to showing the original message
+        }
+      }
       toast.error(message);
       setLoading(false);
     }

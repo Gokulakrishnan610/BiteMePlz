@@ -174,6 +174,47 @@ class ResendOTPView(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class ResendOTPByEmailView(APIView):
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        try:
+            from .models import User
+            import random
+            
+            email = request.data.get('email')
+            if not email:
+                return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                # Avoid user enumeration; pretend success
+                return Response({'message': 'If the email exists, an OTP has been sent'}, status=status.HTTP_200_OK)
+            
+            if getattr(user, 'is_verified', False):
+                return Response({'message': 'Account already verified'}, status=status.HTTP_200_OK)
+            
+            # Generate new OTP
+            otp = str(random.randint(100000, 999999))
+            otp_data = {
+                'otp': otp,
+                'created_at': timezone.now().isoformat(),
+                'expires_at': (timezone.now() + timedelta(minutes=6)).isoformat()
+            }
+            user.otp = otp_data
+            user.save()
+            
+            # Send OTP email
+            from .utils import send_resend_otp_email
+            email_sent = send_resend_otp_email(user.email, otp, user.name)
+            if not email_sent:
+                return Response({'error': 'Failed to send OTP email. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            return Response({'message': 'New OTP sent to your email', 'userId': str(user.id)}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 # Forgot Password Flow
 class ForgotPasswordRequestView(APIView):
     permission_classes = [AllowAny]
@@ -347,6 +388,7 @@ urlpatterns = [
     path('users/register/', RegisterView.as_view(), name='register'),
     path('users/verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
     path('users/resend-otp/', ResendOTPView.as_view(), name='resend-otp'),
+    path('users/resend-otp-by-email/', ResendOTPByEmailView.as_view(), name='resend-otp-by-email'),
     path('users/login/', LoginView.as_view(), name='login'),
     # Forgot password endpoints
     path('users/forgot-password/', ForgotPasswordRequestView.as_view(), name='forgot-password'),
