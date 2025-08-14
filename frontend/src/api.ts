@@ -1,19 +1,32 @@
 import axios from 'axios';
 
 function resolveApiBaseUrl(): string {
-  // For production, use the deployed backend URL
-  // For development, use relative URLs to work with Vite proxy
+  // 1) Highest priority: explicit env variable
+  const envUrl = (import.meta as any).env?.VITE_API_BASE_URL as string | undefined;
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
+    return envUrl.trim();
+  }
+
+  // 2) Next: user override persisted in localStorage
+  try {
+    const saved = localStorage.getItem('API_BASE_URL');
+    if (saved && typeof saved === 'string' && saved.trim()) {
+      return saved.trim();
+    }
+  } catch {}
+
+  // 3) Production fallback
   if (import.meta.env.PROD) {
     return 'https://kisokrec.onrender.com';
   }
-  // For development, use relative URLs to work with Vite proxy
+  // 4) Dev: use Vite proxy with relative path
   return '';
 }
 
 // Create a custom axios instance with dynamic base URL
 const api = axios.create({
   baseURL: resolveApiBaseUrl(),
-  timeout: 10000,
+  timeout: 15000,
 });
 
 export function setApiBaseUrl(newUrl: string) {

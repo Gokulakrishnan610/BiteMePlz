@@ -1631,19 +1631,87 @@ class OrderViewSet(viewsets.ModelViewSet):
                 order = Order.objects.get(order_id=pk)
             except Order.DoesNotExist:
                 return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
-        
+
+        # --- SHOP CONTEXT CHECK ---
+        user = request.user
+        selected_shop_id = None
+        if hasattr(user, 'role') and user.role == 'shopAdmin' and hasattr(user, 'shop') and user.shop:
+            selected_shop_id = str(user.shop.id)
+        elif hasattr(user, 'role') and user.role == 'admin' and hasattr(user, 'selected_shop_id'):
+            selected_shop_id = str(user.selected_shop_id)
+        elif 'selected_shop_id' in request.data:
+            selected_shop_id = str(request.data['selected_shop_id'])
+        if selected_shop_id and str(order.shop.id) != selected_shop_id:
+            return Response({'error': 'You can only verify orders for your own shop.'}, status=status.HTTP_403_FORBIDDEN)
+        # --- END SHOP CONTEXT CHECK ---
+
         if order.is_verified:
             return Response({'error': 'Order already verified'}, status=status.HTTP_400_BAD_REQUEST)
-        
         if order.status == 'expired':
             return Response({'error': 'Order has expired'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         # Mark as verified
         order.is_verified = True
         order.verified_at = timezone.now()
         order.status = 'completed'
         order.save()
-        
+
+        # Multiorder QR update logic
+        try:
+            # Only update if this order has a multiorder QR
+            import json
+            qr_payload = json.loads(order.qr_code or '{}')
+            if isinstance(qr_payload, dict) and qr_payload.get('type') == 'multi_order':
+                # Find all sibling orders in this group
+                sibling_orders = []
+                orders_list = qr_payload.get('orders') or []
+                for entry in orders_list:
+                    oid = entry.get('order_id')
+                    if not oid:
+                        continue
+                    try:
+                        o = Order.objects.get(order_id=oid)
+                        sibling_orders.append(o)
+                    except Order.DoesNotExist:
+                        continue
+                # Remove verified orders from the QR payload
+                unverified_orders = [o for o in sibling_orders if not o.is_verified]
+                if unverified_orders:
+                    # Update QR for all unverified siblings
+                    new_orders_list = []
+                    for o in unverified_orders:
+                        # Use latest items for each order
+                        item_summary = [
+                            {
+                                'name': it.get('name'),
+                                'quantity': it.get('quantity'),
+                            }
+                            for it in (o.order_items or [])
+                        ]
+                        new_orders_list.append({
+                            'order_id': o.order_id,
+                            'shop_id': str(o.shop.id),
+                            'shop_name': o.shop.name,
+                            'items': item_summary,
+                        })
+                    new_qr_payload = {
+                        'type': 'multi_order',
+                        'user_id': str(order.user.id),
+                        'orders': new_orders_list,
+                        'total_price': str(sum([float(o.total_price) for o in unverified_orders])),
+                    }
+                    new_qr_str = json.dumps(new_qr_payload)
+                    for o in unverified_orders:
+                        o.qr_code = new_qr_str
+                        o.save()
+                else:
+                    # All verified, clear QR for all siblings
+                    for o in sibling_orders:
+                        o.qr_code = None
+                        o.save()
+        except Exception as e:
+            pass  # Non-fatal, don't block verification
+
         # Create transaction for verification
         Transaction.objects.create(
             user=order.user,
@@ -1653,7 +1721,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             type='verification',
             description=f'Order verification for {order.order_id}'
         )
-        
+
         return Response(OrderSerializer(order).data)
 
     @action(detail=True, methods=['put'])

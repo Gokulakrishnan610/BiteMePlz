@@ -30,28 +30,21 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError }) => 
       const devices = await Html5Qrcode.getCameras();
       setCameras(devices);
       
-      // Try to find back camera first, otherwise use the first available
-      const backCamera = devices.find(device => 
-        device.label.toLowerCase().includes('back') || 
-        device.label.toLowerCase().includes('rear') ||
-        device.label.toLowerCase().includes('environment')
-      );
-      
-      if (backCamera) {
-        setSelectedCamera(backCamera.id);
-      } else if (devices.length > 0) {
+      // For mobile devices, try to detect both front and back cameras
+      // Even if only one shows up in the list, we'll try to switch
+      if (devices.length > 0) {
         setSelectedCamera(devices[0].id);
       }
     } catch (err) {
       console.error('Error getting cameras:', err);
-      setError('Unable to access cameras. Please ensure camera permissions are granted.');
-      onScanError?.('Unable to access cameras');
+      setError('Unable to access camera. Please ensure camera permissions are granted.');
+      onScanError?.('Unable to access camera');
     }
   };
 
   const startScanner = async () => {
     if (!selectedCamera) {
-      setError('No camera selected');
+      setError('No camera available');
       return;
     }
 
@@ -80,7 +73,6 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError }) => 
         selectedCamera,
         config,
         (decodedText) => {
-  
           onScanSuccess(decodedText);
           stopScanner();
         },
@@ -114,22 +106,103 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError }) => 
   };
 
   const switchCamera = async () => {
-    if (cameras.length <= 1) return;
-    
-    const currentIndex = cameras.findIndex(camera => camera.id === selectedCamera);
-    const nextIndex = (currentIndex + 1) % cameras.length;
-    const nextCamera = cameras[nextIndex];
-    
+    // For mobile devices, always try to switch camera
+    // This handles cases where the device API might not show all cameras
     if (isScanning) {
       await stopScanner();
-      setSelectedCamera(nextCamera.id);
       // Small delay to ensure camera is released
       setTimeout(() => {
-        setSelectedCamera(nextCamera.id);
-        startScanner();
+        // Try to start with a different camera configuration
+        startScannerWithAlternateConfig();
       }, 500);
     } else {
-      setSelectedCamera(nextCamera.id);
+      // If not scanning, just try to start with alternate config
+      startScannerWithAlternateConfig();
+    }
+  };
+
+  const startScannerWithAlternateConfig = async () => {
+    try {
+      setError('');
+      setIsScanning(true);
+
+      // Create new Html5Qrcode instance
+      const html5QrCode = new Html5Qrcode("qr-reader");
+      scannerRef.current = html5QrCode;
+
+      // Try different camera configurations for mobile
+      const config: any = {
+        fps: 10,
+        qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+          const size = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.85);
+          return { width: size, height: size };
+        },
+        aspectRatio: 1.0,
+        showTorchButtonIfSupported: true,
+        showZoomSliderIfSupported: true,
+        defaultZoomValueIfSupported: 2,
+      };
+
+      // Try to start with environment-facing camera (back camera) first
+      try {
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          config,
+          (decodedText) => {
+            onScanSuccess(decodedText);
+            stopScanner();
+          },
+          (errorMessage) => {
+            if (!errorMessage.includes('No QR code found')) {
+              console.warn('QR scan error:', errorMessage);
+            }
+          }
+        );
+        return; // Successfully started with environment camera
+      } catch (envError) {
+        console.log('Environment camera failed, trying user camera...');
+      }
+
+      // If environment camera fails, try user-facing camera (front camera)
+      try {
+        await html5QrCode.start(
+          { facingMode: "user" },
+          config,
+          (decodedText) => {
+            onScanSuccess(decodedText);
+            stopScanner();
+          },
+          (errorMessage) => {
+            if (!errorMessage.includes('No QR code found')) {
+              console.warn('QR scan error:', errorMessage);
+            }
+          }
+        );
+        return; // Successfully started with user camera
+      } catch (userError) {
+        console.log('User camera failed, falling back to device ID...');
+      }
+
+      // Fallback to using the device ID if facingMode fails
+      await html5QrCode.start(
+        selectedCamera,
+        config,
+        (decodedText) => {
+          onScanSuccess(decodedText);
+          stopScanner();
+        },
+        (errorMessage) => {
+          if (!errorMessage.includes('No QR code found')) {
+            console.warn('QR scan error:', errorMessage);
+          }
+        }
+      );
+
+    } catch (err: any) {
+      console.error('Error starting scanner with alternate config:', err);
+      setError(`Failed to start camera: ${err.message || 'Unknown error'}`);
+      setIsScanning(false);
+      onScanError?.(err.message || 'Failed to start camera');
     }
   };
 
@@ -141,7 +214,8 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError }) => 
         </div>
       )}
 
-      {cameras.length > 0 && (
+      {/* Only show camera selection if multiple cameras are available */}
+      {cameras.length > 1 && (
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-gray-700">
             Select Camera:
@@ -181,17 +255,16 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError }) => 
           </button>
         )}
 
-        {cameras.length > 1 && (
-          <button
-            onClick={switchCamera}
-            disabled={!selectedCamera}
-            className="btn-secondary flex items-center"
-            title="Switch Camera"
-          >
-            <RotateCcw size={20} className="mr-2" />
-            Switch Camera
-          </button>
-        )}
+                 {/* Always show switch camera button */}
+         <button
+           onClick={switchCamera}
+           disabled={!selectedCamera}
+           className="btn-secondary flex items-center"
+           title="Switch between front and back cameras"
+         >
+           <RotateCcw size={20} className="mr-2" />
+           Switch Camera
+         </button>
       </div>
       
       <div 
@@ -222,13 +295,22 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError }) => 
       {!isScanning && cameras.length === 0 && (
         <div className="text-center py-8">
           <Camera size={48} className="mx-auto text-gray-400 mb-4" />
-          <p className="text-gray-600 mb-2">No cameras detected</p>
+          <p className="text-gray-600 mb-2">No camera detected</p>
           <button
             onClick={getCameras}
             className="btn-secondary text-sm"
           >
             Retry Camera Detection
           </button>
+        </div>
+      )}
+
+      {/* Show camera info for single camera setup */}
+      {!isScanning && cameras.length === 1 && (
+        <div className="text-center py-4">
+          <p className="text-sm text-gray-600">
+            Using: {cameras[0]?.label || 'Available Camera'}
+          </p>
         </div>
       )}
     </div>
