@@ -273,7 +273,7 @@ const ScanQRPage: React.FC = () => {
                         </button>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-4">
-                        <QRScanner onScanSuccess={handleScan} onScanError={handleError} />
+                        <QRScanner onScanSuccess={handleScan} onScanError={handleError} autoStart preferBackCamera />
                       </div>
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                         <div className="flex items-start">
@@ -414,7 +414,7 @@ const ScanQRPage: React.FC = () => {
               </div>
 
               <div className="flex space-x-4">
-                <button onClick={() => { setOrder(null); setResult(''); }} className="flex-1 btn-secondary">Scan Another Order</button>
+                <button onClick={() => { setOrder(null); setResult(''); setScanning(true); }} className="flex-1 btn-secondary">Scan Another Order</button>
 					{!order.is_verified && items.length > 0 && remainingItems.length === 0 && (
 						<button
 							onClick={handleVerifyOrder}
