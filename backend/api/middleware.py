@@ -14,8 +14,10 @@ class CustomCORSMiddleware(MiddlewareMixin):
                     "http://127.0.0.1:5173",
                     "http://127.0.0.1:3000",
                     "https://kisokrec.onrender.com",
+                    "https://kioskrec.onrender.com",
                     "https://rec-kiosk-1.onrender.com",
                     "https://super-conkies-906020.netlify.app",
+                    "https://kioskrec25.netlify.app",
                 ]
                 
                 # Check regex patterns
@@ -56,8 +58,10 @@ class CustomCORSMiddleware(MiddlewareMixin):
                     "http://127.0.0.1:5173",
                     "http://127.0.0.1:3000",
                     "https://kisokrec.onrender.com",
+                    "https://kioskrec.onrender.com",
                     "https://rec-kiosk-1.onrender.com",
                     "https://super-conkies-906020.netlify.app",
+                    "https://kioskrec25.netlify.app",
                 ]
                 
                 import re

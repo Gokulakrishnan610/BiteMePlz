@@ -10,7 +10,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here'
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 # Render dynamically assigns host
-ALLOWED_HOSTS = ["kisokrec.onrender.com", "kisok-e3w0.onrender.com", "localhost", "127.0.0.1","rec-kiosk-1.onrender.com"]
+ALLOWED_HOSTS = ["kisokrec.onrender.com", "kioskrec.onrender.com", "kisok-e3w0.onrender.com", "localhost", "127.0.0.1","rec-kiosk-1.onrender.com"]
 
 
 # Apps
@@ -139,8 +139,10 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
     "https://kisokrec.onrender.com",
+    "https://kioskrec.onrender.com",
     "https://rec-kiosk-1.onrender.com",
     "https://super-conkies-906020.netlify.app",
+    "https://kioskrec25.netlify.app",
 ]
 
 CORS_ALLOWED_ORIGIN_REGEXES = [
