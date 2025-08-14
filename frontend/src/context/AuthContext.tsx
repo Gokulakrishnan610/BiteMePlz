@@ -72,7 +72,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const { data } = await api.post('/api/users/login/', { email, password });  
+      const { data } = await api.post('/api/users/login/', { email, password });
 
       if (!data._id || !data.name || !data.email || !data.role || !data.token) {
         throw new Error('Invalid response from server');
@@ -91,15 +91,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setUser(userData);
       setToken(data.token);
-      
+
       // Set token in api defaults for backward compatibility
       api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-      
+
       localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('token', data.token);
     } catch (error: any) {
+      const extractBackendMessage = (err: any): string | null => {
+        const data = err?.response?.data;
+        if (!data) return null;
+        if (typeof data === 'string') return data;
+        if (typeof data.message === 'string') return data.message;
+        if (typeof data.error === 'string') return data.error;
+        if (typeof data.detail === 'string') return data.detail;
+        if (Array.isArray(data)) {
+          const first = data.find((x) => typeof x === 'string');
+          if (first) return first;
+        }
+        if (typeof data === 'object') {
+          for (const key of Object.keys(data)) {
+            const val = (data as any)[key];
+            if (typeof val === 'string') return val;
+            if (Array.isArray(val)) {
+              const first = val.find((x) => typeof x === 'string');
+              if (first) return first;
+            }
+          }
+        }
+        return null;
+      };
+
+      const msg = extractBackendMessage(error);
       console.error('Login error:', error);
-      throw new Error(error.response?.data?.message || error.response?.data?.error || 'Login failed');
+      throw new Error(msg || 'Invalid email or password');
     }
   };
 

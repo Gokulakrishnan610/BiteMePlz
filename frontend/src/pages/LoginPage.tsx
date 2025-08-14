@@ -37,8 +37,9 @@ const LoginPage: React.FC = () => {
       }
       toast.success('Login successful');
       setShowPostLoginAnimation(true);
-    } catch {
-      toast.error('Invalid email or password');
+    } catch (err: any) {
+      const message = err?.message || 'Invalid email or password';
+      toast.error(message);
       setLoading(false);
     }
   };
