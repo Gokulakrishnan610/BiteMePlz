@@ -10,7 +10,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here'
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 # Render dynamically assigns host
-ALLOWED_HOSTS = ["kisokrec.onrender.com", "kioskrec.onrender.com", "kisok-e3w0.onrender.com", "localhost", "127.0.0.1","rec-kiosk-1.onrender.com","rec-kiosk.onrender.com""]
+ALLOWED_HOSTS = ["kisokrec.onrender.com", "kioskrec.onrender.com", "kisok-e3w0.onrender.com", "localhost", "127.0.0.1","rec-kiosk-1.onrender.com","rec-kiosk.onrender.com"]
 
 
 # Apps
