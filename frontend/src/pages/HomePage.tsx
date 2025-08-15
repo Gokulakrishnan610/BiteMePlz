@@ -119,12 +119,20 @@ const HomePage: React.FC = () => {
           }
         })
         const sortedCategories = Array.from(categories).sort()
+        // Ensure "others" appears last by removing it from sorted array and adding it at the end
+        const othersIndex = sortedCategories.indexOf('others')
+        if (othersIndex > -1) {
+          sortedCategories.splice(othersIndex, 1)
+        }
         const categoryArray = ["All", ...sortedCategories]
+        if (othersIndex > -1) {
+          categoryArray.push("others")
+        }
         setAvailableCategories(categoryArray)
       }
     } catch (error) {
       console.error("Failed to fetch categories:", error)
-      setAvailableCategories(["All", "beverages", "electronics", "food", "others", "snacks", "stationery"])
+      setAvailableCategories(["All", "beverages", "electronics", "food", "snacks", "stationery", "others"])
     }
   }
 

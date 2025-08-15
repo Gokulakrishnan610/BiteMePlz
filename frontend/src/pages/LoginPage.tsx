@@ -36,7 +36,6 @@ const LoginPage: React.FC = () => {
         toast.error('You are not authorized to login here.');
         return;
       }
-      toast.success('Login successful');
       setShowPostLoginAnimation(true);
     } catch (err: any) {
       const message = err?.message || 'Invalid email or password';
