@@ -22,6 +22,8 @@
   --input-focus: #a259ff;
   --sidebar-bg: #ffffff;
   --header-bg: #ffffff;
+  --icon-color: #374151;
+  --icon-hover: #6b7280;
 }
 
 @layer base {
@@ -84,6 +86,52 @@
   /* Label styles */
   label {
     @apply text-[var(--secondary-text)] font-medium;
+  }
+
+  /* Icon consistency across all devices */
+  svg, .lucide, [class*="icon"] {
+    color: var(--icon-color) !important;
+  }
+
+  svg:hover, .lucide:hover, [class*="icon"]:hover {
+    color: var(--icon-hover) !important;
+  }
+
+  /* Ensure text colors are consistent */
+  .text-gray-700 {
+    color: #374151 !important;
+  }
+
+  .text-gray-600 {
+    color: #4b5563 !important;
+  }
+
+  .text-gray-500 {
+    color: #6b7280 !important;
+  }
+
+  .text-gray-400 {
+    color: #9ca3af !important;
+  }
+
+  .text-gray-300 {
+    color: #d1d5db !important;
+  }
+
+  .text-gray-200 {
+    color: #e5e7eb !important;
+  }
+
+  .text-gray-100 {
+    color: #f3f4f6 !important;
+  }
+
+  .text-white {
+    color: #ffffff !important;
+  }
+
+  .text-black {
+    color: #000000 !important;
   }
 }
 
@@ -519,5 +567,190 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   
   .admin-card {
     @apply mx-2 rounded-lg;
+  }
+}
+
+/* Device-specific UI consistency fixes */
+@media (max-width: 1024px) {
+  /* Ensure consistent colors on tablets */
+  .text-gray-700 {
+    color: #374151 !important;
+  }
+  
+  svg, .lucide {
+    color: #374151 !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Ensure consistent colors on mobile devices */
+  .text-gray-700 {
+    color: #374151 !important;
+  }
+  
+  svg, .lucide {
+    color: #374151 !important;
+  }
+  
+  /* Force white backgrounds on mobile for consistency */
+  .bg-white\/95 {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+  }
+  
+  .bg-white\/90 {
+    background-color: rgba(255, 255, 255, 0.9) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Ensure consistent colors on small mobile devices */
+  .text-gray-700 {
+    color: #374151 !important;
+  }
+  
+  svg, .lucide {
+    color: #374151 !important;
+  }
+}
+
+/* Cross-browser icon color consistency */
+.lucide-react, .lucide, [data-lucide] {
+  color: #374151 !important;
+}
+
+/* Force consistent icon colors */
+button svg, button .lucide {
+  color: #374151 !important;
+}
+
+button:hover svg, button:hover .lucide {
+  color: #6b7280 !important;
+}
+
+/* Ensure navbar elements are always visible */
+.navbar-icon {
+  color: #374151 !important;
+}
+
+.navbar-icon:hover {
+  color: #6b7280 !important;
+}
+
+/* Device-agnostic color overrides */
+*[class*="text-gray-"] {
+  color: inherit !important;
+}
+
+/* Specific overrides for common text colors */
+.text-gray-700 {
+  color: #374151 !important;
+}
+
+.text-gray-600 {
+  color: #4b5563 !important;
+}
+
+.text-gray-500 {
+  color: #6b7280 !important;
+}
+
+.text-gray-400 {
+  color: #9ca3af !important;
+}
+
+.text-gray-300 {
+  color: #d1d5db !important;
+}
+
+.text-gray-200 {
+  color: #e5e7eb !important;
+}
+
+.text-gray-100 {
+  color: #f3f4f6 !important;
+}
+
+/* Navbar-specific icon consistency */
+.navbar button svg,
+.navbar button .lucide,
+.navbar .navbar-icon {
+  color: #374151 !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+
+.navbar button:hover svg,
+.navbar button:hover .lucide,
+.navbar button:hover .navbar-icon {
+  color: #6b7280 !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+
+/* Force icon visibility on all devices */
+.lucide-react,
+.lucide,
+[data-lucide],
+svg[class*="lucide"] {
+  color: #374151 !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+
+/* Ensure all icons in buttons are visible */
+button .lucide,
+button svg,
+button [class*="icon"] {
+  color: #374151 !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+
+button:hover .lucide,
+button:hover svg,
+button:hover [class*="icon"] {
+  color: #6b7280 !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+
+/* Device-specific icon overrides */
+@media (max-width: 768px) {
+  .navbar-icon,
+  .lucide,
+  svg[class*="lucide"] {
+    color: #374151 !important;
+    fill: #374151 !important;
+    stroke: #374151 !important;
+  }
+  
+  .navbar-icon:hover,
+  .lucide:hover,
+  svg[class*="lucide"]:hover {
+    color: #6b7280 !important;
+    fill: #6b7280 !important;
+    stroke: #6b7280 !important;
+  }
+}
+
+/* High-DPI display support */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .navbar-icon,
+  .lucide,
+  svg[class*="lucide"] {
+    color: #374151 !important;
+    fill: #374151 !important;
+    stroke: #374151 !important;
+  }
+}
+
+/* Cross-browser compatibility */
+@supports not (backdrop-filter: blur(10px)) {
+  .bg-white\/95 {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+  }
+  
+  .bg-white\/90 {
+    background-color: rgba(255, 255, 255, 0.9) !important;
   }
 }

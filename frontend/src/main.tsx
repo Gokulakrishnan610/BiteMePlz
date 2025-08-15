@@ -5,6 +5,10 @@ import './index.css';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { Toaster } from './components/Toaster';
+import { initDeviceCompatibility } from './utils/deviceCompatibility';
+
+// Initialize device compatibility system
+initDeviceCompatibility();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

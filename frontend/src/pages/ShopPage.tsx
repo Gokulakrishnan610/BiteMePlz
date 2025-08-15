@@ -126,29 +126,14 @@ const ShopPage: React.FC = () => {
     }
   }, [favoritesStorageKey])
   const [showMultiShopNotice, setShowMultiShopNotice] = useState(false)
+  const [multiShopNoticeShown, setMultiShopNoticeShown] = useState(false)
   
 
   
   // Load cart from localStorage on component mount
   useEffect(() => {
     const savedCart = localStorage.getItem("multiShopCart")
-    if (savedCart && id) {
-      try {
-        const parsedCart = JSON.parse(savedCart)
-        setLocalCart(parsedCart)
-
-        // Check if there are items from other shops
-        const hasItemsFromOtherShops = parsedCart.some((item: LocalCartItem) => item.shopId !== id)
-        if (hasItemsFromOtherShops && parsedCart.length > 0) {
-          setShowMultiShopNotice(true)
-          // Auto-hide after 5 seconds
-          setTimeout(() => setShowMultiShopNotice(false), 5000)
-        }
-      } catch (error) {
-        console.error("Error loading cart from localStorage:", error)
-      }
-    } else if (savedCart && !id) {
-      // If no shop ID yet, just load the cart
+    if (savedCart) {
       try {
         const parsedCart = JSON.parse(savedCart)
         setLocalCart(parsedCart)
@@ -156,57 +141,81 @@ const ShopPage: React.FC = () => {
         console.error("Error loading cart from localStorage:", error)
       }
     }
-  }, [id])
+  }, [])
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem("multiShopCart", JSON.stringify(localCart))
   }, [localCart])
 
-  // Check for multi-shop orders whenever cart changes
+  // Check for multi-shop orders and show notice only when appropriate
   useEffect(() => {
-    if (id && localCart.length > 0) {
-      const hasItemsFromOtherShops = localCart.some((item: LocalCartItem) => item.shopId !== id)
-      if (hasItemsFromOtherShops && !showMultiShopNotice) {
-        setShowMultiShopNotice(true)
-        // Auto-hide after 5 seconds
-        setTimeout(() => setShowMultiShopNotice(false), 5000)
-      }
+    if (!id || localCart.length === 0) {
+      setShowMultiShopNotice(false)
+      setMultiShopNoticeShown(false)
+      return
     }
-  }, [localCart, id, showMultiShopNotice])
+
+    const hasItemsFromOtherShops = localCart.some((item: LocalCartItem) => item.shopId !== id)
+    
+    // Only show notice if we haven't shown it yet for this session and there are items from other shops
+    if (hasItemsFromOtherShops && !multiShopNoticeShown) {
+      setShowMultiShopNotice(true)
+      setMultiShopNoticeShown(true)
+      // Auto-hide after 5 seconds
+      const timer = setTimeout(() => setShowMultiShopNotice(false), 5000)
+      return () => clearTimeout(timer)
+    } else if (!hasItemsFromOtherShops) {
+      setShowMultiShopNotice(false)
+      // Reset the shown flag when there are no more items from other shops
+      setMultiShopNoticeShown(false)
+    }
+  }, [localCart, id, multiShopNoticeShown])
+
+  // Reset multi-shop notice state when shop ID changes
+  useEffect(() => {
+    setShowMultiShopNotice(false)
+    setMultiShopNoticeShown(false)
+  }, [id])
 
   // Sync local cart with global cart when global cart changes
   useEffect(() => {
-    if (id && cartItems.length > 0) {
-      // Get items from global cart for current shop
-      const currentShopGlobalItems = cartItems.filter((item) => {
-        const shopId = typeof item.shop_id === 'string' ? item.shop_id : item.shop_id.id
-        return shopId === id
-      })
+    if (!id || cartItems.length === 0) return
 
-      // Update local cart with global cart data for current shop
-      setLocalCart((prev) => {
-        const otherShopItems = prev.filter((item) => item.shopId !== id)
-        const currentShopItems = currentShopGlobalItems.map((item) => ({
-          productId: typeof item.product_id === 'string' ? item.product_id : item.product_id.id,
-          quantity: item.quantity,
-          product: {
-            id: typeof item.product_id === 'string' ? item.product_id : item.product_id.id,
-            name: item.name,
-            description: '', // We don't have description in global cart
-            category: '', // We don't have category in global cart
-            price: item.price,
-            stock: item.stock,
-            image: item.image,
-            is_available: true
-          },
-          shopId: id,
-          shopName: item.shop_name
-        }))
+    // Get items from global cart for current shop
+    const currentShopGlobalItems = cartItems.filter((item) => {
+      const shopId = typeof item.shop_id === 'string' ? item.shop_id : item.shop_id.id
+      return shopId === id
+    })
 
-        return [...otherShopItems, ...currentShopItems]
-      })
-    }
+    // Only update if there are actual changes to prevent infinite loops
+    setLocalCart((prev) => {
+      const otherShopItems = prev.filter((item) => item.shopId !== id)
+      const currentShopItems = currentShopGlobalItems.map((item) => ({
+        productId: typeof item.product_id === 'string' ? item.product_id : item.product_id.id,
+        quantity: item.quantity,
+        product: {
+          id: typeof item.product_id === 'string' ? item.product_id : item.product_id.id,
+          name: item.name,
+          description: '', // We don't have description in global cart
+          category: '', // We don't have category in global cart
+          price: item.price,
+          stock: item.stock,
+          image: item.image,
+          is_available: true
+        },
+        shopId: id,
+        shopName: item.shop_name
+      }))
+
+      const newCart = [...otherShopItems, ...currentShopItems]
+      
+      // Only update if there are actual changes
+      if (JSON.stringify(prev) !== JSON.stringify(newCart)) {
+        return newCart
+      }
+      return prev
+    })
   }, [cartItems, id])
 
   const toggleFavorite = (productId: string) => {
@@ -355,8 +364,6 @@ const ShopPage: React.FC = () => {
         shop_name: shop.name,
       })
     }
-    
-    toast.success("Added to cart")
   }
 
   const handleRemoveFromLocalCart = (productId: string) => {
@@ -574,12 +581,15 @@ const ShopPage: React.FC = () => {
                      You have items from {uniqueShops} shop{uniqueShops > 1 ? "s" : ""} in your cart
                    </p>
                  </div>
-                 <button
-                   onClick={() => setShowMultiShopNotice(false)}
-                   className="text-white/80 hover:text-white flex-shrink-0"
-                 >
-                   <X size={14} />
-                 </button>
+                                   <button
+                    onClick={() => {
+                      setShowMultiShopNotice(false)
+                      setMultiShopNoticeShown(true) // Mark as shown so it won't reappear
+                    }}
+                    className="text-white/80 hover:text-white flex-shrink-0"
+                  >
+                    <X size={14} />
+                  </button>
                </div>
              </CardContent>
            </Card>
@@ -636,43 +646,43 @@ const ShopPage: React.FC = () => {
           </div>
           </div>
 
-        {/* Multi-shop indicator bar */}
-        {uniqueShops > 1 && (
-          <div className="px-3 sm:px-4 pb-2">
-            <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg px-3 py-2">
-              <div className="flex items-center gap-2">
-                <Store size={14} className="text-purple-600 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-purple-800">Multi-Shop Order Active</p>
-                  <p className="text-xs text-purple-600 truncate">
-                    Items from {uniqueShops} shops • Total: ₹{totalCartValue}
-                  </p>
-                </div>
-            <button
-                  onClick={handleGoToCart}
-                  className="text-purple-600 hover:text-purple-800 text-xs font-medium flex-shrink-0"
-            >
-                  View All
-            </button>
-              </div>
-            </div>
-          </div>
-        )}
+                {/* Multi-shop indicator bar */}
+         {uniqueShops > 1 && otherShopsItems.length > 0 && (
+           <div className="px-3 sm:px-4 pb-2">
+             <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg px-3 py-2">
+               <div className="flex items-center gap-2">
+                 <Store size={14} className="text-purple-600 flex-shrink-0" />
+                 <div className="flex-1 min-w-0">
+                   <p className="text-xs font-medium text-purple-800">Multi-Shop Order Active</p>
+                   <p className="text-xs text-purple-600 truncate">
+                     Items from {uniqueShops} shops • Total: ₹{totalCartValue}
+                   </p>
+                 </div>
+             <button
+                   onClick={handleGoToCart}
+                   className="text-purple-600 hover:text-purple-800 text-xs font-medium flex-shrink-0"
+             >
+                   View All
+             </button>
+               </div>
+             </div>
+           </div>
+         )}
           </div>
 
-             {/* Floating Multi-Shop Indicator */}
-       {uniqueShops > 1 && !showMultiShopNotice && (
-         <div className="md:hidden fixed top-36 sm:top-40 right-4 z-30">
-          <button
-            onClick={handleGoToCart}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full px-3 py-2 shadow-lg flex items-center gap-2 animate-pulse"
-          >
-            <Store size={14} />
-            <span className="text-xs font-medium">{uniqueShops} shops</span>
-                         <Badge className="bg-white/20 text-white text-xs px-1.5 py-0.5 rounded-full">{totalCartItems}</Badge>
-          </button>
-        </div>
-      )}
+                           {/* Floating Multi-Shop Indicator */}
+        {uniqueShops > 1 && otherShopsItems.length > 0 && !showMultiShopNotice && (
+          <div className="md:hidden fixed top-36 sm:top-40 right-4 z-30">
+           <button
+             onClick={handleGoToCart}
+             className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full px-3 py-2 shadow-lg flex items-center gap-2 animate-pulse"
+           >
+             <Store size={14} />
+             <span className="text-xs font-medium">{uniqueShops} shops</span>
+                          <Badge className="bg-white/20 text-white text-xs px-1.5 py-0.5 rounded-full">{totalCartItems}</Badge>
+           </button>
+         </div>
+       )}
 
       {/* Restaurant Image & Info */}
             <div className="relative">
@@ -737,19 +747,19 @@ const ShopPage: React.FC = () => {
 
 
 
-      {/* Desktop Floating Multi-Shop Indicator */}
-      {uniqueShops > 1 && !showMultiShopNotice && (
-        <div className="hidden md:block fixed top-40 right-6 z-30">
-          <button
-            onClick={handleGoToCart}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full px-4 py-2 shadow-lg flex items-center gap-2 hover:shadow-xl transition-all duration-200 animate-pulse"
-          >
-            <Store size={16} />
-            <span className="text-sm font-medium">{uniqueShops} shops</span>
-            <Badge className="bg-white/20 text-white text-xs px-2 py-1 rounded-full">{currentShopCartCount}</Badge>
-          </button>
-        </div>
-      )}
+             {/* Desktop Floating Multi-Shop Indicator */}
+       {uniqueShops > 1 && otherShopsItems.length > 0 && !showMultiShopNotice && (
+         <div className="hidden md:block fixed top-40 right-6 z-30">
+           <button
+             onClick={handleGoToCart}
+             className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full px-4 py-2 shadow-lg flex items-center gap-2 hover:shadow-xl transition-all duration-200 animate-pulse"
+           >
+             <Store size={16} />
+             <span className="text-sm font-medium">{uniqueShops} shops</span>
+             <Badge className="bg-white/20 text-white text-xs px-2 py-1 rounded-full">{currentShopCartCount}</Badge>
+           </button>
+         </div>
+       )}
 
       {/* Content */}
       <div className="pt-4 md:pt-4">
