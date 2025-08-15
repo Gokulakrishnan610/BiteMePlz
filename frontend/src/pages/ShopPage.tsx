@@ -677,19 +677,7 @@ const ShopPage: React.FC = () => {
          )}
           </div>
 
-                           {/* Floating Multi-Shop Indicator */}
-        {uniqueShops > 1 && otherShopsItems.length > 0 && !showMultiShopNotice && (
-          <div className="md:hidden fixed top-36 sm:top-40 right-4 z-30">
-           <button
-             onClick={handleGoToCart}
-             className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full px-3 py-2 shadow-lg flex items-center gap-2 animate-pulse"
-           >
-             <Store size={14} />
-             <span className="text-xs font-medium">{uniqueShops} shops</span>
-                          <Badge className="bg-white/20 text-white text-xs px-1.5 py-0.5 rounded-full">{totalCartItems}</Badge>
-           </button>
-         </div>
-       )}
+         
 
       {/* Restaurant Image & Info */}
             <div className="relative">

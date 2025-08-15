@@ -29,7 +29,7 @@ const Footer = () => {
         <div className="font-medium text-foreground/70 flex items-center space-x-2">
           Made with
           <Lottie animationData={HeartAnimation} loop={true} className="w-14 p-0 m-0" />
-          by DEVS
+          by Devs
           <span className={`ml-3 transition-opacity duration-300 ${isVisible ? "opacity-100" : "opacity-0"}`}>
             {currentText}
           </span>
