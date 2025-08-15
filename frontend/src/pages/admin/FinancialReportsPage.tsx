@@ -244,7 +244,7 @@ const FinancialReportsPage: React.FC = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         <div className="card bg-gradient-to-br from-green-500 to-green-600 text-white">
           <div className="p-3 sm:p-4 lg:p-6 flex items-center">
             <DollarSign size={24} className="sm:hidden mr-2 sm:mr-4 flex-shrink-0" />

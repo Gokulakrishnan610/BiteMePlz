@@ -20,6 +20,7 @@ interface Product {
   description: string
   price: number
   stock: number
+  stock_mode: 'stock' | 'live_stock'
   image: string
   shop: string
   category?: string
@@ -72,7 +73,13 @@ const ProductPage: React.FC = () => {
 
   const handleQuantityChange = (value: number) => {
     if (product) {
-      setQuantity(Math.max(1, Math.min(value, product.stock)))
+      if (product.stock_mode === 'live_stock') {
+        // For live stock, no upper limit on quantity
+        setQuantity(Math.max(1, value))
+      } else {
+        // For regular stock, limit by available stock
+        setQuantity(Math.max(1, Math.min(value, product.stock)))
+      }
     }
   }
 
@@ -87,7 +94,7 @@ const ProductPage: React.FC = () => {
       toast.error("Product information is incomplete. Please try again.");
       return;
     }
-    if (product.stock === 0) {
+    if (product.stock_mode === 'stock' && product.stock === 0) {
       toast.error("Product is out of stock")
       return
     }
@@ -248,13 +255,15 @@ const ProductPage: React.FC = () => {
                             : "bg-red-600 hover:bg-red-700 text-white"
                         }
                       >
-                        {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
+                        {product.stock_mode === 'live_stock' 
+                    ? "Livestock - Always Available" 
+                    : (product.stock > 0 ? `${product.stock} in stock` : "Out of stock")}
                       </Badge>
                     </div>
                   </div>
 
                   {/* Quantity Selector */}
-                  {product.stock > 0 && (
+                  {(product.stock_mode === 'live_stock' || product.stock > 0) && (
                     <div className="mb-6">
                       <label className="block text-sm font-medium text-gray-700 mb-3">Quantity</label>
                       <div className="flex items-center bg-gray-100 rounded-lg border border-gray-200 w-fit">
@@ -273,11 +282,11 @@ const ProductPage: React.FC = () => {
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleQuantityChange(Number.parseInt(e.target.value) || 1)}
                           className="w-20 text-center border-0 bg-transparent focus:ring-0 font-semibold"
                           min="1"
-                          max={product.stock}
+                          max={product.stock_mode === 'live_stock' ? undefined : product.stock}
                         />
                         <Button
                           onClick={() => handleQuantityChange(quantity + 1)}
-                          disabled={quantity >= product.stock}
+                          disabled={product.stock_mode === 'stock' && quantity >= product.stock}
                           variant="ghost"
                           size="sm"
                           className="p-3 hover:bg-gray-200 rounded-r-lg"
@@ -291,19 +300,19 @@ const ProductPage: React.FC = () => {
                   {/* Add to Cart Button */}
                   <Button
                     onClick={handleAddToCart}
-                    disabled={product.stock === 0}
+                    disabled={product.stock_mode === 'stock' && product.stock === 0}
                     className={`w-full py-4 text-lg ${
-                      product.stock === 0
+                      product.stock_mode === 'stock' && product.stock === 0
                         ? "bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300"
                         : "bg-purple-600 hover:bg-purple-700 text-white"
                     }`}
                   >
                     <ShoppingCart size={20} className="mr-2" />
-                    {product.stock === 0 ? "Out of Stock" : `Add ${quantity} to Cart`}
+                    {product.stock_mode === 'stock' && product.stock === 0 ? "Out of Stock" : `Add ${quantity} to Cart`}
                   </Button>
 
                   {/* Total Price Display */}
-                  {product.stock > 0 && quantity > 1 && (
+                  {(product.stock_mode === 'live_stock' || product.stock > 0) && quantity > 1 && (
                     <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
                       <div className="flex justify-between items-center">
                         <span className="text-purple-700 font-medium">Total ({quantity} items):</span>

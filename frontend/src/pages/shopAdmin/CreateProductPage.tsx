@@ -16,6 +16,7 @@ const CreateProductPage: React.FC = () => {
     description: '',
     price: '',
     stock: '',
+    stock_mode: 'stock',
     image: '',
     category: 'others',
   });
@@ -29,26 +30,33 @@ const CreateProductPage: React.FC = () => {
 
     try {
       // Validate required fields
-      if (!formData.name.trim() || !formData.description.trim() || !formData.price || !formData.stock || !formData.category) {
+      if (!formData.name.trim() || !formData.description.trim() || !formData.price || !formData.category) {
         toast.error('Please fill in all required fields');
         setLoading(false);
         return;
       }
 
-      // Validate price and stock
+      // Validate price
       const price = Number(formData.price);
-      const stock = Number(formData.stock);
-      
       if (price <= 0) {
         toast.error('Price must be greater than 0');
         setLoading(false);
         return;
       }
       
-      if (stock < 0) {
-        toast.error('Stock cannot be negative');
-        setLoading(false);
-        return;
+      // Validate stock based on stock mode
+      if (formData.stock_mode === 'stock') {
+        if (!formData.stock) {
+          toast.error('Stock quantity is required for regular stock products');
+          setLoading(false);
+          return;
+        }
+        const stock = Number(formData.stock);
+        if (stock < 0) {
+          toast.error('Stock cannot be negative');
+          setLoading(false);
+          return;
+        }
       }
 
       // Validate shop_id
@@ -66,7 +74,8 @@ const CreateProductPage: React.FC = () => {
         name: formData.name.trim(),
         description: formData.description.trim(),
         price: price,
-        stock: stock,
+        stock: formData.stock_mode === 'stock' ? Number(formData.stock) : 0,
+        stock_mode: formData.stock_mode,
         image: formData.image || '',
         shop_id: effectiveShopId,
         category: formData.category,
@@ -201,22 +210,45 @@ const CreateProductPage: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
-                Stock *
+                Stock Mode *
               </label>
-              <input
-                type="number"
-                name="stock"
-                value={formData.stock}
+              <select
+                name="stock_mode"
+                value={formData.stock_mode}
                 onChange={handleChange}
                 className="input"
-                min="0"
                 required
-                placeholder="Enter stock quantity (e.g., 50)"
-              />
+              >
+                <option value="stock">Stock</option>
+                <option value="live_stock">Live Stock</option>
+              </select>
               <p className="text-xs text-[var(--muted-text)] mt-1">
-                Available quantity in stock
+                {formData.stock_mode === 'stock' 
+                  ? 'Regular stock with quantity limits' 
+                  : 'Live stock with no quantity limits'}
               </p>
             </div>
+
+            {formData.stock_mode === 'stock' && (
+              <div>
+                <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
+                  Stock Quantity *
+                </label>
+                <input
+                  type="number"
+                  name="stock"
+                  value={formData.stock}
+                  onChange={handleChange}
+                  className="input"
+                  min="0"
+                  required
+                  placeholder="Enter stock quantity (e.g., 50)"
+                />
+                <p className="text-xs text-[var(--muted-text)] mt-1">
+                  Available quantity in stock
+                </p>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">

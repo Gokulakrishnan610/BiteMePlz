@@ -93,7 +93,7 @@ const UsersPage: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         <div className="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
           <div className="p-3 sm:p-4 lg:p-6 flex items-center">
             <Users size={24} className="sm:hidden mr-2 sm:mr-4 flex-shrink-0" />

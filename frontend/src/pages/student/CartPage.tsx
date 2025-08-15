@@ -532,7 +532,9 @@ const CartPage: React.FC = () => {
                             <div className="ml-4 flex-1 min-w-0">
                               <h4 className="font-semibold text-gray-900 text-base truncate">{item.name}</h4>
                               <p className="text-purple-600 font-semibold text-lg">₹{item.price}</p>
-                              <p className="text-gray-500 text-sm">Stock: {item.stock} available</p>
+                              <p className="text-gray-500 text-sm">
+                                {item.stock_mode === 'live_stock' ? 'Livestock' : `Stock: ${item.stock} available`}
+                              </p>
                             </div>
                           </div>
 
@@ -560,7 +562,7 @@ const CartPage: React.FC = () => {
                                 }}
                                 className="p-1.5 sm:p-2 hover:bg-gray-200 transition-colors rounded-r-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Increase quantity"
-                                disabled={item.quantity >= item.stock}
+                                disabled={item.stock_mode === 'stock' && item.quantity >= item.stock}
                               >
                                 <Plus size={16} className="text-gray-600" />
                               </button>

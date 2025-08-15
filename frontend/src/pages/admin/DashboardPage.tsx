@@ -347,7 +347,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ setMaintenanceMode }) => 
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
           <div className="bg-[var(--card)] p-3 sm:p-4 lg:p-6 rounded-lg shadow-sm">
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">

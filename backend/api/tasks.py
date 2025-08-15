@@ -40,8 +40,11 @@ def expire_orders_and_handle_refund():
                         continue
                     try:
                         p = Product.objects.select_for_update().get(id=product_id)
-                        p.stock = p.stock + qty
-                        p.save()
+                        # Only restock regular stock products, not live stock products
+                        if p.stock_mode == 'stock':
+                            p.stock = p.stock + qty
+                            p.save()
+                        # For live stock products, no restocking needed
                     except Product.DoesNotExist:
                         # If product gone, skip restock
                         pass
@@ -127,23 +130,26 @@ def expire_orders_and_handle_refund():
                         continue
                     try:
                         p = Product.objects.select_for_update().get(id=pid)
-                        p.stock = p.stock + qty
-                        p.save()
-                        # Broadcast stock update if channels present
-                        if _channels_available:
-                            try:
-                                channel_layer = get_channel_layer()
-                                async_to_sync(channel_layer.group_send)(
-                                    'stock_updates',
-                                    {
-                                        'type': 'stock_update',
-                                        'product_id': str(p.id),
-                                        'shop_id': str(p.shop.id),
-                                        'stock': int(p.stock),
-                                    },
-                                )
-                            except Exception:
-                                pass
+                        # Only restock regular stock products, not live stock products
+                        if p.stock_mode == 'stock':
+                            p.stock = p.stock + qty
+                            p.save()
+                            # Broadcast stock update if channels present
+                            if _channels_available:
+                                try:
+                                    channel_layer = get_channel_layer()
+                                    async_to_sync(channel_layer.group_send)(
+                                        'stock_updates',
+                                        {
+                                            'type': 'stock_update',
+                                            'product_id': str(p.id),
+                                            'shop_id': str(p.shop.id),
+                                            'stock': int(p.stock),
+                                        },
+                                    )
+                                except Exception:
+                                    pass
+                        # For live stock products, no restocking needed
                     except Product.DoesNotExist:
                         pass
             except Exception:

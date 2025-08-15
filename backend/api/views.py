@@ -1936,8 +1936,11 @@ class OrderViewSet(viewsets.ModelViewSet):
                         continue
                     try:
                         p = _Product.objects.select_for_update().get(id=pid)
-                        p.stock = p.stock + qty
-                        p.save()
+                        # Only restock regular stock products, not live stock products
+                        if p.stock_mode == 'stock':
+                            p.stock = p.stock + qty
+                            p.save()
+                        # For live stock products, no restocking needed
                     except _Product.DoesNotExist:
                         pass
             except Exception:

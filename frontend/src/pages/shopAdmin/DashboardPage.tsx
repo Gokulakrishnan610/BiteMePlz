@@ -484,7 +484,7 @@ const DashboardPage: React.FC = () => {
             <h3 className="text-xl font-semibold text-[var(--primary-text)]">Top Selling Products</h3>
           </div>
           <div className="card-body">
-            <div className="enhanced-table">
+            <div className="enhanced-table overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr>

@@ -119,11 +119,17 @@ class Product(models.Model):
         ('others', 'Others'),
     ]
     
+    STOCK_MODE_CHOICES = [
+        ('stock', 'Stock'),
+        ('live_stock', 'Live Stock'),
+    ]
+    
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     stock = models.IntegerField(default=0)
+    stock_mode = models.CharField(max_length=20, choices=STOCK_MODE_CHOICES, default='stock')
     image = models.CharField(max_length=500, blank=True, null=True)  # Changed to CharField to store image path
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='others')
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='products')
@@ -145,6 +151,7 @@ class Product(models.Model):
             'description': self.description,
             'price': float(self.price),
             'stock': self.stock,
+            'stock_mode': self.stock_mode,
             'image': self.image,
             'category': self.category,
             'shop': str(self.shop.id),

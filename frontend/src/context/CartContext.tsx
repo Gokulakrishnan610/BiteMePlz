@@ -9,6 +9,7 @@ export interface CartItem {
   price: number;
   quantity: number;
   stock: number;
+  stock_mode: 'stock' | 'live_stock';
   shop_id: string | { id: string };
   shop_name: string;
 }
@@ -64,7 +65,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCartItems(
         cartItems.map(i =>
           i.product_id === item.product_id && i.shop_id === item.shop_id
-            ? { ...i, quantity: Math.min(i.quantity + item.quantity, i.stock) }
+            ? { ...i, quantity: item.stock_mode === 'live_stock' ? i.quantity + item.quantity : Math.min(i.quantity + item.quantity, i.stock) }
             : i
         )
       );
@@ -86,7 +87,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCartItems(
       cartItems.map(item =>
         item.product_id === productId && item.shop_id === shop_id
-          ? { ...item, quantity: Math.min(quantity, item.stock) }
+          ? { ...item, quantity: item.stock_mode === 'live_stock' ? quantity : Math.min(quantity, item.stock) }
           : item
       )
     );

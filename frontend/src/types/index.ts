@@ -35,6 +35,7 @@ export interface Product {
   category: string; // Added missing category field
   price: number;
   stock: number;
+  stock_mode: 'stock' | 'live_stock';
   image: string;
   shop: string;
   is_available: boolean;

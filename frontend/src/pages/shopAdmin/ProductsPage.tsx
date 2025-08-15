@@ -28,8 +28,12 @@ const ProductsPage: React.FC = () => {
         }
         
         const { data } = await api.get(`/api/products/?shop=${effectiveShopId}`);
-        // Handle paginated response
-        setProducts(data.results || data);
+        // Handle paginated response and add backward compatibility for stock_mode
+        const productsData = data.results || data;
+        setProducts(productsData.map((product: Product) => ({
+          ...product,
+          stock_mode: product.stock_mode || 'stock' // Default to 'stock' for backward compatibility
+        })));
         setLoading(false);
       } catch (error: any) {
         console.error('Error fetching products:', error);
@@ -175,9 +179,10 @@ const ProductsPage: React.FC = () => {
                   <td className="py-2 px-2 text-sm">₹{product.price}</td>
                   <td className="py-2 px-2">
                     <span className={`text-sm ${
+                      product.stock_mode === 'live_stock' ? 'text-[var(--primary)]' :
                       product.stock === 0 ? 'text-[var(--error)]' : 'text-[var(--success)]'
                     }`}>
-                      {product.stock}
+                      {product.stock_mode === 'live_stock' ? 'Livestock' : product.stock}
                     </span>
                   </td>
                   <td className="py-2 px-2">

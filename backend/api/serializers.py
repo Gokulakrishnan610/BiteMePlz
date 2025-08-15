@@ -89,7 +89,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'description', 'price', 'stock', 'image', 'category', 'shop', 'shop_id', 
+        fields = ['id', 'name', 'description', 'price', 'stock', 'stock_mode', 'image', 'category', 'shop', 'shop_id', 
                  'is_available', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
@@ -244,14 +244,19 @@ class OrderSerializer(serializers.ModelSerializer):
                 except Product.DoesNotExist:
                     raise serializers.ValidationError(f"Product with ID {product_id} does not exist.")
 
-                if product.stock < quantity:
-                    raise serializers.ValidationError(f"Not enough stock for product {product.name}. Available: {product.stock}, Requested: {quantity}")
+                # Check stock only for regular stock products, not for live stock
+                if product.stock_mode == 'stock':
+                    if product.stock < quantity:
+                        raise serializers.ValidationError(f"Not enough stock for product {product.name}. Available: {product.stock}, Requested: {quantity}")
 
-                # Safe in-DB decrement to avoid race conditions
-                updated = Product.objects.filter(id=product.id, stock__gte=quantity).update(stock=F('stock') - quantity)
-                if updated != 1:
-                    raise serializers.ValidationError(f"Not enough stock for product {product.name}.")
-                print(f"OrderSerializer create - product stock updated for {product.name}. New stock: {product.stock - quantity}")
+                    # Safe in-DB decrement to avoid race conditions
+                    updated = Product.objects.filter(id=product.id, stock__gte=quantity).update(stock=F('stock') - quantity)
+                    if updated != 1:
+                        raise serializers.ValidationError(f"Not enough stock for product {product.name}.")
+                    print(f"OrderSerializer create - product stock updated for {product.name}. New stock: {product.stock - quantity}")
+                else:
+                    # For live stock products, no stock deduction needed
+                    print(f"OrderSerializer create - live stock product {product.name}, no stock deduction needed")
 
                 # Add product details to the order item for storage in JSONField
                 incoming_price = item_data.get('price')
@@ -417,14 +422,19 @@ class MultiShopOrderSerializer(serializers.ModelSerializer):
                 except Product.DoesNotExist:
                     raise serializers.ValidationError(f"Product with ID {product_id} does not exist.")
 
-                if product.stock < quantity:
-                    raise serializers.ValidationError(f"Not enough stock for product {product.name}. Available: {product.stock}, Requested: {quantity}")
+                # Check stock only for regular stock products, not for live stock
+                if product.stock_mode == 'stock':
+                    if product.stock < quantity:
+                        raise serializers.ValidationError(f"Not enough stock for product {product.name}. Available: {product.stock}, Requested: {quantity}")
 
-                # Safe in-DB decrement to avoid race conditions
-                updated = Product.objects.filter(id=product.id, stock__gte=quantity).update(stock=F('stock') - quantity)
-                if updated != 1:
-                    raise serializers.ValidationError(f"Not enough stock for product {product.name}.")
-                print(f"MultiShopOrderSerializer create - product stock updated for {product.name}. New stock: {product.stock - quantity}")
+                    # Safe in-DB decrement to avoid race conditions
+                    updated = Product.objects.filter(id=product.id, stock__gte=quantity).update(stock=F('stock') - quantity)
+                    if updated != 1:
+                        raise serializers.ValidationError(f"Not enough stock for product {product.name}.")
+                    print(f"MultiShopOrderSerializer create - product stock updated for {product.name}. New stock: {product.stock - quantity}")
+                else:
+                    # For live stock products, no stock deduction needed
+                    print(f"MultiShopOrderSerializer create - live stock product {product.name}, no stock deduction needed")
 
                 # Add product details to the order item for storage in JSONField
                 incoming_price = item_data.get('price')

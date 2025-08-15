@@ -14,6 +14,7 @@ interface ProductFormData {
   category: string;
   price: number;
   stock: number;
+  stock_mode: 'stock' | 'live_stock';
   image: string;
   is_available: boolean;
 
@@ -33,6 +34,7 @@ const EditProductPage: React.FC = () => {
     category: 'others',
     price: 0,
     stock: 0,
+    stock_mode: 'stock',
     image: '',
     is_available: true
   });
@@ -68,6 +70,7 @@ const EditProductPage: React.FC = () => {
           category: finalCategory,
           price: data.price || 0,
           stock: data.stock || 0,
+          stock_mode: data.stock_mode || 'stock',
           image: data.image || '',
           is_available: data.is_available !== undefined ? data.is_available : true,
 
@@ -109,6 +112,7 @@ const EditProductPage: React.FC = () => {
         category: formData.category.toLowerCase().trim(), // Ensure lowercase
         price: Number(formData.price),
         stock: Number(formData.stock),
+        stock_mode: formData.stock_mode,
         image: formData.image,
         is_available: formData.is_available,
         shop_id: effectiveShopId // Include shop_id from effective shop
@@ -257,19 +261,43 @@ const EditProductPage: React.FC = () => {
               />
             </div>
 
+            {formData.stock_mode === 'stock' && (
+              <div>
+                <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
+                  Stock Quantity *
+                </label>
+                <input
+                  type="number"
+                  name="stock"
+                  value={formData.stock}
+                  onChange={handleChange}
+                  className="input"
+                  min="0"
+                  required
+                />
+                <p className="text-xs text-[var(--muted-text)] mt-1">
+                  Available quantity in stock
+                </p>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-[var(--secondary-text)] mb-1">
-                Stock *
+                Stock Mode *
               </label>
-              <input
-                type="number"
-                name="stock"
-                value={formData.stock}
+              <select
+                name="stock_mode"
+                value={formData.stock_mode}
                 onChange={handleChange}
                 className="input"
-                min="0"
                 required
-              />
+              >
+                <option value="stock">Stock</option>
+                <option value="live_stock">Live Stock</option>
+              </select>
+              <p className="text-xs text-[var(--muted-text)] mt-1">
+                Current: {formData.stock_mode === 'stock' ? 'Stock' : 'Live Stock'}
+              </p>
             </div>
 
             <div>

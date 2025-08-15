@@ -576,7 +576,7 @@ const StudentAnalyticsPage: React.FC = () => {
                   <h3 className="text-xl font-semibold mb-4">Abandonment Analysis</h3>
                   {advancedInsights.abandonmentAnalysis?.map((analysis, index) => (
                     <div key={index} className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="p-3 bg-blue-50 rounded">
                           <p className="text-sm text-blue-600">Total Sessions</p>
                           <p className="text-2xl font-bold text-blue-800">{analysis.totalSessions}</p>

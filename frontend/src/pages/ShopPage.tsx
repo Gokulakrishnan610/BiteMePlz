@@ -39,6 +39,7 @@ interface Product {
   category: string
   price: number
   stock: number
+  stock_mode: 'stock' | 'live_stock'
   image: string
   is_available: boolean
 }
@@ -201,6 +202,7 @@ const ShopPage: React.FC = () => {
           category: '', // We don't have category in global cart
           price: item.price,
           stock: item.stock,
+          stock_mode: 'stock' as const, // Default to stock mode for global cart items
           image: item.image,
           is_available: true
         },
@@ -249,7 +251,10 @@ const ShopPage: React.FC = () => {
 
         setShop(shopResponse.data)
         const allProducts = productsResponse.data.results || []
-        setProducts(allProducts.filter((product: Product) => product.is_available))
+        setProducts(allProducts.filter((product: Product) => product.is_available).map((product: Product) => ({
+          ...product,
+          stock_mode: product.stock_mode || 'stock' // Default to 'stock' for backward compatibility
+        })))
         // setAllShops(allShopsResponse.data.results || [])
         setLoading(false)
       } catch (err) {
@@ -308,7 +313,7 @@ const ShopPage: React.FC = () => {
       toast.error("Shop is no longer accepting orders for today")
       return
     }
-    if (product.stock === 0) {
+    if (product.stock_mode === 'stock' && product.stock === 0) {
       toast.error("Product is out of stock")
       return
     }
@@ -318,7 +323,7 @@ const ShopPage: React.FC = () => {
       const existing = prev.find((item) => item.productId === product.id)
       if (existing) {
         return prev.map((item) =>
-          item.productId === product.id ? { ...item, quantity: Math.min(item.quantity + 1, product.stock) } : item,
+          item.productId === product.id ? { ...item, quantity: product.stock_mode === 'live_stock' ? item.quantity + 1 : Math.min(item.quantity + 1, product.stock) } : item,
         )
       } else {
                   return [
@@ -348,7 +353,7 @@ const ShopPage: React.FC = () => {
     
     if (existingGlobalItem) {
       // Update quantity in global cart
-      const newQuantity = Math.min(existingGlobalItem.quantity + 1, product.stock)
+      const newQuantity = product.stock_mode === 'live_stock' ? existingGlobalItem.quantity + 1 : Math.min(existingGlobalItem.quantity + 1, product.stock)
       updateQuantity(product.id, shop.id, newQuantity)
     } else {
       // Add new item to global cart
@@ -360,6 +365,7 @@ const ShopPage: React.FC = () => {
         price: product.price,
         quantity: 1,
         stock: product.stock,
+        stock_mode: product.stock_mode,
         shop_id: shop.id,
         shop_name: shop.name,
       })
@@ -409,7 +415,7 @@ const ShopPage: React.FC = () => {
   const validCategories = useMemo(
     () =>
       products
-        .filter((product) => product.is_available && product.stock > 0)
+        .filter((product) => product.is_available && (product.stock_mode === 'live_stock' || product.stock > 0))
         .map((product) => product.category)
         .filter((category) => category && typeof category === "string")
         .filter((category) => !disabledCategories.includes(category as string)),
@@ -501,6 +507,7 @@ const ShopPage: React.FC = () => {
             category: '', // We don't have category in global cart
             price: globalItem.price,
             stock: globalItem.stock,
+            stock_mode: 'stock' as const, // Default to stock mode for global cart items
             image: globalItem.image,
             is_available: true
           },
@@ -848,7 +855,7 @@ const ShopPage: React.FC = () => {
                                    </span>
                                    <button
                                      onClick={() => handleAddToLocalCart(product)}
-                                     disabled={quantity >= product.stock}
+                                     disabled={product.stock_mode === 'stock' && quantity >= product.stock}
                                      className="text-white disabled:opacity-50"
                                    >
                                      <Plus size={14} />
@@ -857,8 +864,8 @@ const ShopPage: React.FC = () => {
                                ) : (
                                  <Button
                                    onClick={() => handleAddToLocalCart(product)}
-                                   disabled={product.stock === 0 || !shopAcceptingOrders}
-                                   className="bg-purple-600 hover:bg-purple-700 text-white px-3 sm:px-4 py-1 sm:py-1.5 rounded-lg font-semibold text-xs sm:text-sm h-7 sm:h-8 transform-none active:transform-none hover:transform-none"
+                                   disabled={(product.stock_mode === 'stock' && product.stock === 0) || !shopAcceptingOrders}
+                                   className="bg-purple-600 hover:bg-purple-700 text-white px-3 sm:px-4 py-1 sm:px-4 py-1 sm:py-1.5 rounded-lg font-semibold text-xs sm:text-sm h-7 sm:h-8 transform-none active:transform-none hover:transform-none"
                                  >
                                    ADD
                       </Button>
@@ -909,7 +916,7 @@ const ShopPage: React.FC = () => {
                            <div className="flex items-center justify-between mb-2">
                              <span className="text-sm font-bold text-purple-600">₹{product.price}</span>
                              <Badge variant="outline" className="text-xs">
-                               {product.stock} left
+                               {product.stock_mode === 'live_stock' ? 'Live Stock' : `${product.stock} left`}
                     </Badge>
                            </div>
 
@@ -921,7 +928,7 @@ const ShopPage: React.FC = () => {
                                <span className="text-white font-semibold text-sm">{quantity}</span>
                                <button
                                  onClick={() => handleAddToLocalCart(product)}
-                                 disabled={quantity >= product.stock}
+                                 disabled={product.stock_mode === 'stock' && quantity >= product.stock}
                                  className="text-white disabled:opacity-50"
                                >
                                  <Plus size={14} />
@@ -930,11 +937,11 @@ const ShopPage: React.FC = () => {
                            ) : (
                       <Button
                                onClick={() => handleAddToLocalCart(product)}
-                               disabled={product.stock === 0 || !shopAcceptingOrders}
+                               disabled={(product.stock_mode === 'stock' && product.stock === 0) || !shopAcceptingOrders}
                                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-1.5 text-sm"
                         size="sm"
                       >
-                               {product.stock === 0 ? "Out of Stock" : "ADD"}
+                               {(product.stock_mode === 'stock' && product.stock === 0) ? "Out of Stock" : "ADD"}
                       </Button>
                     )}
                          </div>
