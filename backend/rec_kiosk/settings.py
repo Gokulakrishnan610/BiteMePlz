@@ -105,7 +105,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files
-MEDIA_URL = 'https://rec-kiosk-media.onrender.com/'
+MEDIA_URL = '/media/' if DEBUG else 'https://rec-kiosk-media.onrender.com/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 os.makedirs(os.path.join(MEDIA_ROOT, 'uploads'), exist_ok=True)
 os.makedirs(os.path.join(MEDIA_ROOT, 'shops'), exist_ok=True)

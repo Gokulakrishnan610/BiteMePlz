@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['logo.png'],
       manifest: {
         name: 'REC Kiosk',
         short_name: 'Kiosk',
@@ -24,49 +24,49 @@ export default defineConfig({
         dir: 'ltr',
         icons: [
           {
-            src: '/images/rec college.png',
+            src: 'images/logo.png',
             sizes: '72x72',
             type: 'image/png',
             purpose: 'any',
           },
           {
-            src: '/images/rec college.png',
+            src: 'images/logo.png',
             sizes: '96x96',
             type: 'image/png',
             purpose: 'any',
           },
           {
-            src: '/images/rec college.png',
+            src: 'images/logo.png',
             sizes: '128x128',
             type: 'image/png',
             purpose: 'any',
           },
           {
-            src: '/images/rec college.png',
+            src: 'images/logo.png',
             sizes: '144x144',
             type: 'image/png',
             purpose: 'any',
           },
           {
-            src: '/images/rec college.png',
+            src: 'images/logo.png',
             sizes: '152x152',
             type: 'image/png',
             purpose: 'any',
           },
           {
-            src: '/images/rec college.png',
+            src: 'images/logo.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any maskable',
           },
           {
-            src: '/images/rec college.png',
+            src: 'images/logo.png',
             sizes: '384x384',
             type: 'image/png',
             purpose: 'any',
           },
           {
-            src: '/images/rec college.png',
+            src: 'images/logo.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable',
@@ -74,14 +74,14 @@ export default defineConfig({
         ],
         screenshots: [
           {
-            src: '/images/rec college.png',
+            src: '/images/logo.png',
             sizes: '1280x720',
             type: 'image/png',
             form_factor: 'wide',
             label: 'REC Kiosk Desktop View',
           },
           {
-            src: '/images/rec college.png',
+            src: '/images/logo.png',
             sizes: '750x1334',
             type: 'image/png',
             form_factor: 'narrow',
@@ -145,10 +145,7 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/media': {
-        target:
-          process.env.NODE_ENV === 'production'
-            ? 'https://rec-kiosk-media.onrender.com'
-            : 'http://localhost:8000',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
     },

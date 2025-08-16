@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { Upload, X, Image as ImageIcon, AlertTriangle, Link as LinkIcon, FileImage } from 'lucide-react';
 import api from '../api';
 import { toast } from 'sonner';
-import { MEDIA_BASE_URL } from '../lib/utils';
+import { getMediaUrl } from '../lib/utils';
 
 interface ImageUploadProps {
   onImageUpload: (imagePath: string) => void;
@@ -111,9 +111,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       const formData = new FormData();
       formData.append('image', file);
       const { data } = await api.post('/api/upload/single/', formData, { timeout: 30000 });
-      const imageUrl = data.filePath.startsWith("http")
-        ? data.filePath
-        : MEDIA_BASE_URL + data.filePath.replace(/^\/media/, "");
+      const imageUrl = getMediaUrl(data.filePath);
       setPreview(imageUrl);
       onImageUpload(imageUrl);
       toast.success('Image uploaded successfully! 🎉', {
@@ -222,7 +220,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               preview
                 ? preview.startsWith('http')
                   ? preview
-                  : MEDIA_BASE_URL + preview
+                  : getMediaUrl(preview)
                 : ""
             } alt="Preview" className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105" />
             <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300" />

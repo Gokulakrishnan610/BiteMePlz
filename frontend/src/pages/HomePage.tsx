@@ -11,7 +11,7 @@ import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import Navbar from "../components/Navbar"
 // import SimpleLoading from "../components/SimpleLoading"
-import { MEDIA_BASE_URL } from "../lib/utils";
+import { getMediaUrl } from "../lib/utils";
 
 interface Shop {
   id: string
@@ -431,9 +431,7 @@ const HomePage: React.FC = () => {
                           <img
                             src={
                               shop.image
-                                ? shop.image.startsWith("http")
-                                  ? shop.image
-                                  : MEDIA_BASE_URL + shop.image
+                                ? getMediaUrl(shop.image)
                                 : "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"
                             }
                             alt={shop.name}
@@ -574,11 +572,11 @@ const HomePage: React.FC = () => {
                           key={shop.id}
                           to={isOpen ? `/shop/${shop.id}` : "#"}
                           onClick={() => isOpen && handleShopClick(shop.id)}
-                          className={isOpen ? "" : "pointer-events-none opacity-60"}
+                          className={`${isOpen ? "" : "pointer-events-none opacity-60"} h-full block`}
                         >
-                          <Card className="overflow-hidden hover:shadow-lg transition-all duration-200 border-0 shadow-md">
-                            <div className="flex">
-                              <div className="relative w-32 h-32 flex-shrink-0">
+                          <Card className="overflow-hidden hover:shadow-lg transition-all duration-200 border-0 shadow-md h-full">
+                            <div className="flex h-full">
+                              <div className="relative w-32 flex-shrink-0 h-full">
                                 <img
                                   src={shop.image || "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"}
                                   alt={shop.name}

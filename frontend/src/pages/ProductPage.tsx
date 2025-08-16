@@ -13,7 +13,7 @@ import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import Navbar from "../components/Navbar"
-import { MEDIA_BASE_URL } from "../lib/utils";
+import { getMediaUrl } from "../lib/utils";
 
 interface Product {
   id: string
@@ -192,7 +192,7 @@ const ProductPage: React.FC = () => {
                     product.image
                       ? product.image.startsWith("http")
                         ? product.image
-                        : MEDIA_BASE_URL + product.image
+                        : getMediaUrl(product.image)
                       : "https://images.pexels.com/photos/1667088/pexels-photo-1667088.jpeg"
                   }
                   alt={product.name}

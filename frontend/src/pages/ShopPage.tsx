@@ -30,7 +30,7 @@ import api from "../api"
 import { useCart } from "../context/CartContext"
 import { useAuth } from "../context/AuthContext"
 import { toast } from 'sonner'
-import { MEDIA_BASE_URL } from "../lib/utils";
+import { getMediaUrl } from "../lib/utils";
 // no-op alias imports removed
 
 interface Product {
@@ -831,7 +831,7 @@ const ShopPage: React.FC = () => {
                                   product.image
                                     ? product.image.startsWith("http")
                                       ? product.image
-                                      : MEDIA_BASE_URL + product.image
+                                      : getMediaUrl(product.image)
                                     : "/placeholder.svg"
                                 }
                                 alt={product.name}
