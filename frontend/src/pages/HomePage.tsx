@@ -11,6 +11,7 @@ import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import Navbar from "../components/Navbar"
 // import SimpleLoading from "../components/SimpleLoading"
+import { MEDIA_BASE_URL } from "../lib/utils";
 
 interface Shop {
   id: string
@@ -169,7 +170,28 @@ const HomePage: React.FC = () => {
       setIsFiltering(true)
       let filtered = shops
 
-      if (selectedCategory !== "All") {
+      // If searching for a product by name
+      if (searchQuery) {
+        try {
+          const { data } = await api.get("/api/products/", {
+            params: {
+              name: searchQuery, // Assuming backend supports filtering by name
+              is_available: true,
+              stock__gt: 0,
+            },
+          })
+          const products = data.results || data
+          // Extract unique shop IDs from products
+          const shopIdsWithProduct = new Set(
+            products.map((product: Product) => (product.shop && (product.shop as any).id) || product.shop)
+          )
+          // Filter shops that have the product
+          filtered = shops.filter((shop) => shopIdsWithProduct.has(shop.id))
+        } catch (error) {
+          // fallback: no shops if error
+          filtered = []
+        }
+      } else if (selectedCategory !== "All") {
         try {
           const { data } = await api.get("/api/products/", {
             params: {
@@ -180,25 +202,22 @@ const HomePage: React.FC = () => {
           })
           const products = data.results || data
           const shopIdsWithCategory = new Set(
-            products.map((product: Product) => (product.shop && (product.shop as any).id) || product.shop),
+            products.map((product: Product) => (product.shop && (product.shop as any).id) || product.shop)
           )
           // Exclude shops that have disabled this category
           filtered = shops
             .filter((shop) => shopIdsWithCategory.has(shop.id))
             .filter((shop) => !((shop.disabled_categories || []).includes(selectedCategory.toLowerCase())))
-                 } catch (error) {
-           filtered = shops.filter((shop) => {
-             return shop.category === selectedCategory || shop.category === selectedCategory.toLowerCase()
-           })
-         }
+        } catch (error) {
+          filtered = shops.filter((shop) => {
+            return shop.category === selectedCategory || shop.category === selectedCategory.toLowerCase()
+          })
+        }
       }
 
-      if (searchQuery) {
-        filtered = filtered.filter(
-          (shop) =>
-            shop.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            shop.description.toLowerCase().includes(searchQuery.toLowerCase()),
-        )
+      // If not searching for a product, still allow filtering by shop name/description
+      if (!searchQuery && (selectedCategory === "All")) {
+        filtered = shops
       }
 
       setFilteredShops(filtered)
@@ -209,10 +228,14 @@ const HomePage: React.FC = () => {
 
   const deferredSearch = useDeferredValue(searchQuery)
   const displayedShops = useMemo(() => {
+    // If searching for products, show all shops that have the product (no additional filtering)
+    if (searchQuery) return filteredShops
+    
+    // If not searching for products, apply shop name/description filtering
     if (!deferredSearch) return filteredShops
     const q = deferredSearch.toLowerCase()
     return filteredShops.filter((s) => s.name.toLowerCase().includes(q) || s.description.toLowerCase().includes(q))
-  }, [filteredShops, deferredSearch])
+  }, [filteredShops, deferredSearch, searchQuery])
 
   useEffect(() => {
     if (loading) return
@@ -407,9 +430,12 @@ const HomePage: React.FC = () => {
                         <div className="relative aspect-[4/3] overflow-hidden flex-shrink-0">
                           <img
                             src={
-                              shop.image ||
-                              "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"
-                             || "/placeholder.svg"}
+                              shop.image
+                                ? shop.image.startsWith("http")
+                                  ? shop.image
+                                  : MEDIA_BASE_URL + shop.image
+                                : "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"
+                            }
                             alt={shop.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                           />

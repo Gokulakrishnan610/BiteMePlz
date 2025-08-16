@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { Upload, X, Image as ImageIcon, AlertTriangle, Link as LinkIcon, FileImage } from 'lucide-react';
 import api from '../api';
 import { toast } from 'sonner';
+import { MEDIA_BASE_URL } from '../lib/utils';
 
 interface ImageUploadProps {
   onImageUpload: (imagePath: string) => void;
@@ -105,22 +106,25 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
     try {
       setUploading(true);
-      const reader = new FileReader();
-      reader.onload = (e) => setPreview(e.target?.result as string);
-      reader.readAsDataURL(file);
+      setPreview(""); // Clear preview while uploading
 
       const formData = new FormData();
       formData.append('image', file);
       const { data } = await api.post('/api/upload/single/', formData, { timeout: 30000 });
-      onImageUpload(data.filePath);
+      const imageUrl = data.filePath.startsWith("http")
+        ? data.filePath
+        : MEDIA_BASE_URL + data.filePath.replace(/^\/media/, "");
+      setPreview(imageUrl);
+      onImageUpload(imageUrl);
       toast.success('Image uploaded successfully! 🎉', {
         style: { background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#166534' },
       });
     } catch (error: unknown) {
       let errorMessage = 'Failed to upload image';
       if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as { response?: { data?: { message?: string } } };
+        const axiosError = error as { response?: { data?: { message?: string, error?: string } } };
         if (axiosError.response?.data?.message) errorMessage = axiosError.response.data.message;
+        if (axiosError.response?.data?.error) errorMessage = axiosError.response.data.error;
       } else if (error && typeof error === 'object' && 'message' in error) {
         const errorWithMessage = error as { message: string };
         errorMessage = errorWithMessage.message;
@@ -129,7 +133,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         duration: 4000,
         style: { background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626' },
       });
-      setPreview(currentImage || '');
+      setPreview(""); // Clear preview on error
       if (fileInputRef.current) fileInputRef.current.value = '';
     } finally {
       setUploading(false);
@@ -214,7 +218,13 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       {preview ? (
         <div className="relative group">
           <div className="relative overflow-hidden rounded-xl border-2 border-gray-200 shadow-lg">
-            <img src={preview} alt="Preview" className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105" />
+            <img src={
+              preview
+                ? preview.startsWith('http')
+                  ? preview
+                  : MEDIA_BASE_URL + preview
+                : ""
+            } alt="Preview" className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105" />
             <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300" />
           </div>
 

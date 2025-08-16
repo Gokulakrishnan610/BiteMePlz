@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 export default defineConfig({
   plugins: [
@@ -104,7 +105,7 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: /\.(?:png|jpg|jpeg|svg|gif)$/,
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif)$/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'images-cache',
@@ -121,6 +122,15 @@ export default defineConfig({
         type: 'module',
       },
     }),
+    // 🔑 ensures _redirects is copied into dist/
+    viteStaticCopy({
+      targets: [
+        {
+          src: 'public/_redirects',
+          dest: '.',
+        },
+      ],
+    }),
   ],
   optimizeDeps: {
     exclude: ['lucide-react'],
@@ -130,14 +140,14 @@ export default defineConfig({
       '/api': {
         target:
           process.env.NODE_ENV === 'production'
-            ? 'https://kioskrec.onrender.com'
+            ? 'https://rec-kiosk.onrender.com'
             : 'http://localhost:8000',
         changeOrigin: true,
       },
       '/media': {
         target:
           process.env.NODE_ENV === 'production'
-            ? 'https://kioskrec.onrender.com'
+            ? 'https://rec-kiosk-media.onrender.com'
             : 'http://localhost:8000',
         changeOrigin: true,
       },
@@ -151,7 +161,8 @@ export default defineConfig({
     'process.env': {},
   },
   preview: {
-    allowedHosts: ['kioskrec.onrender.z'], // <-- add your Render frontend host here
     port: 4173,
+    strictPort: true,
+    allowedHosts: ['https://rec-kiosk.onrender.com'], // ✅ corrected hostname
   },
 });

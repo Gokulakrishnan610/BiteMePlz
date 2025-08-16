@@ -13,6 +13,7 @@ import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import Navbar from "../components/Navbar"
+import { MEDIA_BASE_URL } from "../lib/utils";
 
 interface Product {
   id: string
@@ -187,7 +188,13 @@ const ProductPage: React.FC = () => {
             <Card className="overflow-hidden">
               <div className="aspect-square w-full overflow-hidden">
                 <img
-                  src={product.image || "https://images.pexels.com/photos/1667088/pexels-photo-1667088.jpeg"}
+                  src={
+                    product.image
+                      ? product.image.startsWith("http")
+                        ? product.image
+                        : MEDIA_BASE_URL + product.image
+                      : "https://images.pexels.com/photos/1667088/pexels-photo-1667088.jpeg"
+                  }
                   alt={product.name}
                   className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                 />

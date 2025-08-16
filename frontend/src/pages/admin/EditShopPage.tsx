@@ -123,7 +123,7 @@ const EditShopPage: React.FC = () => {
       await api.patch(`/api/shops/${id}/`, payload);
       
       toast.success('shop updated successfully');
-      navigate('/admin/shops');
+      navigate('/kisok-ac-back-office/shops');
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Failed to update shop';
       toast.error(errorMessage);

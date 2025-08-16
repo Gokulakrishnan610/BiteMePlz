@@ -30,6 +30,7 @@ import api from "../api"
 import { useCart } from "../context/CartContext"
 import { useAuth } from "../context/AuthContext"
 import { toast } from 'sonner'
+import { MEDIA_BASE_URL } from "../lib/utils";
 // no-op alias imports removed
 
 interface Product {
@@ -826,7 +827,13 @@ const ShopPage: React.FC = () => {
                           <div className="flex flex-col items-center gap-2 sm:gap-3 flex-shrink-0">
                             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-lg flex items-center justify-center relative overflow-hidden">
                               <img
-                                src={product.image || "/placeholder.svg"}
+                                src={
+                                  product.image
+                                    ? product.image.startsWith("http")
+                                      ? product.image
+                                      : MEDIA_BASE_URL + product.image
+                                    : "/placeholder.svg"
+                                }
                                 alt={product.name}
                                 className="w-full h-full object-cover"
                               />

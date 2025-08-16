@@ -894,6 +894,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             print(f"DEBUG: User authenticated: {getattr(self.request.user, 'is_authenticated', False)}")
         
         shop_id = self.request.query_params.get('shop_id') or self.request.query_params.get('shop')
+        name = self.request.query_params.get('name')
         
         # For mutation/detail actions, don't filter by is_available so we can update disabled items
         if getattr(self, 'action', None) in ['retrieve', 'update', 'partial_update', 'destroy']:
@@ -930,12 +931,13 @@ class ProductViewSet(viewsets.ModelViewSet):
             return Product.objects.filter(shop=shop_id)
 
         # For public listing or other users: only show available products (optionally by shop)
+        queryset = Product.objects.filter(is_available=True)
         if shop_id:
             print(f"DEBUG: Public/other user viewing shop products - showing only available products for shop {shop_id}")
-            return Product.objects.filter(shop=shop_id, is_available=True)
-        
-        print(f"DEBUG: Public listing - showing only available products")
-        return Product.objects.filter(is_available=True)
+            queryset = queryset.filter(shop=shop_id)
+        if name:
+            queryset = queryset.filter(name__icontains=name)
+        return queryset
 
     def get_permissions(self):
         if self.action == 'list':
