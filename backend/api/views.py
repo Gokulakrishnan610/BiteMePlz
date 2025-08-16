@@ -443,8 +443,18 @@ class UserViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=False, methods=['post'])
-    def shop_admin(self, request):
+    @action(detail=False, methods=['get'])
+def cors_test(self, request):
+    """Test endpoint to verify CORS is working"""
+    return Response({
+        'message': 'CORS test successful',
+        'origin': request.META.get('HTTP_ORIGIN'),
+        'method': request.method,
+        'headers': dict(request.headers)
+    })
+
+@action(detail=False, methods=['post'])
+def shop_admin(self, request):
         """Create a shop admin user and shop"""
         try:
             # Only the main admin can create shop admins
@@ -542,11 +552,6 @@ class ShopViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
-        # Add CORS debugging
-        if self.action == 'list':
-            print(f"DEBUG: Shop list called from origin: {self.request.META.get('HTTP_ORIGIN')}")
-            print(f"DEBUG: Request headers: {dict(self.request.headers)}")
-        
         user = getattr(self.request, 'user', None)
         if getattr(user, 'is_authenticated', False):
             if getattr(user, 'role', None) == 'admin':

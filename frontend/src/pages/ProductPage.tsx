@@ -46,7 +46,7 @@ const ProductPage: React.FC = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const { data } = await api.get(`/products/${id}/`)
+        const { data } = await api.get(`/api/products/${id}/`)
         setProduct(data)
 
         // Fetch shop details if shop ID is available
@@ -54,9 +54,10 @@ const ProductPage: React.FC = () => {
           try {
             const shopResponse = await api.get(`/api/shops/${data.shop}/`)
             setShop(shopResponse.data)
-      } catch (shopError) {
-        // silent fail, product page continues without shop details
-      }
+          } catch (shopError) {
+            // silent fail, product page continues without shop details
+            console.warn("Failed to fetch shop details:", shopError)
+          }
         }
 
         setLoading(false)
@@ -99,8 +100,6 @@ const ProductPage: React.FC = () => {
       return
     }
 
-    console.log("[ProductPage] Adding to cart - product:", product);
-
     addToCart({
       id: product.id + "-" + Date.now(), // Generate a unique ID for the cart item
       product_id: product.id,
@@ -109,10 +108,10 @@ const ProductPage: React.FC = () => {
       price: product.price,
       quantity,
       stock: product.stock,
+      stock_mode: product.stock_mode,
       shop_id: shop!.id,
-       shop_name: shop!.name,
-     });
-    console.log("[ProductPage] Added to cart - product_id:", product.id, "shop_id:", shop!.id);
+      shop_name: shop!.name,
+    });
     // Removed add-to-cart popup per UX request
   }
 

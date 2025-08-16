@@ -18,7 +18,7 @@ function resolveApiBaseUrl(): string {
   // 3) Production fallback
   if (import.meta.env.PROD) {
     // Default production API. Override via VITE_API_BASE_URL or localStorage 'API_BASE_URL'.
-    return 'https://kioskrec.onrender.com';
+    return 'https://rec-kiosk.onrender.com';
   }
   // 4) Dev: use Vite proxy with relative path
   return '';

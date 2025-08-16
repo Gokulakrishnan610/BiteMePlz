@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Download, X, Smartphone, Monitor, Tablet } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -11,6 +12,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const PWAInstallPrompt: React.FC = () => {
+  const location = useLocation();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -292,12 +294,14 @@ const PWAInstallPrompt: React.FC = () => {
   };
 
   const handleDismiss = () => {
+    console.log('PWA Install Prompt - Dismiss clicked');
     setIsVisible(false);
     setIsDismissed(true);
     localStorage.setItem('pwa-install-dismissed', 'true');
   };
 
   const handleDismissForSession = () => {
+    console.log('PWA Install Prompt - Later clicked');
     setIsVisible(false);
     setIsDismissed(true);
   };
@@ -310,8 +314,19 @@ const PWAInstallPrompt: React.FC = () => {
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isAndroid = /Android/.test(navigator.userAgent);
 
+  // Determine positioning based on current page
+  const isLoginPage = location.pathname.includes('/login');
+  const isHomePage = location.pathname === '/';
+  
+  const promptPosition = isLoginPage ? 'top-0' : 'top-20 sm:top-24 md:top-24 lg:top-24 xl:top-26';
+  
+  // Debug logging
+  console.log('PWA Install Prompt - Current path:', location.pathname);
+  console.log('PWA Install Prompt - Is login page:', isLoginPage);
+  console.log('PWA Install Prompt - Position class:', promptPosition);
+
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto">
+    <div className={`fixed ${promptPosition} left-0 right-0 z-[9999] max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto`}>
       <div className="bg-gradient-to-r from-purple-500/95 to-purple-600/95 backdrop-blur-md border border-purple-400/30 rounded-xl shadow-2xl shadow-purple-500/20 overflow-hidden">
         {/* Animated header bar */}
         <div className="h-1 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 animate-pulse" />

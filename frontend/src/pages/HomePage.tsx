@@ -130,33 +130,10 @@ const HomePage: React.FC = () => {
 
   const fetchShops = async (signal?: AbortSignal) => {
     try {
-      console.log("=== FETCH SHOPS START ===")
-      console.log("Fetching shops...")
       const { data } = await api.get("/api/shops/", { signal })
-      console.log("Shops API response:", data)
-      console.log("Shops API response keys:", Object.keys(data))
-      console.log("Shops API response type:", typeof data)
       
       const shopsData = data.results || data
-      console.log("Shops data:", shopsData)
-      console.log("Shops data type:", typeof shopsData)
-      console.log("Is array:", Array.isArray(shopsData))
-      
-      if (Array.isArray(shopsData)) {
-        console.log("First shop structure:", shopsData[0])
-        console.log("Shop ID type:", typeof shopsData[0]?.id)
-        console.log("Shop ID value:", shopsData[0]?.id)
-        console.log("Total shops received:", shopsData.length)
-        
-        // Log all shop names for debugging
-        shopsData.forEach((shop, index) => {
-          console.log(`Shop ${index + 1}:`, { id: shop.id, name: shop.name, is_active: shop.is_active, is_open: shop.is_open })
-        })
-      }
-      
       const shopsArray = Array.isArray(shopsData) ? shopsData : []
-      console.log("Final shops array:", shopsArray)
-      console.log("Number of shops:", shopsArray.length)
       
       setShops(shopsArray)
       setFilteredShops(shopsArray)
@@ -165,18 +142,9 @@ const HomePage: React.FC = () => {
       const recent = getRecentShops(shopsArray)
       setRecentShops(recent)
       
-      console.log("=== FETCH SHOPS END ===")
       return shopsArray
     } catch (err) {
       console.error("Error fetching shops:", err)
-      // Try to fetch from debug endpoint
-      try {
-        console.log("Trying debug endpoint...")
-        const debugResponse = await api.get("/api/shops/debug/")
-        console.log("Debug response:", debugResponse.data)
-      } catch (debugErr) {
-        console.error("Debug endpoint also failed:", debugErr)
-      }
       throw err
     }
   }

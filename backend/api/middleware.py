@@ -35,6 +35,9 @@ class CustomCORSMiddleware(MiddlewareMixin):
                             is_allowed = True
                             break
                 
+                # Debug logging
+                print(f"DEBUG: Origin: {origin}, Allowed: {is_allowed}")
+                
                 if is_allowed:
                     response['Access-Control-Allow-Origin'] = origin
                     response['Access-Control-Allow-Credentials'] = 'true'
@@ -42,6 +45,9 @@ class CustomCORSMiddleware(MiddlewareMixin):
                     response['Access-Control-Allow-Headers'] = 'accept, accept-encoding, authorization, content-type, dnt, origin, user-agent, x-csrftoken, x-requested-with, x-parent-session-id, X-Parent-Session-ID, cache-control, pragma'
                     response['Access-Control-Expose-Headers'] = 'x-parent-session-id, X-Parent-Session-ID, content-type, content-length'
                     response['Access-Control-Max-Age'] = '86400'
+                    print(f"DEBUG: CORS headers set for {origin}")
+                else:
+                    print(f"DEBUG: Origin {origin} not allowed")
         
         return response
     
@@ -78,12 +84,18 @@ class CustomCORSMiddleware(MiddlewareMixin):
                             is_allowed = True
                             break
                 
+                # Debug logging for OPTIONS request
+                print(f"DEBUG: OPTIONS request from {origin}, Allowed: {is_allowed}")
+                
                 if is_allowed:
                     response['Access-Control-Allow-Origin'] = origin
                     response['Access-Control-Allow-Credentials'] = 'true'
                     response['Access-Control-Allow-Methods'] = 'DELETE, GET, OPTIONS, PATCH, POST, PUT'
                     response['Access-Control-Allow-Headers'] = 'accept, accept-encoding, authorization, content-type, dnt, origin, user-agent, x-csrftoken, x-requested-with, x-parent-session-id, X-Parent-Session-ID, cache-control, pragma'
                     response['Access-Control-Max-Age'] = '86400'
+                    print(f"DEBUG: CORS headers set for OPTIONS request from {origin}")
                     return response
+                else:
+                    print(f"DEBUG: OPTIONS request from {origin} not allowed")
         
         return None
