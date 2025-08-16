@@ -104,12 +104,41 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Media files
+# Media files - Production ready configuration
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Ensure media directories exist
+os.makedirs(MEDIA_ROOT, exist_ok=True)
 os.makedirs(os.path.join(MEDIA_ROOT, 'uploads'), exist_ok=True)
 os.makedirs(os.path.join(MEDIA_ROOT, 'shops'), exist_ok=True)
 os.makedirs(os.path.join(MEDIA_ROOT, 'products'), exist_ok=True)
+
+# Production media handling
+if not DEBUG:
+    # For production, ensure media files are accessible
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+    # Create directories with proper permissions
+    for subdir in ['uploads', 'shops', 'products']:
+        full_path = os.path.join(MEDIA_ROOT, subdir)
+        os.makedirs(full_path, exist_ok=True)
+        # Ensure directory is readable
+        try:
+            os.chmod(full_path, 0o755)
+        except:
+            pass
+    
+    # Check if we're on Render or similar platform
+    RENDER_EXTERNAL_HOSTNAME = config('RENDER_EXTERNAL_HOSTNAME', default=None)
+    if RENDER_EXTERNAL_HOSTNAME:
+        # Ensure media directory exists and is writable
+        print(f"Running on Render: {RENDER_EXTERNAL_HOSTNAME}")
+        print(f"Media root: {MEDIA_ROOT}")
+        # Force create media directories
+        for subdir in ['uploads', 'shops', 'products']:
+            full_path = os.path.join(MEDIA_ROOT, subdir)
+            os.makedirs(full_path, exist_ok=True)
+            print(f"Created media directory: {full_path}")
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'api.User'
