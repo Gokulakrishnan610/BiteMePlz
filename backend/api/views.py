@@ -25,6 +25,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from .authentication import ParentSessionAuthentication  # use dedicated module
 import time
+from django.db.models import Count, Avg, Sum
 
 
 class UUIDEncoder(DjangoJSONEncoder):
@@ -91,6 +92,57 @@ class UserViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             user = serializer.validated_data['user']
             refresh = RefreshToken.for_user(user)
+            
+            # Log login for ALL users (students, shop admins, sub-admins, admins)
+            try:
+                # For users with shops (shop admins, sub-admins)
+                if user.shop:
+                    ShopLog.objects.create(
+                        shop=user.shop,
+                        action='user_login',
+                        performed_by=user,
+                        details={
+                            'user_name': user.name,
+                            'user_email': user.email,
+                            'user_role': user.role,
+                            'user_id': str(user.id),
+                            'is_sub_admin': getattr(user, 'is_sub_admin', False),
+                            'login_time': timezone.now().isoformat(),
+                            'ip_address': self._get_client_ip(request),
+                            'login_type': 'shop_user'
+                        }
+                    )
+                # For students and other users without shops
+                else:
+                    # Find the first shop to log to (for system-wide logging)
+                    from api.models import Shop
+                    default_shop = Shop.objects.first()
+                    if default_shop:
+                        ShopLog.objects.create(
+                            shop=default_shop,
+                            action='user_login',
+                            performed_by=user,
+                            details={
+                                'user_name': user.name,
+                                'user_email': user.email,
+                                'user_role': user.role,
+                                'user_id': str(user.id),
+                                'is_sub_admin': getattr(user, 'is_sub_admin', False),
+                                'login_time': timezone.now().isoformat(),
+                                'ip_address': self._get_client_ip(request),
+                                'login_type': 'student_user',
+                                'note': 'Student login logged to default shop for system-wide tracking'
+                            }
+                        )
+                    else:
+                        print(f"[WARNING] No shops found to log user login for {user.email}")
+                
+                print(f"[DEBUG] User login logged successfully for {user.email} (role: {user.role})")
+                
+            except Exception as e:
+                print(f"[ERROR] Failed to log user login for {user.email}: {str(e)}")
+                # Don't fail the login if logging fails
+            
             return Response({
                 '_id': str(user.id),
                 'name': user.name,
@@ -103,6 +155,15 @@ class UserViewSet(viewsets.ModelViewSet):
                 'token': str(refresh.access_token),
             }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def _get_client_ip(self, request):
+        """Get client IP address from request"""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
     def profile(self, request):
@@ -134,8 +195,36 @@ class UserViewSet(viewsets.ModelViewSet):
     def update_profile(self, request):
         serializer = UserSerializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
+            old_user_data = {
+                'name': request.user.name,
+                'email': request.user.email,
+                'balance': float(request.user.balance)
+            }
+            
             serializer.save()
             data = serializer.data
+            
+            # Log profile updates for shop admins and sub-admins
+            if request.user.role in ['shopAdmin', 'admin'] and request.user.shop:
+                updated_fields = []
+                for field, value in serializer.validated_data.items():
+                    if hasattr(request.user, field) and getattr(request.user, field) != value:
+                        updated_fields.append(field)
+                
+                if updated_fields:
+                    ShopLog.objects.create(
+                        shop=request.user.shop,
+                        action='profile_updated',
+                        performed_by=request.user,
+                        details={
+                            'user_name': request.user.name,
+                            'user_email': request.user.email,
+                            'updated_fields': updated_fields,
+                            'old_values': {field: old_user_data.get(field) for field in updated_fields if field in old_user_data},
+                            'new_values': {field: getattr(request.user, field) for field in updated_fields if hasattr(request.user, field)}
+                        }
+                    )
+            
             # Ensure UUIDs are converted to strings
             data['id'] = str(request.user.id)
             if request.user.shop:
@@ -235,6 +324,64 @@ class UserViewSet(viewsets.ModelViewSet):
                 'user': UserSerializer(user).data
             }, status=status.HTTP_201_CREATED)
 
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['delete'])
+    def delete_sub_admin(self, request):
+        """Delete a sub-shop admin (shopAdmin: own shop, admin: must provide shop_id)."""
+        if request.user.role == 'shopAdmin':
+            if not request.user.shop:
+                return Response({'error': 'No shop associated with this user'}, status=status.HTTP_400_BAD_REQUEST)
+            target_shop = request.user.shop
+            # Shop admins can only delete their own sub-admins
+            if not request.user.is_sub_admin:
+                return Response({'error': 'Only main shop admins can delete sub-admins'}, status=status.HTTP_403_FORBIDDEN)
+        elif request.user.role == 'admin':
+            shop_id = request.data.get('shop_id') or request.data.get('shop')
+            if not shop_id:
+                return Response({'error': 'shop_id is required for admins'}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                target_shop = Shop.objects.get(id=shop_id)
+            except Shop.DoesNotExist:
+                return Response({'error': 'Shop not found'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response({'error': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+
+        sub_admin_email = request.data.get('email')
+        if not sub_admin_email:
+            return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            sub_admin = User.objects.get(
+                email=sub_admin_email,
+                shop=target_shop,
+                role='shopAdmin',
+                is_sub_admin=True
+            )
+            
+            # Log the sub-admin deletion
+            ShopLog.objects.create(
+                shop=target_shop,
+                action='sub_admin_deleted',
+                performed_by=request.user,
+                details={
+                    'sub_admin_name': sub_admin.name,
+                    'sub_admin_email': sub_admin.email,
+                    'deleted_by_role': request.user.role,
+                    'deleted_by_name': request.user.name
+                }
+            )
+            
+            # Delete the sub-admin
+            sub_admin.delete()
+            
+            return Response({
+                'message': 'Sub-shop admin deleted successfully'
+            }, status=status.HTTP_200_OK)
+
+        except User.DoesNotExist:
+            return Response({'error': 'Sub-shop admin not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -428,16 +575,76 @@ class ShopViewSet(viewsets.ModelViewSet):
         old_shop = self.get_object()
         shop = serializer.save()
         
-        # Log the shop update
-        ShopLog.objects.create(
-            shop=shop,
-            action='settings_updated',
-            performed_by=self.request.user,
-            details={
-                'updated_fields': list(serializer.validated_data.keys()),
-                'shop_name': shop.name
-            }
-        )
+        # Determine what fields were updated
+        updated_fields = []
+        for field, value in serializer.validated_data.items():
+            if hasattr(old_shop, field) and getattr(old_shop, field) != value:
+                updated_fields.append(field)
+        
+        if updated_fields:
+            # Special logging for disabled categories changes
+            if 'disabled_categories' in updated_fields:
+                old_categories = getattr(old_shop, 'disabled_categories', [])
+                new_categories = getattr(shop, 'disabled_categories', [])
+                
+                ShopLog.objects.create(
+                    shop=shop,
+                    action='categories_updated',
+                    performed_by=self.request.user,
+                    details={
+                        'old_disabled_categories': old_categories,
+                        'new_disabled_categories': new_categories,
+                        'categories_added': [cat for cat in new_categories if cat not in old_categories],
+                        'categories_removed': [cat for cat in old_categories if cat not in new_categories],
+                        'updated_by_role': getattr(self.request.user, 'role', 'unknown')
+                    }
+                )
+            
+            # Special logging for final validity time changes
+            if 'final_validity_time' in updated_fields:
+                old_time = getattr(old_shop, 'final_validity_time', None)
+                new_time = getattr(shop, 'final_validity_time', None)
+                
+                ShopLog.objects.create(
+                    shop=shop,
+                    action='validity_time_updated',
+                    performed_by=self.request.user,
+                    details={
+                        'old_final_validity_time': old_time.isoformat() if old_time else None,
+                        'new_final_validity_time': new_time.isoformat() if new_time else None,
+                        'updated_by_role': getattr(self.request.user, 'role', 'unknown')
+                    }
+                )
+            
+            # Special logging for QR validity minutes changes
+            if 'qr_validity_minutes' in updated_fields:
+                old_minutes = getattr(old_shop, 'qr_validity_minutes', None)
+                new_minutes = getattr(shop, 'qr_validity_minutes', None)
+                
+                ShopLog.objects.create(
+                    shop=shop,
+                    action='qr_validity_updated',
+                    performed_by=self.request.user,
+                    details={
+                        'old_qr_validity_minutes': old_minutes,
+                        'new_qr_validity_minutes': new_minutes,
+                        'updated_by_role': getattr(self.request.user, 'role', 'unknown')
+                    }
+                )
+            
+            # General logging for other updates
+            other_fields = [f for f in updated_fields if f not in ['disabled_categories', 'final_validity_time', 'qr_validity_minutes']]
+            if other_fields:
+                ShopLog.objects.create(
+                    shop=shop,
+                    action='settings_updated',
+                    performed_by=self.request.user,
+                    details={
+                        'updated_fields': other_fields,
+                        'shop_name': shop.name,
+                        'updated_by_role': getattr(self.request.user, 'role', 'unknown')
+                    }
+                )
         
         return shop
 
@@ -577,7 +784,6 @@ class ShopViewSet(viewsets.ModelViewSet):
             shop = self.get_object()
             
             # Get transaction statistics by type
-            from django.db.models import Count, Avg, Sum
             stats = Transaction.objects.filter(
                 order__shop=shop
             ).values('type').annotate(
@@ -684,31 +890,162 @@ class ProductViewSet(viewsets.ModelViewSet):
             print(f"DEBUG: Product list called from origin: {self.request.META.get('HTTP_ORIGIN')}")
             print(f"DEBUG: Request headers: {dict(self.request.headers)}")
             print(f"DEBUG: Query params: {self.request.query_params}")
+            print(f"DEBUG: User role: {getattr(self.request.user, 'role', 'None')}")
+            print(f"DEBUG: User authenticated: {getattr(self.request.user, 'is_authenticated', False)}")
         
         shop_id = self.request.query_params.get('shop_id') or self.request.query_params.get('shop')
+        
         # For mutation/detail actions, don't filter by is_available so we can update disabled items
         if getattr(self, 'action', None) in ['retrieve', 'update', 'partial_update', 'destroy']:
             if self.request.user.role == 'shopAdmin':
                 # Limit to the current shop admin's products
                 try:
-                    return Product.objects.filter(shop=self.request.user.shop_id)
+                    return Product.objects.filter(shop=self.request.user.shop)
                 except Exception:
                     return Product.objects.none()
             return Product.objects.all()
 
-        # For admin or shop admins listing a specific shop via query param, show all products
-        if getattr(self.request.user, 'role', None) in ['admin', 'shopAdmin'] and shop_id:
+        # For authenticated shop admins viewing their own shop's products, show ALL products
+        if (getattr(self.request.user, 'role', None) == 'shopAdmin' and 
+            getattr(self.request.user, 'shop', None) and 
+            shop_id and 
+            str(getattr(self.request.user, 'shop', None).id) == str(shop_id)):
+            print(f"DEBUG: Shop admin viewing own shop products - showing all products for shop {shop_id}")
+            print(f"DEBUG: User shop: {getattr(self.request.user, 'shop', None)}")
+            print(f"DEBUG: User shop.id: {getattr(self.request.user, 'shop', None).id if getattr(self.request.user, 'shop', None) else 'None'}")
+            print(f"DEBUG: Requested shop_id: {shop_id}")
+            print(f"DEBUG: Shop IDs match: {str(getattr(self.request.user, 'shop', None).id) == str(shop_id) if getattr(self.request.user, 'shop', None) else 'False'}")
+            return Product.objects.filter(shop=shop_id)
+        else:
+            if getattr(self.request.user, 'role', None) == 'shopAdmin':
+                print(f"DEBUG: Shop admin but not viewing own shop or shop_id mismatch")
+                print(f"DEBUG: User shop: {getattr(self.request.user, 'shop', None)}")
+                print(f"DEBUG: User shop.id: {getattr(self.request.user, 'shop', None).id if getattr(self.request.user, 'shop', None) else 'None'}")
+                print(f"DEBUG: Requested shop_id: {shop_id}")
+                print(f"DEBUG: User authenticated: {getattr(self.request.user, 'is_authenticated', False)}")
+
+        # For admin users viewing any shop's products, show ALL products
+        if getattr(self.request.user, 'role', None) == 'admin' and shop_id:
+            print(f"DEBUG: Admin viewing shop products - showing all products for shop {shop_id}")
             return Product.objects.filter(shop=shop_id)
 
-        # Public listing: only show available products (optionally by shop)
+        # For public listing or other users: only show available products (optionally by shop)
         if shop_id:
+            print(f"DEBUG: Public/other user viewing shop products - showing only available products for shop {shop_id}")
             return Product.objects.filter(shop=shop_id, is_available=True)
+        
+        print(f"DEBUG: Public listing - showing only available products")
         return Product.objects.filter(is_available=True)
 
     def get_permissions(self):
         if self.action == 'list':
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
+
+    def perform_create(self, serializer):
+        """Log product creation"""
+        product = serializer.save()
+        
+        # Log the product creation with error handling
+        try:
+            ShopLog.objects.create(
+                shop=product.shop,
+                action='product_created',
+                performed_by=self.request.user,
+                details={
+                    'product_name': product.name,
+                    'product_id': str(product.id),
+                    'price': float(product.price),
+                    'stock': product.stock,
+                    'category': product.category.name if product.category else 'No Category'
+                }
+            )
+            print(f"[DEBUG] Product creation logged successfully for {product.name}")
+        except Exception as e:
+            print(f"[ERROR] Failed to log product creation for {product.name}: {str(e)}")
+            # Don't fail the product creation if logging fails
+        
+        return product
+
+    def perform_update(self, serializer):
+        """Log product updates"""
+        old_product = self.get_object()
+        product = serializer.save()
+        
+        # Determine what fields were updated
+        updated_fields = []
+        for field, value in serializer.validated_data.items():
+            if hasattr(old_product, field) and getattr(old_product, field) != value:
+                updated_fields.append(field)
+        
+        if updated_fields:
+            # Special logging for stock changes
+            if 'stock' in updated_fields:
+                old_stock = getattr(old_product, 'stock', 0)
+                new_stock = getattr(product, 'stock', 0)
+                stock_change = new_stock - old_stock
+                
+                try:
+                    ShopLog.objects.create(
+                        shop=product.shop,
+                        action='stock_updated',
+                        performed_by=self.request.user,
+                        details={
+                            'product_name': product.name,
+                            'product_id': str(product.id),
+                            'old_stock': old_stock,
+                            'new_stock': new_stock,
+                            'stock_change': stock_change,
+                            'change_type': 'increase' if stock_change > 0 else 'decrease' if stock_change < 0 else 'no_change',
+                            'updated_by_role': getattr(self.request.user, 'role', 'unknown')
+                        }
+                    )
+                    print(f"[DEBUG] Stock update logged successfully for {product.name}")
+                except Exception as e:
+                    print(f"[ERROR] Failed to log stock update for {product.name}: {str(e)}")
+            
+            # General logging for other updates
+            if any(field != 'stock' for field in updated_fields):
+                try:
+                    ShopLog.objects.create(
+                        shop=product.shop,
+                        action='product_updated',
+                        performed_by=self.request.user,
+                        details={
+                            'product_name': product.name,
+                            'product_id': str(product.id),
+                            'updated_fields': [f for f in updated_fields if f != 'stock'],
+                            'old_values': {field: getattr(old_product, field) for field in updated_fields if field != 'stock' and hasattr(old_product, field)},
+                            'new_values': {field: getattr(product, field) for field in updated_fields if field != 'stock' and hasattr(product, field)}
+                        }
+                    )
+                    print(f"[DEBUG] Product update logged successfully for {product.name}")
+                except Exception as e:
+                    print(f"[ERROR] Failed to log product update for {product.name}: {str(e)}")
+        
+        return product
+
+    def perform_destroy(self, instance):
+        """Log product deletion"""
+        # Log the product deletion before deleting
+        try:
+            ShopLog.objects.create(
+                shop=instance.shop,
+                action='product_deleted',
+                performed_by=self.request.user,
+                details={
+                    'product_name': instance.name,
+                    'product_id': str(instance.id),
+                    'price': float(instance.price),
+                    'stock': instance.stock
+                }
+            )
+            print(f"[DEBUG] Product deletion logged successfully for {instance.name}")
+        except Exception as e:
+            print(f"[ERROR] Failed to log product deletion for {instance.name}: {str(e)}")
+            # Don't fail the deletion if logging fails
+        
+        instance.delete()
 
     def update(self, request, *args, **kwargs):
         """Custom update method to handle product availability updates"""
@@ -772,22 +1109,108 @@ class ProductViewSet(viewsets.ModelViewSet):
                 except Shop.DoesNotExist:
                     return Response({'error': 'Shop not found'}, status=status.HTTP_404_NOT_FOUND)
             
-            # Create the product
-            serializer = self.get_serializer(data=request.data)
+            # Create the product using perform_create for logging
+            serializer = self.get_serializer(data=data)
             serializer.is_valid(raise_exception=True)
-            self.perform_create(serializer)
-            headers = self.get_success_headers(serializer.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-
+            product = self.perform_create(serializer)
+            
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         except Exception as e:
-            import traceback
-            traceback.print_exc()
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    # Remove the perform_create method override since OrderSerializer handles it
-    # def perform_create(self, serializer):
-    #     # This is handled by the OrderSerializer's create method
-    #     pass
+    @action(detail=False, methods=['post'])
+    def bulk_update(self, request):
+        """Bulk update products (e.g., stock, availability, etc.)"""
+        try:
+            products_data = request.data.get('products', [])
+            if not products_data:
+                return Response({'error': 'No products data provided'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            updated_products = []
+            failed_products = []
+            
+            for product_data in products_data:
+                try:
+                    product_id = product_data.get('id')
+                    if not product_id:
+                        failed_products.append({'id': 'unknown', 'error': 'Missing product ID'})
+                        continue
+                    
+                    # Get the product
+                    try:
+                        product = Product.objects.get(id=product_id)
+                    except Product.DoesNotExist:
+                        failed_products.append({'id': product_id, 'error': 'Product not found'})
+                        continue
+                    
+                    # Check permissions
+                    if request.user.role == 'shopAdmin':
+                        if str(product.shop.id) != str(request.user.shop.id):
+                            failed_products.append({'id': product_id, 'error': 'Access denied'})
+                            continue
+                    
+                    # Update the product
+                    old_data = {
+                        'stock': product.stock,
+                        'is_available': product.is_available,
+                        'price': float(product.price)
+                    }
+                    
+                    # Apply updates
+                    for field, value in product_data.items():
+                        if field != 'id' and hasattr(product, field):
+                            setattr(product, field, value)
+                    
+                    product.save()
+                    updated_products.append(product)
+                    
+                    # Log the bulk update
+                    ShopLog.objects.create(
+                        shop=product.shop,
+                        action='product_bulk_updated',
+                        performed_by=request.user,
+                        details={
+                            'product_name': product.name,
+                            'product_id': str(product.id),
+                            'updated_fields': [f for f in product_data.keys() if f != 'id'],
+                            'old_values': old_data,
+                            'new_values': {
+                                'stock': product.stock,
+                                'is_available': product.is_available,
+                                'price': float(product.price)
+                            },
+                            'bulk_operation': True
+                        }
+                    )
+                    
+                except Exception as e:
+                    failed_products.append({'id': product_data.get('id', 'unknown'), 'error': str(e)})
+            
+            # Log the overall bulk operation
+            if updated_products:
+                ShopLog.objects.create(
+                    shop=updated_products[0].shop,
+                    action='bulk_operation_completed',
+                    performed_by=request.user,
+                    details={
+                        'operation_type': 'bulk_product_update',
+                        'total_products': len(products_data),
+                        'successful_updates': len(updated_products),
+                        'failed_updates': len(failed_products),
+                        'updated_product_ids': [str(p.id) for p in updated_products],
+                        'failed_product_details': failed_products
+                    }
+                )
+            
+            return Response({
+                'message': f'Bulk update completed. {len(updated_products)} products updated, {len(failed_products)} failed.',
+                'updated_products': len(updated_products),
+                'failed_products': len(failed_products),
+                'failed_details': failed_products
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -836,7 +1259,122 @@ class OrderViewSet(viewsets.ModelViewSet):
             acting_user = self._get_or_create_parent_guest_user()
         # Ensure order saved with acting_user
         order = serializer.save(user=acting_user)
+        
+        # Log the order creation
+        ShopLog.objects.create(
+            shop=order.shop,
+            action='order_created',
+            performed_by=acting_user if acting_user.role != 'student' else None,
+            details={
+                'order_id': order.order_id,
+                'total_price': float(order.total_price),
+                'payment_method': getattr(self.request, 'payment_method', 'unknown'),
+                'items_count': order.items.count(),
+                'customer_name': acting_user.name if acting_user.role != 'student' else 'Student'
+            }
+        )
+        
         return order
+
+    def perform_update(self, serializer):
+        """Log order updates"""
+        old_order = self.get_object()
+        order = serializer.save()
+        
+        # Determine what fields were updated
+        updated_fields = []
+        for field, value in serializer.validated_data.items():
+            if hasattr(old_order, field) and getattr(old_order, field) != value:
+                updated_fields.append(field)
+        
+        if updated_fields:
+            # Special logging for status changes
+            if 'status' in updated_fields:
+                old_status = getattr(old_order, 'status', 'unknown')
+                new_status = getattr(order, 'status', 'unknown')
+                
+                ShopLog.objects.create(
+                    shop=order.shop,
+                    action='order_status_changed',
+                    performed_by=self.request.user,
+                    details={
+                        'order_id': order.order_id,
+                        'old_status': old_status,
+                        'new_status': new_status,
+                        'total_price': float(order.total_price),
+                        'customer_name': order.user.name if order.user else 'Unknown',
+                        'changed_by_role': getattr(self.request.user, 'role', 'unknown'),
+                        'changed_by_name': getattr(self.request.user, 'name', 'Unknown')
+                    }
+                )
+            
+            # Special logging for verification changes
+            if 'is_verified' in updated_fields:
+                old_verified = getattr(old_order, 'is_verified', False)
+                new_verified = getattr(order, 'is_verified', False)
+                
+                if new_verified and not old_verified:
+                    # Order was verified
+                    ShopLog.objects.create(
+                        shop=order.shop,
+                        action='order_verified',
+                        performed_by=self.request.user,
+                        details={
+                            'order_id': order.order_id,
+                            'total_price': float(order.total_price),
+                            'verified_at': order.verified_at.isoformat() if hasattr(order, 'verified_at') and order.verified_at else None,
+                            'verifier_role': getattr(self.request.user, 'role', 'unknown'),
+                            'verifier_name': getattr(self.request.user, 'name', 'Unknown'),
+                            'customer_name': order.user.name if order.user else 'Unknown'
+                        }
+                    )
+                elif old_verified and not new_verified:
+                    # Order was unverified
+                    ShopLog.objects.create(
+                        shop=order.shop,
+                        action='order_unverified',
+                        performed_by=self.request.user,
+                        details={
+                            'order_id': order.order_id,
+                            'total_price': float(order.total_price),
+                            'unverified_by_role': getattr(self.request.user, 'role', 'unknown'),
+                            'unverified_by_name': getattr(self.request.user, 'name', 'Unknown'),
+                            'customer_name': order.user.name if order.user else 'Unknown'
+                        }
+                    )
+            
+            # General logging for other updates
+            other_fields = [f for f in updated_fields if f not in ['status', 'is_verified']]
+            if other_fields:
+                ShopLog.objects.create(
+                    shop=order.shop,
+                    action='order_updated',
+                    performed_by=self.request.user,
+                    details={
+                        'order_id': order.order_id,
+                        'updated_fields': other_fields,
+                        'old_values': {field: getattr(old_order, field) for field in other_fields if hasattr(old_order, field)},
+                        'new_values': {field: getattr(order, field) for field in other_fields if hasattr(order, field)}
+                    }
+                )
+        
+        return order
+
+    def perform_destroy(self, instance):
+        """Log order deletion"""
+        # Log the order deletion before deleting
+        ShopLog.objects.create(
+            shop=instance.shop,
+            action='order_deleted',
+            performed_by=self.request.user,
+            details={
+                'order_id': instance.order_id,
+                'total_price': float(instance.total_price),
+                'customer_name': instance.user.name if instance.user else 'Unknown'
+            }
+        )
+        
+        instance.delete()
 
     def create(self, request, *args, **kwargs):
         """Create a single shop order"""
@@ -1567,6 +2105,21 @@ class OrderViewSet(viewsets.ModelViewSet):
         order.status = 'completed'
         order.save()
 
+        # Log the order verification
+        ShopLog.objects.create(
+            shop=order.shop,
+            action='order_verified',
+            performed_by=request.user,
+            details={
+                'order_id': order.order_id,
+                'total_price': float(order.total_price),
+                'verified_at': order.verified_at.isoformat(),
+                'verifier_role': getattr(request.user, 'role', 'unknown'),
+                'verifier_name': getattr(request.user, 'name', 'Unknown'),
+                'customer_name': order.user.name if order.user else 'Unknown'
+            }
+        )
+
         # Multiorder QR update logic
         try:
             # Only update if this order has a multiorder QR
@@ -2001,11 +2554,255 @@ class ShopLogViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        if self.request.user.role == 'admin':
-            return ShopLog.objects.all()
-        elif self.request.user.role == 'shopAdmin':
-            return ShopLog.objects.filter(shop__shop_admin=self.request.user)
-        return ShopLog.objects.none()
+        user = self.request.user
+        print(f"[DEBUG] ShopLogViewSet - User: {user}, Role: {getattr(user, 'role', 'None')}, Is Superuser: {getattr(user, 'is_superuser', False)}")
+        
+        # Admin users should see all logs
+        if getattr(user, 'role', None) == 'admin' or getattr(user, 'is_superuser', False):
+            print(f"[DEBUG] Admin user - returning all logs")
+            return ShopLog.objects.all().order_by('-created_at')
+        elif getattr(user, 'role', None) == 'shopAdmin':
+            print(f"[DEBUG] Shop admin user - filtering by shop")
+            return ShopLog.objects.filter(shop__shop_admin=user).order_by('-created_at')
+        else:
+            print(f"[DEBUG] Regular user - no logs")
+            return ShopLog.objects.none()
+
+    @action(detail=False, methods=['get'])
+    def admin_all_logs(self, request):
+        """Get all logs for admin users with enhanced filtering"""
+        if not (getattr(request.user, 'role', None) == 'admin' or getattr(request.user, 'is_superuser', False)):
+            return Response({'error': 'Admin access required'}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            # Get query parameters
+            shop_id = request.query_params.get('shop_id')
+            action = request.query_params.get('action')
+            start_date = request.query_params.get('start_date')
+            end_date = request.query_params.get('end_date')
+            performed_by = request.query_params.get('performed_by')
+            page = int(request.query_params.get('page', 1))
+            limit = int(request.query_params.get('limit', 50))
+            
+            # Start with all logs
+            queryset = ShopLog.objects.all()
+            
+            # Apply filters
+            if shop_id:
+                queryset = queryset.filter(shop_id=shop_id)
+                print(f"[DEBUG] Filtered by shop_id: {shop_id}")
+            
+            if action:
+                queryset = queryset.filter(action=action)
+                print(f"[DEBUG] Filtered by action: {action}")
+            
+            if start_date:
+                print(f"[DEBUG] Start date received: {start_date}, type: {type(start_date)}")
+                try:
+                    # Handle different date formats
+                    if isinstance(start_date, str):
+                        queryset = queryset.filter(created_at__date__gte=start_date)
+                        print(f"[DEBUG] Filtered by start_date: {start_date}")
+                    else:
+                        print(f"[DEBUG] Start date is not a string, skipping filter")
+                except Exception as e:
+                    print(f"[DEBUG] Error filtering by start_date: {e}")
+            
+            if end_date:
+                print(f"[DEBUG] End date received: {end_date}, type: {type(end_date)}")
+                try:
+                    # Handle different date formats
+                    if isinstance(end_date, str):
+                        queryset = queryset.filter(created_at__date__lte=end_date)
+                        print(f"[DEBUG] Filtered by end_date: {end_date}")
+                    else:
+                        print(f"[DEBUG] End date is not a string, skipping filter")
+                except Exception as e:
+                    print(f"[DEBUG] Error filtering by end_date: {e}")
+            
+            if performed_by:
+                queryset = queryset.filter(performed_by__name__icontains=performed_by)
+                print(f"[DEBUG] Filtered by performed_by: {performed_by}")
+            
+            # Order by creation date
+            queryset = queryset.order_by('-created_at')
+            
+            # Pagination
+            offset = (page - 1) * limit
+            total = queryset.count()
+            logs = queryset[offset:offset + limit]
+            
+            # Serialize
+            serializer = self.get_serializer(logs, many=True)
+            
+            return Response({
+                'results': serializer.data,
+                'total': total,
+                'currentPage': page,
+                'totalPages': (total + limit - 1) // limit,
+                'hasNext': offset + limit < total,
+                'hasPrevious': page > 1
+            })
+            
+        except Exception as e:
+            print(f"[ERROR] Admin all logs error: {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def list(self, request, *args, **kwargs):
+        """Override list method to add debugging and proper filtering"""
+        print(f"[DEBUG] ShopLogViewSet.list called by user: {request.user}, role: {getattr(request.user, 'role', 'None')}")
+        
+        try:
+            # Get the base queryset
+            queryset = self.get_queryset()
+            
+            # Get query parameters for filtering
+            shop_id = request.query_params.get('shop')
+            action = request.query_params.get('action')
+            start_date = request.query_params.get('startDate')  # Frontend sends startDate
+            end_date = request.query_params.get('endDate')      # Frontend sends endDate
+            performed_by = request.query_params.get('performedBy')
+            page = int(request.query_params.get('page', 1))
+            limit = int(request.query_params.get('limit', 50))
+            
+            print(f"[DEBUG] Filter params - shop: {shop_id}, action: {action}, start: {start_date}, end: {end_date}, user: {performed_by}, page: {page}, limit: {limit}")
+            
+            # Apply filters
+            if shop_id:
+                queryset = queryset.filter(shop_id=shop_id)
+                print(f"[DEBUG] Filtered by shop_id: {shop_id}")
+            
+            if action:
+                queryset = queryset.filter(action=action)
+                print(f"[DEBUG] Filtered by action: {action}")
+            
+            if start_date:
+                queryset = queryset.filter(created_at__date__gte=start_date)
+                print(f"[DEBUG] Filtered by start_date: {start_date}")
+            
+            if end_date:
+                queryset = queryset.filter(created_at__date__lte=end_date)
+                print(f"[DEBUG] Filtered by end_date: {end_date}")
+            
+            if performed_by:
+                queryset = queryset.filter(performed_by__name__icontains=performed_by)
+                print(f"[DEBUG] Filtered by performed_by: {performed_by}")
+            
+            # Order by creation date (newest first)
+            queryset = queryset.order_by('-created_at')
+            
+            # Get total count before pagination
+            total = queryset.count()
+            print(f"[DEBUG] Total logs after filtering: {total}")
+            
+            # Apply pagination
+            offset = (page - 1) * limit
+            logs = queryset[offset:offset + limit]
+            print(f"[DEBUG] Pagination - offset: {offset}, limit: {limit}, returned: {len(logs)}")
+            
+            # Serialize the paginated results
+            serializer = self.get_serializer(logs, many=True)
+            
+            # Return paginated response
+            response_data = {
+                'results': serializer.data,
+                'total': total,
+                'currentPage': page,
+                'totalPages': (total + limit - 1) // limit,
+                'hasNext': offset + limit < total,
+                'hasPrevious': page > 1
+            }
+            
+            print(f"[DEBUG] Response - total: {total}, pages: {response_data['totalPages']}, current: {page}")
+            print(f"[DEBUG] Response data keys: {list(response_data.keys())}")
+            print(f"[DEBUG] Results count: {len(response_data['results'])}")
+            return Response(response_data)
+            
+        except Exception as e:
+            print(f"[ERROR] ShopLogViewSet.list error: {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'])
+    def create_test_log(self, request):
+        """Create a test log entry for debugging purposes"""
+        if not (getattr(request.user, 'role', None) == 'admin' or getattr(request.user, 'is_superuser', False)):
+            return Response({'error': 'Admin access required'}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            # Get the first shop for testing
+            shop = Shop.objects.first()
+            if not shop:
+                return Response({'error': 'No shops found'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Create a test log entry
+            test_log = ShopLog.objects.create(
+                shop=shop,
+                action='test_log_created',
+                performed_by=request.user,
+                details={
+                    'test_message': 'This is a test log entry',
+                    'created_by': request.user.email,
+                    'timestamp': timezone.now().isoformat(),
+                    'purpose': 'Testing logging system'
+                }
+            )
+            
+            print(f"[DEBUG] Test log created: {test_log.id}")
+            
+            return Response({
+                'message': 'Test log created successfully',
+                'log_id': str(test_log.id),
+                'shop': shop.name,
+                'action': test_log.action
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            print(f"[ERROR] Test log creation error: {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['get'])
+    def debug_info(self, request):
+        """Get debug information about the logging system"""
+        if not (getattr(request.user, 'role', None) == 'admin' or getattr(request.user, 'is_superuser', False)):
+            return Response({'error': 'Admin access required'}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            # Get basic statistics
+            total_logs = ShopLog.objects.count()
+            logs_by_action = ShopLog.objects.values('action').annotate(count=Count('action')).order_by('-count')
+            recent_logs = ShopLog.objects.order_by('-created_at')[:5]
+            
+            # Get user info
+            user_info = {
+                'id': request.user.id,
+                'email': request.user.email,
+                'role': getattr(request.user, 'role', 'None'),
+                'is_superuser': getattr(request.user, 'is_superuser', False),
+                'is_staff': getattr(request.user, 'is_staff', False)
+            }
+            
+            return Response({
+                'debug_info': {
+                    'total_logs': total_logs,
+                    'logs_by_action': list(logs_by_action),
+                    'recent_logs': [
+                        {
+                            'id': str(log.id),
+                            'action': log.action,
+                            'shop': log.shop.name if log.shop else 'Unknown',
+                            'created_at': log.created_at.isoformat(),
+                            'performed_by': getattr(log.performed_by, 'name', 'System') if log.performed_by else 'System'
+                        }
+                        for log in recent_logs
+                    ]
+                },
+                'user_info': user_info,
+                'timestamp': timezone.now().isoformat()
+            })
+            
+        except Exception as e:
+            print(f"[ERROR] Debug info error: {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class StudentAnalyticsViewSet(viewsets.ModelViewSet):

@@ -56,31 +56,103 @@ const ShopLogsPage: React.FC = () => {
   });
 
   const actionLabels: Record<string, string> = {
-    shop_opened: 'shop Opened',
-    shop_closed: 'shop Closed',
-    validity_updated: 'Validity Updated',
-    qr_validity_updated: 'QR Validity Updated',
-    shop_created: 'shop Created',
-    shop_activated: 'shop Activated',
-    shop_deactivated: 'shop Deactivated',
+    // Shop management actions
+    shop_opened: 'Shop Opened',
+    shop_closed: 'Shop Closed',
+    shop_created: 'Shop Created',
+    shop_activated: 'Shop Activated',
+    shop_deactivated: 'Shop Deactivated',
     manual_close: 'Manual Close',
     auto_close: 'Auto Close',
     final_validity_expired: 'Final Validity Expired',
-    settings_updated: 'Settings Updated'
+    shop_auto_opened: 'Shop Auto-Opened',
+    shop_auto_closed: 'Shop Auto-Closed',
+    
+    // Settings and configuration
+    validity_updated: 'Validity Time Updated',
+    qr_validity_updated: 'QR Validity Updated',
+    settings_updated: 'Settings Updated',
+    categories_updated: 'Categories Updated',
+    validity_time_updated: 'Validity Time Updated',
+    
+    // Product management
+    product_created: 'Product Created',
+    product_updated: 'Product Updated',
+    product_deleted: 'Product Deleted',
+    stock_updated: 'Stock Updated',
+    product_bulk_updated: 'Product Bulk Updated',
+    
+    // Order management
+    order_created: 'Order Created',
+    order_updated: 'Order Updated',
+    order_deleted: 'Order Deleted',
+    order_verified: 'Order Verified',
+    order_unverified: 'Order Unverified',
+    order_expired: 'Order Expired',
+    order_status_changed: 'Order Status Changed',
+    
+    // User management
+    sub_admin_created: 'Sub-Admin Created',
+    sub_admin_deleted: 'Sub-Admin Deleted',
+    admin_password_changed: 'Admin Password Changed',
+    user_login: 'User Login',
+    profile_updated: 'Profile Updated',
+    
+    // Bulk operations
+    bulk_operation_completed: 'Bulk Operation Completed',
+    
+    // System actions
+    toggle_open: 'Shop Toggle'
   };
 
   const actionColors: Record<string, string> = {
+    // Shop management actions
     shop_opened: 'badge-success',
     shop_closed: 'badge-warning',
-    validity_updated: 'badge-info',
-    qr_validity_updated: 'badge-info',
     shop_created: 'badge-success',
     shop_activated: 'badge-success',
     shop_deactivated: 'badge-error',
     manual_close: 'badge-warning',
     auto_close: 'badge-error',
     final_validity_expired: 'badge-error',
-    settings_updated: 'badge-primary'
+    shop_auto_opened: 'badge-success',
+    shop_auto_closed: 'badge-warning',
+    
+    // Settings and configuration
+    validity_updated: 'badge-info',
+    qr_validity_updated: 'badge-info',
+    settings_updated: 'badge-primary',
+    categories_updated: 'badge-primary',
+    validity_time_updated: 'badge-info',
+    
+    // Product management
+    product_created: 'badge-success',
+    product_updated: 'badge-info',
+    product_deleted: 'badge-error',
+    stock_updated: 'badge-warning',
+    product_bulk_updated: 'badge-info',
+    
+    // Order management
+    order_created: 'badge-success',
+    order_updated: 'badge-info',
+    order_deleted: 'badge-error',
+    order_verified: 'badge-success',
+    order_unverified: 'badge-warning',
+    order_expired: 'badge-error',
+    order_status_changed: 'badge-info',
+    
+    // User management
+    sub_admin_created: 'badge-success',
+    sub_admin_deleted: 'badge-error',
+    admin_password_changed: 'badge-warning',
+    user_login: 'badge-info',
+    profile_updated: 'badge-info',
+    
+    // Bulk operations
+    bulk_operation_completed: 'badge-primary',
+    
+    // System actions
+    toggle_open: 'badge-warning'
   };
 
   useEffect(() => {

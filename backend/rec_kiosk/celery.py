@@ -12,6 +12,10 @@ app.autodiscover_tasks()
 app.conf.beat_schedule = {
     'expire-orders-every-minute': {
         'task': 'api.tasks.expire_orders_and_handle_refund',
-        'schedule': crontab(),  # every minute
+        'schedule': crontab(minute='*'),  # Every minute
+    },
+    'manage-shop-hours-every-5-minutes': {
+        'task': 'api.tasks.manage_shop_hours',
+        'schedule': crontab(minute='*/5'),  # Every 5 minutes
     },
 }

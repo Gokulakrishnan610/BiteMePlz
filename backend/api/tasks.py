@@ -9,6 +9,56 @@ except Exception:
     _channels_available = False
 from django.db import transaction as db_transaction
 from django.conf import settings
+from api.models import ShopLog
+from api.models import Shop
+from datetime import datetime
+
+@shared_task(name='api.tasks.manage_shop_hours')
+def manage_shop_hours():
+    """Automatically open/close shops based on their configured hours"""
+    now = timezone.now()
+    current_time = now.time()
+    
+    # Get all active shops
+    shops = Shop.objects.filter(is_active=True)
+    
+    for shop in shops:
+        try:
+            if shop.final_validity_time:
+                # Convert final_validity_time to time object if it's a datetime
+                if isinstance(shop.final_validity_time, datetime):
+                    closing_time = shop.final_validity_time.time()
+                else:
+                    closing_time = shop.final_validity_time
+                
+                # Check if shop should be open or closed
+                should_be_open = current_time < closing_time
+                
+                # Update shop status if it differs from current state
+                if shop.is_open != should_be_open:
+                    old_status = shop.is_open
+                    shop.is_open = should_be_open
+                    shop.save()
+                    
+                    # Log the automatic status change
+                    action = 'shop_auto_opened' if should_be_open else 'shop_auto_closed'
+                    ShopLog.objects.create(
+                        shop=shop,
+                        action=action,
+                        performed_by=None,  # System action
+                        details={
+                            'old_status': 'closed' if old_status else 'open',
+                            'new_status': 'open' if should_be_open else 'closed',
+                            'time_checked': now.isoformat(),
+                            'closing_time': closing_time.isoformat(),
+                            'reason': 'Automatic time-based operation'
+                        }
+                    )
+                    
+        except Exception as e:
+            # Log error but continue with other shops
+            print(f"Error managing shop hours for {shop.name}: {str(e)}")
+            continue
 
 @shared_task(name='api.tasks.expire_orders_and_handle_refund')
 def expire_orders_and_handle_refund():
@@ -32,6 +82,27 @@ def expire_orders_and_handle_refund():
             # Mark order as expired and RESTOCK all items since order not verified
             order.status = 'expired'
             order.save()
+            
+            # Log the order expiration
+            try:
+                ShopLog.objects.create(
+                    shop=order.shop,
+                    action='order_expired',
+                    performed_by=None,  # System action
+                    details={
+                        'order_id': order.order_id,
+                        'total_price': float(order.total_price),
+                        'expired_at': now.isoformat(),
+                        'customer_name': order.user.name if order.user else 'Unknown',
+                        'payment_method': (order.payment_result or {}).get('method', 'unknown'),
+                        'was_paid': order.is_paid,
+                        'expiry_reason': 'QR validity expired'
+                    }
+                )
+            except Exception:
+                # Don't fail the expiry if logging errors
+                pass
+            
             try:
                 for it in (order.order_items or []):
                     product_id = it.get('product_id')
