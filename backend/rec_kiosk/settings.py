@@ -131,28 +131,32 @@ REST_FRAMEWORK = {
     'UNAUTHENTICATED_USER': None,
 }
 
-# CORS Configuration - Minimal working setup
+# CORS Configuration - Completely open for debugging
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = ["DELETE", "GET", "OPTIONS", "PATCH", "POST", "PUT"]
 CORS_ALLOW_HEADERS = [
     "accept", "accept-encoding", "authorization", "content-type", "dnt", "origin",
     "user-agent", "x-csrftoken", "x-requested-with", "x-parent-session-id", 
-    "X-Parent-Session-ID", "cache-control", "pragma"
+    "X-Parent-Session-ID", "cache-control", "pragma", "*"
 ]
 
-# Remove all other CORS settings to avoid conflicts
-# CORS_ALLOWED_ORIGINS = [...]
-# CORS_ALLOWED_ORIGIN_REGEXES = [...]
-# CORS_EXPOSE_HEADERS = [...]
-# CORS_PREFLIGHT_MAX_AGE = ...
-# CORS_URLS_REGEX = ...
-# CORS_ORIGIN_ALLOW_ALL = ...
+# Force CORS to be completely open
+CORS_ORIGIN_WHITELIST = []
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_ALL_ORIGINS = True
 
 # Debug CORS issues
 if DEBUG:
-    CORS_ORIGIN_ALLOW_ALL = True  # Temporarily allow all origins in debug mode
+    CORS_ORIGIN_ALLOW_ALL = True
+    CORS_ALLOW_ALL_ORIGINS = True
     print("DEBUG: CORS_ORIGIN_ALLOW_ALL set to True for debugging")
+    print("DEBUG: CORS_ALLOW_ALL_ORIGINS set to True for debugging")
+
+# Force CORS headers in all cases
+CORS_URLS_REGEX = r'^.*$'
+CORS_PREFLIGHT_MAX_AGE = 86400
 
 # JWT
 from datetime import timedelta
