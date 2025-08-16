@@ -25,6 +25,84 @@ class CustomUserAdmin(UserAdmin):
     add_fieldsets = UserAdmin.add_fieldsets + (
         ('REC Kiosk Info', {'fields': ('name', 'roll_no', 'role', 'shop', 'is_verified', 'otp', 'password_reset_otp', 'password_reset_token', 'balance')}),
     )
+    
+    actions = ['view_password_reset_info']
+    
+    def view_password_reset_info(self, request, queryset):
+        """View password reset information for selected users"""
+        if len(queryset) != 1:
+            self.message_user(request, 'Please select exactly one user to view password reset info.', messages.ERROR)
+            return
+        
+        user = queryset.first()
+        
+        # Get password reset information
+        has_reset_otp = bool(user.password_reset_otp)
+        has_reset_token = bool(user.password_reset_token)
+        
+        # Get recent password change logs if it's a shop admin
+        recent_password_changes = []
+        if user.role == 'shopAdmin' and user.shop:
+            recent_password_changes = ShopLog.objects.filter(
+                shop=user.shop,
+                action='admin_password_changed'
+            ).order_by('-created_at')[:5]
+        
+        # Return HTML with password reset information
+        from django.http import HttpResponse
+        html = f'''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Password Reset Info - {user.email}</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 40px; }}
+                .info {{ background: #f0f0f0; padding: 15px; border-radius: 4px; margin-bottom: 20px; }}
+                .status {{ padding: 8px; border-radius: 4px; margin: 5px 0; }}
+                .status.active {{ background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }}
+                .status.inactive {{ background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }}
+                .log-entry {{ background: #fff; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin: 5px 0; }}
+                .button {{ background: #007cba; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block; margin: 5px; }}
+                .button:hover {{ background: #005a87; }}
+            </style>
+        </head>
+        <body>
+            <h1>Password Reset Information</h1>
+            <div class="info">
+                <strong>User:</strong> {user.name}<br>
+                <strong>Email:</strong> {user.email}<br>
+                <strong>Role:</strong> {user.role}<br>
+                <strong>Shop:</strong> {user.shop.name if user.shop else 'None'}
+            </div>
+            
+            <h2>Current Password Reset Status</h2>
+            <div class="status {'active' if has_reset_otp else 'inactive'}">
+                <strong>Reset OTP:</strong> {'Active' if has_reset_otp else 'None'}
+            </div>
+            <div class="status {'active' if has_reset_token else 'inactive'}">
+                <strong>Reset Token:</strong> {'Active' if has_reset_token else 'None'}
+            </div>
+            
+            {f'''
+            <h2>Recent Password Changes</h2>
+            {''.join([f'''
+            <div class="log-entry">
+                <strong>Date:</strong> {log.created_at.strftime('%Y-%m-%d %H:%M:%S')}<br>
+                <strong>Changed By:</strong> {log.performed_by.email if log.performed_by else 'Unknown'}<br>
+                <strong>Details:</strong> {log.details.get('admin_user', 'N/A')}
+            </div>
+            ''' for log in recent_password_changes]) if recent_password_changes else '<p>No recent password changes found.</p>'}
+            ''' if user.role == 'shopAdmin' and user.shop else ''}
+            
+            <h2>Actions</h2>
+            <a href="{reverse('admin:api_user_change', args=[user.id])}" class="button">Back to User</a>
+            <a href="{reverse('admin:index')}" class="button">Admin Home</a>
+        </body>
+        </html>
+        '''
+        return HttpResponse(html)
+    
+    view_password_reset_info.short_description = "View Password Reset Info"
 
 
 class ShopAdmin(admin.ModelAdmin):
@@ -33,7 +111,7 @@ class ShopAdmin(admin.ModelAdmin):
     search_fields = ('name', 'location', 'shop_admin__name', 'shop_admin__email')
     ordering = ('-created_at',)
     
-    actions = ['change_shop_admin_password']
+    actions = ['change_shop_admin_password', 'view_password_reset_info']
     
     def shop_admin_email(self, obj):
         """Display shop admin email for easy reference"""
@@ -87,6 +165,22 @@ class ShopAdmin(admin.ModelAdmin):
     
     change_shop_admin_password.short_description = "Change shop admin password"
     
+    def view_password_reset_info(self, request, queryset):
+        """View password reset information for selected shops' admin users"""
+        if len(queryset) != 1:
+            self.message_user(request, 'Please select exactly one shop to view password reset info.', messages.ERROR)
+            return
+        
+        shop = queryset.first()
+        if not shop.shop_admin:
+            self.message_user(request, f'Shop "{shop.name}" has no admin user.', messages.ERROR)
+            return
+        
+        # Redirect to the password reset info view
+        return redirect(reverse('admin:shop_password_reset_info', args=[shop.id]))
+    
+    view_password_reset_info.short_description = "View Password Reset Info"
+    
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
@@ -94,6 +188,11 @@ class ShopAdmin(admin.ModelAdmin):
                 '<path:object_id>/change-password/',
                 self.admin_site.admin_view(self.change_password_view),
                 name='shop_change_password',
+            ),
+            path(
+                '<path:object_id>/password-reset-info/',
+                self.admin_site.admin_view(self.password_reset_info_view),
+                name='shop_password_reset_info',
             ),
         ]
         return custom_urls + urls
@@ -185,7 +284,86 @@ class ShopAdmin(admin.ModelAdmin):
             </html>
             '''
             return HttpResponse(html)
+
+        except Shop.DoesNotExist:
+            messages.error(request, 'Shop not found.')
+            return redirect(reverse('admin:api_shop_change', args=[object_id]))
+
+    def password_reset_info_view(self, request, object_id):
+        """Custom view for viewing password reset information"""
+        try:
+            shop = Shop.objects.get(id=object_id)
+            if not shop.shop_admin:
+                messages.error(request, f'Shop "{shop.name}" has no admin user.')
+                return redirect(reverse('admin:api_shop_change', args=[object_id]))
+
+            admin_user = shop.shop_admin
             
+            # Get password reset information
+            has_reset_otp = bool(admin_user.password_reset_otp)
+            has_reset_token = bool(admin_user.password_reset_token)
+            
+            # Get recent password change logs
+            from django.utils import timezone
+            recent_password_changes = ShopLog.objects.filter(
+                shop=shop,
+                action='admin_password_changed'
+            ).order_by('-created_at')[:5]
+            
+            # Return HTML with password reset information
+            from django.http import HttpResponse
+            html = f'''
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Password Reset Info - {shop.name}</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; margin: 40px; }}
+                    .info {{ background: #f0f0f0; padding: 15px; border-radius: 4px; margin-bottom: 20px; }}
+                    .status {{ padding: 8px; border-radius: 4px; margin: 5px 0; }}
+                    .status.active {{ background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }}
+                    .status.inactive {{ background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }}
+                    .log-entry {{ background: #fff; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin: 5px 0; }}
+                    .button {{ background: #007cba; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block; margin: 5px; }}
+                    .button:hover {{ background: #005a87; }}
+                    .button.danger {{ background: #dc3545; }}
+                    .button.danger:hover {{ background: #c82333; }}
+                </style>
+            </head>
+            <body>
+                <h1>Password Reset Information</h1>
+                <div class="info">
+                    <strong>Shop:</strong> {shop.name}<br>
+                    <strong>Admin:</strong> {admin_user.email}<br>
+                    <strong>Admin Name:</strong> {admin_user.name}
+                </div>
+                
+                <h2>Current Password Reset Status</h2>
+                <div class="status {'active' if has_reset_otp else 'inactive'}">
+                    <strong>Reset OTP:</strong> {'Active' if has_reset_otp else 'None'}
+                </div>
+                <div class="status {'active' if has_reset_token else 'inactive'}">
+                    <strong>Reset Token:</strong> {'Active' if has_reset_token else 'None'}
+                </div>
+                
+                <h2>Recent Password Changes</h2>
+                {''.join([f'''
+                <div class="log-entry">
+                    <strong>Date:</strong> {log.created_at.strftime('%Y-%m-%d %H:%M:%S')}<br>
+                    <strong>Changed By:</strong> {log.performed_by.email if log.performed_by else 'Unknown'}<br>
+                    <strong>Details:</strong> {log.details.get('admin_user', 'N/A')}
+                </div>
+                ''' for log in recent_password_changes]) if recent_password_changes else '<p>No recent password changes found.</p>'}
+                
+                <h2>Actions</h2>
+                <a href="{reverse('admin:api_shop_change', args=[object_id])}" class="button">Back to Shop</a>
+                <a href="{reverse('admin:shop_change_password', args=[object_id])}" class="button">Change Password</a>
+                <a href="{reverse('admin:index')}" class="button">Admin Home</a>
+            </body>
+            </html>
+            '''
+            return HttpResponse(html)
+
         except Shop.DoesNotExist:
             messages.error(request, 'Shop not found.')
             return redirect(reverse('admin:api_shop_change', args=[object_id]))

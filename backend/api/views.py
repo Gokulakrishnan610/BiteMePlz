@@ -284,177 +284,18 @@ class UserViewSet(viewsets.ModelViewSet):
             'admin_email': shop.shop_admin.email
         }, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
-    def forgot_password(self, request):
-        """Send password reset OTP to user's email"""
-        try:
-            email = request.data.get('email')
-            if not email:
-                return Response({'message': 'Order created successfully',
-                    'order': convert_uuids_to_str_recursive(order_data)
-                }, status=status.HTTP_201_CREATED)
-            elif payment_method == 'razorpay':
-                import razorpay
-                from django.conf import settings
-                
-                client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-                
-                razorpay_order = client.order.create({
-                    'amount': int(total_price * 100),
-                    'currency': 'INR',
-                    'receipt': f'order_{uuid.uuid4().hex[:8]}',
-                    'payment_capture': 1
-                })
-
-                
-                order_data = self.get_serializer(order).data
-                order_data['_id'] = str(order_data['id'])
-                
-                return Response({
-                    'message': 'Order created successfully',
-                    'order': convert_uuids_to_str_recursive(order_data),
-                    'razorpay_order_id': razorpay_order['id'],
-                    'razorpayKeyId': settings.RAZORPAY_KEY_ID
-                }, status=status.HTTP_201_CREATED)
-            else:
-                return Response({'error': 'Invalid payment method'}, status=status.HTTP_400_BAD_REQUEST)
-                
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
-    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
-    def verify_reset_otp(self, request):
-        """Verify password reset OTP"""
-        try:
-            user_id = request.data.get('userId')
-            otp = request.data.get('otp')
-            
-            if not user_id or not otp:
-                return Response({'error': 'User ID and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            try:
-                user = User.objects.get(id=user_id)
-            except User.DoesNotExist:
-                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-            
-            if not user.password_reset_otp:
-                return Response({'error': 'No OTP found for this user'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Check if OTP is expired
-            otp_data = user.password_reset_otp
-            expires_at = timezone.datetime.fromisoformat(otp_data['expires_at'].replace('Z', '+00:00'))
-            if timezone.now() > expires_at:
-                return Response({'error': 'OTP has expired'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Verify OTP
-            if otp_data['otp'] != otp:
-                return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Generate reset token
-            import secrets
-            reset_token = secrets.token_urlsafe(32)
-            user.password_reset_token = {
-                'token': reset_token,
-                'created_at': timezone.now().isoformat(),
-                'expires_at': (timezone.now() + timedelta(minutes=30)).isoformat()
-            }
-            user.save()
-            
-            return Response({
-                'message': 'OTP verified successfully',
-                'resetToken': reset_token
-            }, status=status.HTTP_200_OK)
-            
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
-    def reset_password(self, request):
-        """Reset password using reset token"""
-        try:
-            reset_token = request.data.get('resetToken')
-            new_password = request.data.get('newPassword')
-            
-            if not reset_token or not new_password:
-                return Response({'error': 'Reset token and new password are required'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Find user with this reset token
-            users = User.objects.all()
-            user = None
-            for u in users:
-                if u.password_reset_token and u.password_reset_token.get('token') == reset_token:
-                    user = u
-                    break
-            
-            if not user:
-                return Response({'error': 'Invalid reset token'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Check if token is expired
-            token_data = user.password_reset_token
-            expires_at = timezone.datetime.fromisoformat(token_data['expires_at'].replace('Z', '+00:00'))
-            if timezone.now() > expires_at:
-                return Response({'error': 'Reset token has expired'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Update password
-            user.set_password(new_password)
-            user.password_reset_token = None
-            user.password_reset_otp = None
-            user.save()
-            
-            return Response({
-                'message': 'Password reset successfully'
-            }, status=status.HTTP_200_OK)
-            
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
-    def resend_reset_otp(self, request):
-        """Resend password reset OTP"""
-        try:
-            user_id = request.data.get('userId')
-            
-            if not user_id:
-                return Response({'error': 'User ID is required'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            try:
-                user = User.objects.get(id=user_id)
-            except User.DoesNotExist:
-                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-            
-            # Generate new OTP
-            import random
-            otp = str(random.randint(100000, 999999))
-            otp_data = {
-                'otp': otp,
-                'created_at': timezone.now().isoformat(),
-                'expires_at': (timezone.now() + timedelta(minutes=10)).isoformat()
-            }
-            
-            user.password_reset_otp = otp_data
-            user.save()
-            
-            return Response({
-                'message': 'New password reset OTP sent to your email'
-            }, status=status.HTTP_200_OK)
-            
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=False, methods=['get'])
-def cors_test(self, request):
-    """Test endpoint to verify CORS is working"""
-    return Response({
-        'message': 'CORS test successful',
-        'origin': request.META.get('HTTP_ORIGIN'),
-        'method': request.method,
-        'headers': dict(request.headers)
-    })
 
-@action(detail=False, methods=['post'])
-def shop_admin(self, request):
+
+
+
+    @action(detail=False, methods=['post'])
+    def shop_admin(self, request):
         """Create a shop admin user and shop"""
         try:
             # Only the main admin can create shop admins
@@ -552,6 +393,11 @@ class ShopViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
+        # Add CORS debugging
+        if self.action == 'list':
+            print(f"DEBUG: Shop list called from origin: {self.request.META.get('HTTP_ORIGIN')}")
+            print(f"DEBUG: Request headers: {dict(self.request.headers)}")
+        
         user = getattr(self.request, 'user', None)
         if getattr(user, 'is_authenticated', False):
             if getattr(user, 'role', None) == 'admin':

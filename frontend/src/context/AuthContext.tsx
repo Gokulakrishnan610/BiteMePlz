@@ -21,6 +21,7 @@ interface AuthContextType {
   logout: () => void;
   loading: boolean;
   isParent: boolean;
+  setCartResetCallback: (callback: () => void) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,6 +42,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cartResetCallback, setCartResetCallback] = useState<(() => void) | null>(null);
 
   // Initialize auth state on app load
   useEffect(() => {
@@ -56,21 +58,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           
           // Set token in api defaults for backward compatibility
           api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+          
+          // Clear cart on initialization to ensure fresh state for current user
+          if (cartResetCallback) {
+            cartResetCallback();
+          }
         }
       } catch (error) {
         // Clear corrupted data
         localStorage.removeItem('user');
         localStorage.removeItem('token');
+        // Also clear cart if there's an error
+        if (cartResetCallback) {
+          cartResetCallback();
+        }
       } finally {
         setLoading(false);
       }
     };
 
     initializeAuth();
-  }, []);
+  }, [cartResetCallback]);
+
+  // Clear cart whenever user changes
+  useEffect(() => {
+    if (cartResetCallback && user) {
+      cartResetCallback();
+    }
+  }, [user?._id, cartResetCallback]);
 
   const login = async (email: string, password: string) => {
     try {
+      // Clear cart when logging in (in case a different user was previously logged in)
+      if (cartResetCallback) {
+        cartResetCallback();
+      }
+      
       const { data } = await api.post('/api/users/login/', { email: email.trim().toLowerCase(), password });
 
       if (!data._id || !data.name || !data.email || !data.role || !data.token) {
@@ -128,6 +151,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (name: string, email: string, password: string, role: string) => {
     try {
+      // Clear cart when registering (in case a different user was previously logged in)
+      if (cartResetCallback) {
+        cartResetCallback();
+      }
+      
       const { data } = await api.post('/api/users/register/', {
         name,
         email,
@@ -164,6 +192,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
+    // Clear cart when logging out
+    if (cartResetCallback) {
+      cartResetCallback();
+    }
+    
     setUser(null);
     setToken(null);
     
@@ -179,6 +212,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const parentLogin = async (email: string) => {
     try {
+      // Clear cart when parent logs in (in case a different user was previously logged in)
+      if (cartResetCallback) {
+        cartResetCallback();
+      }
+      
       // Create a parent user object
       const parentUserData: User = {
         _id: `parent_${Date.now()}`,
@@ -208,7 +246,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     logout,
     loading,
-    isParent: user?.role === 'parent'
+    isParent: user?.role === 'parent',
+    setCartResetCallback
   };
 
   return (

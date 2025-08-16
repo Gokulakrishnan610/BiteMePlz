@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useToast } from '../components/ToastContainer';
+import { useAuth } from './AuthContext';
 
 export interface CartItem {
   id: string;
@@ -38,6 +39,7 @@ export const useCart = () => {
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { showSuccess } = useToast();
+  const { setCartResetCallback } = useAuth();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
   // Initialize cart from localStorage
@@ -95,7 +97,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = () => {
     setCartItems([]);
+    localStorage.removeItem('cartItems');
   };
+
+  // Register the clearCart function with AuthContext
+  useEffect(() => {
+    setCartResetCallback(() => clearCart);
+  }, [setCartResetCallback]);
 
   const getTotalPrice = () => {
     return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);

@@ -50,6 +50,8 @@ Administrators can now change passwords for all shop admin users directly from t
 - **Action Logging**: All password changes are logged with admin details
 - **Admin-Only Access**: Only superusers can change shop admin passwords
 - **Immediate Effect**: New passwords take effect immediately
+- **Forgot Password Compatibility**: Shop admins can still use the forgot password feature even after their passwords are changed by administrators
+- **Password Reset Monitoring**: Admins can view password reset status and recent password change history
 
 ### Technical Implementation
 - **Backend API**: `/api/users/change_shop_admin_password/` endpoint
@@ -57,6 +59,39 @@ Administrators can now change passwords for all shop admin users directly from t
 - **Admin Actions**: Django admin bulk actions and custom views with password forms
 - **Frontend Integration**: React components with password input fields and confirmation dialogs
 - **Audit Trail**: Comprehensive logging via ShopLog model
+
+### Forgot Password Functionality
+The forgot password feature remains fully functional for all users, including shop admins whose passwords have been changed by administrators:
+
+- **Request Reset**: `/api/users/forgot-password/` - Send OTP to user's email
+- **Verify OTP**: `/api/users/verify-reset-otp` - Verify the OTP code
+- **Reset Password**: `/api/users/reset-password` - Set new password using reset token
+- **Resend OTP**: `/api/users/resend-reset-otp` - Resend OTP if expired
+
+This ensures that shop admins can always regain access to their accounts through the standard password reset process, regardless of how their passwords were originally set or changed.
+
+### Password Reset Monitoring (New Feature)
+Administrators can now monitor password reset activities and view the status of password reset requests:
+
+#### From Django Admin Interface
+1. **Shop Management**: 
+   - Select a shop and use "View Password Reset Info" action
+   - View current password reset status (OTP/Token active/inactive)
+   - See recent password change history
+   - Access password change forms directly
+
+2. **User Management**:
+   - Select any user and use "View Password Reset Info" action
+   - View individual user's password reset status
+   - For shop admins: see associated shop's password change logs
+
+#### Information Displayed
+- **Current Status**: Whether reset OTP or token is currently active
+- **Recent Changes**: History of password changes with timestamps and admin details
+- **User Details**: Shop admin information and associated shop details
+- **Quick Actions**: Direct links to change passwords or return to admin sections
+
+This feature provides comprehensive visibility into password management activities while maintaining security by not exposing actual passwords.
 
 ## Installation and Setup
 
