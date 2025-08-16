@@ -30,7 +30,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
-    'api.middleware.CustomCORSMiddleware',  # Custom CORS middleware
+    # 'api.middleware.CustomCORSMiddleware',  # Commented out to avoid CORS conflicts
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # For serving static files
     'django.contrib.sessions.middleware.SessionMiddleware',
