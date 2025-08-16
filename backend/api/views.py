@@ -43,10 +43,12 @@ def serve_media_file(request, path):
             for item in os.listdir(file_path):
                 item_path = os.path.join(file_path, item)
                 if os.path.isfile(item_path):
+                    # Clean up path to avoid double slashes
+                    clean_path = path.rstrip('/') if path else ''
                     files.append({
                         'name': item,
                         'size': os.path.getsize(item_path),
-                        'url': f'/media/{path}/{item}' if path else f'/media/{item}'
+                        'url': f'/media/{clean_path}/{item}' if clean_path else f'/media/{item}'
                     })
             
             # Return JSON response for directory listing
