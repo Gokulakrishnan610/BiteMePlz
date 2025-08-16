@@ -131,26 +131,9 @@ REST_FRAMEWORK = {
     'UNAUTHENTICATED_USER': None,
 }
 
-# CORS Configuration
+# CORS Configuration - Minimal working setup
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:3000",
-    "https://kisokrec.onrender.com",
-    "https://kioskrec.onrender.com",
-    "https://rec-kiosk-1.onrender.com",
-    "https://super-conkies-906020.netlify.app",
-    "https://kioskrec25.netlify.app",
-]
-
-CORS_ALLOWED_ORIGIN_REGEXES = [
-    r"^https?://localhost:\d+$",
-    r"^https?://rec-kiosk-1\.onrender\.com$",
-    r"^https?://.*\.netlify\.app$",  # Allow all Netlify subdomains
-]
-
 CORS_ALLOW_METHODS = ["DELETE", "GET", "OPTIONS", "PATCH", "POST", "PUT"]
 CORS_ALLOW_HEADERS = [
     "accept", "accept-encoding", "authorization", "content-type", "dnt", "origin",
@@ -158,15 +141,13 @@ CORS_ALLOW_HEADERS = [
     "X-Parent-Session-ID", "cache-control", "pragma"
 ]
 
-CORS_EXPOSE_HEADERS = [
-    "x-parent-session-id", "X-Parent-Session-ID", "content-type", "content-length"
-]
-
-CORS_PREFLIGHT_MAX_AGE = 86400
-CORS_URLS_REGEX = r'^.*$'  # Apply CORS to all URLs
-
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ORIGIN_ALLOW_ALL = True
+# Remove all other CORS settings to avoid conflicts
+# CORS_ALLOWED_ORIGINS = [...]
+# CORS_ALLOWED_ORIGIN_REGEXES = [...]
+# CORS_EXPOSE_HEADERS = [...]
+# CORS_PREFLIGHT_MAX_AGE = ...
+# CORS_URLS_REGEX = ...
+# CORS_ORIGIN_ALLOW_ALL = ...
 
 # Debug CORS issues
 if DEBUG:
