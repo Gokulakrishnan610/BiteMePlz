@@ -683,7 +683,11 @@ const ShopPage: React.FC = () => {
       {/* Restaurant Image & Info */}
             <div className="relative">
                 <img
-          src={shop.image || "/placeholder.svg"}
+          src={
+            shop.image
+              ? getMediaUrl(shop.image)
+              : "/placeholder.svg"
+          }
                   alt={shop.name}
           className="w-full h-48 sm:h-56 md:h-64 object-cover"
         />
@@ -885,7 +889,11 @@ const ShopPage: React.FC = () => {
                 >
                        <div className="relative aspect-square h-32 flex-shrink-0">
                     <img
-                           src={product.image || "/placeholder.svg"}
+                           src={
+                             product.image
+                               ? getMediaUrl(product.image)
+                               : "/placeholder.svg"
+                           }
                       alt={product.name}
                            className="w-full h-full object-cover"
                          />

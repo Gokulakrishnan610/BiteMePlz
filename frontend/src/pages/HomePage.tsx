@@ -578,7 +578,11 @@ const HomePage: React.FC = () => {
                             <div className="flex h-full">
                               <div className="relative w-32 flex-shrink-0 h-full">
                                 <img
-                                  src={shop.image || "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"}
+                                  src={
+                                    shop.image
+                                      ? getMediaUrl(shop.image)
+                                      : "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"
+                                  }
                                   alt={shop.name}
                                   className="w-full h-full object-cover"
                                 />
@@ -650,7 +654,11 @@ const HomePage: React.FC = () => {
                           <Card className="overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow duration-200 bg-white">
                             <div className="relative aspect-square overflow-hidden">
                               <img
-                                src={shop.image || "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"}
+                                src={
+                                  shop.image
+                                    ? getMediaUrl(shop.image)
+                                    : "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"
+                                }
                                 alt={shop.name}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                               />
