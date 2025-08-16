@@ -142,6 +142,16 @@ CORS_ALLOW_HEADERS = [
     "X-Parent-Session-ID", "cache-control", "pragma", "*"
 ]
 
+# Specific allowed origins including Netlify
+CORS_ALLOWED_ORIGINS = [
+    "https://kioskrec25.netlify.app",
+    "https://super-conkies-906020.netlify.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+]
+
 # Force CORS to be completely open
 CORS_ORIGIN_WHITELIST = []
 CORS_ORIGIN_ALLOW_ALL = True

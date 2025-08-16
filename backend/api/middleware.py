@@ -39,15 +39,25 @@ class CustomCORSMiddleware(MiddlewareMixin):
                 print(f"DEBUG: Origin: {origin}, Allowed: {is_allowed}")
                 
                 if is_allowed:
-                    response['Access-Control-Allow-Origin'] = origin
-                    response['Access-Control-Allow-Credentials'] = 'true'
-                    response['Access-Control-Allow-Methods'] = 'DELETE, GET, OPTIONS, PATCH, POST, PUT'
-                    response['Access-Control-Allow-Headers'] = 'accept, accept-encoding, authorization, content-type, dnt, origin, user-agent, x-csrftoken, x-requested-with, x-parent-session-id, X-Parent-Session-ID, cache-control, pragma'
-                    response['Access-Control-Expose-Headers'] = 'x-parent-session-id, X-Parent-Session-ID, content-type, content-length'
-                    response['Access-Control-Max-Age'] = '86400'
-                    print(f"DEBUG: CORS headers set for {origin}")
+                    response["Access-Control-Allow-Origin"] = origin
                 else:
-                    print(f"DEBUG: Origin {origin} not allowed")
+                    # For debugging, allow all origins temporarily
+                    response["Access-Control-Allow-Origin"] = "*"
+                    print(f"WARNING: Origin {origin} not in allowed list, but allowing for debugging")
+            else:
+                # No origin header, allow all
+                response["Access-Control-Allow-Origin"] = "*"
+            
+            # Set other CORS headers
+            response["Access-Control-Allow-Methods"] = "DELETE, GET, OPTIONS, PATCH, POST, PUT"
+            response["Access-Control-Allow-Headers"] = "accept, accept-encoding, authorization, content-type, dnt, origin, user-agent, x-csrftoken, x-requested-with, x-parent-session-id, X-Parent-Session-ID, cache-control, pragma"
+            response["Access-Control-Allow-Credentials"] = "true"
+            response["Access-Control-Max-Age"] = "86400"
+            
+            # Handle preflight requests
+            if request.method == "OPTIONS":
+                response.status_code = 200
+                response.content = b""
         
         return response
     
