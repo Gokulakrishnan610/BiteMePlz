@@ -165,9 +165,6 @@ CORS_EXPOSE_HEADERS = [
 CORS_PREFLIGHT_MAX_AGE = 86400
 CORS_URLS_REGEX = r'^.*$'  # Apply CORS to all URLs
 
-# Security: Keep these False
-CORS_ALLOW_ALL_ORIGINS = False
-CORS_ORIGIN_ALLOW_ALL = False
 
 # Debug CORS issues
 if DEBUG:
