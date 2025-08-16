@@ -189,13 +189,10 @@ const OrdersPage: React.FC = () => {
       <div className="pt-20 md:pt-32">
         <div className="max-w-7xl mx-auto px-4 py-8">
           {/* Header */}
-          <div className="flex items-center mb-8">
-            <button
-              onClick={() => navigate(-1)}
-              className="flex items-center text-purple-600 hover:text-purple-700 transition-colors mr-4"
-            >
+          <div className="flex items-center justify-between mb-8">
+            <button onClick={() => navigate('/')} className="flex items-center text-purple-600 hover:text-purple-700 transition-colors">
               <ArrowLeft size={20} className="mr-2" />
-              <span className="font-medium">Back</span>
+              <span className="font-medium">Back to Home</span>
             </button>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
@@ -276,17 +273,31 @@ const OrdersPage: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Link to details when verified */}
-                  {order.status === "completed" && order.is_verified && (
-                      <Link to={`/order/${order._id}`} className="flex-1">
+                    {/* Action Buttons */}
+                  <div className="flex gap-3 mt-6">
+                    {/* View Order Details Button - Always visible */}
+                    <Link to={`/order/${order._id}`} className="flex-1">
+                      <Button
+                        variant="outline"
+                        className="w-full border-purple-600 text-purple-600 hover:bg-purple-50 bg-transparent"
+                      >
+                        <Package size={16} className="mr-2" />
+                        View Order Details
+                      </Button>
+                    </Link>
+
+                    {/* Conditional buttons based on order status */}
+                    {order.status === "completed" && order.is_verified && (
+                      <div className="flex gap-2">
                         <Button
                           variant="outline"
-                          className="w-full border-purple-600 text-purple-600 hover:bg-purple-50 bg-transparent"
+                          className="border-green-600 text-green-600 hover:bg-green-50 bg-transparent"
+                          disabled
                         >
-                          <Package size={16} className="mr-2" />
-                          View Order Details
+                          <CheckCircle size={16} className="mr-2" />
+                          Order Completed
                         </Button>
-                      </Link>
+                      </div>
                     )}
 
                     {order.status === "expired" && (
@@ -299,6 +310,7 @@ const OrdersPage: React.FC = () => {
                         Delete Order
                       </Button>
                     )}
+                  </div>
                 </CardContent>
               </Card>
             ))}
