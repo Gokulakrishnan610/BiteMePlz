@@ -27,6 +27,40 @@ from .authentication import ParentSessionAuthentication  # use dedicated module
 import time
 from django.db.models import Count, Avg, Sum
 
+# Custom media serving view for production
+from django.http import FileResponse, Http404
+from django.conf import settings
+import os
+
+def serve_media_file(request, path):
+    """Custom view to serve media files in production"""
+    file_path = os.path.join(settings.MEDIA_ROOT, path)
+    
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        # Get file extension for content type
+        ext = os.path.splitext(file_path)[1].lower()
+        content_types = {
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.gif': 'image/gif',
+            '.webp': 'image/webp',
+            '.pdf': 'application/pdf',
+            '.txt': 'text/plain',
+        }
+        
+        content_type = content_types.get(ext, 'application/octet-stream')
+        
+        try:
+            with open(file_path, 'rb') as f:
+                response = FileResponse(f, content_type=content_type)
+                response['Cache-Control'] = 'public, max-age=31536000'  # Cache for 1 year
+                return response
+        except Exception as e:
+            raise Http404(f"Error reading file: {e}")
+    else:
+        raise Http404("File not found")
+
 
 class UUIDEncoder(DjangoJSONEncoder):
     def default(self, obj):
