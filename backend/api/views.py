@@ -28,7 +28,7 @@ import time
 from django.db.models import Count, Avg, Sum
 
 # Custom media serving view for production
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, JsonResponse
 from django.conf import settings
 import os
 
@@ -50,7 +50,6 @@ def serve_media_file(request, path):
                     })
             
             # Return JSON response for directory listing
-            from django.http import JsonResponse
             return JsonResponse({
                 'type': 'directory',
                 'path': path,

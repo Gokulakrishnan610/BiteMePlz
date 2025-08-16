@@ -114,10 +114,8 @@ if not DEBUG:  # Only create directories in production
     os.makedirs(os.path.join(MEDIA_ROOT, 'shops'), exist_ok=True)
     os.makedirs(os.path.join(MEDIA_ROOT, 'products'), exist_ok=True)
 
-# Production media serving configuration
-if not DEBUG:
-    # Use whitenoise for media files in production
-    MEDIAFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Note: We use custom view for media serving in production, not whitenoise
+# whitenoise is only for static files
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'api.User'
