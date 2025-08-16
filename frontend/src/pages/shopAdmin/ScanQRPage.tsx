@@ -52,6 +52,7 @@ const ScanQRPage: React.FC = () => {
   const [result, setResult] = useState<string | null>(null);
   const [order, setOrder] = useState<OrderDto | null>(null);
   const [loading, setLoading] = useState(false);
+  const [resetKey, setResetKey] = useState(0);
 
 	const extractOrderId = (raw: string): string | null => {
     if (!raw) return null;
@@ -173,6 +174,12 @@ const ScanQRPage: React.FC = () => {
 			const { data } = await api.put(`/api/orders/${order.id}/verify/`, payload);
       setOrder(data as OrderDto);
       toast.success('Order verified successfully');
+
+      // 🔑 Auto-reset and reopen scanner
+      setOrder(null);
+      setResult('');
+      setScanning(true);
+      setResetKey((prev) => prev + 1);
     } catch (error: any) {
       console.error('Error verifying order:', error);
       toast.error(error.response?.data?.message || 'Failed to verify order');
@@ -273,7 +280,7 @@ const ScanQRPage: React.FC = () => {
                         </button>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-4">
-                        <QRScanner onScanSuccess={handleScan} onScanError={handleError} />
+                        <QRScanner key={resetKey} autoStart={true} onScanSuccess={handleScan} onScanError={handleError} />
                       </div>
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                         <div className="flex items-start">
@@ -414,7 +421,7 @@ const ScanQRPage: React.FC = () => {
               </div>
 
               <div className="flex space-x-4">
-                <button onClick={() => { setOrder(null); setResult(''); setScanning(true); }} className="flex-1 btn-secondary">Scan Another Order</button>
+                <button onClick={() => { setOrder(null); setResult(''); setScanning(true); setResetKey((prev) => prev + 1); }} className="flex-1 btn-secondary">Scan Another Order</button>
 					{!order.is_verified && items.length > 0 && remainingItems.length === 0 && (
 						<button
 							onClick={handleVerifyOrder}

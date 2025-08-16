@@ -53,6 +53,7 @@ import SubShopAdminsPage from './pages/shopAdmin/SubShopAdminsPage';
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
 import LocalhostNotification from './components/LocalhostNotification';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 function App() {
   const { loading } = useAuth();
@@ -82,6 +83,7 @@ function App() {
       <WalletProvider>
         <AdminShopProvider>
           <LocalhostNotification />
+          <PWAInstallPrompt />
           
           <Routes>
             {/* Public Routes */}

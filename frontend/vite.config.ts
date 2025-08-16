@@ -7,15 +7,51 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
         name: 'REC Kiosk',
         short_name: 'Kiosk',
-        description: 'REC Kiosk Webapp',
+        description: 'REC Kiosk Webapp - Campus Food Ordering',
         theme_color: '#6a1b9a',
         background_color: '#ffffff',
         display: 'standalone',
+        orientation: 'portrait',
+        scope: '/',
         start_url: '/',
+        categories: ['food', 'shopping', 'education'],
+        lang: 'en',
+        dir: 'ltr',
         icons: [
+          {
+            src: '/images/rec college.png',
+            sizes: '72x72',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/images/rec college.png',
+            sizes: '96x96',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/images/rec college.png',
+            sizes: '128x128',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/images/rec college.png',
+            sizes: '144x144',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/images/rec college.png',
+            sizes: '152x152',
+            type: 'image/png',
+            purpose: 'any',
+          },
           {
             src: '/images/rec college.png',
             sizes: '192x192',
@@ -24,15 +60,65 @@ export default defineConfig({
           },
           {
             src: '/images/rec college.png',
+            sizes: '384x384',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/images/rec college.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable',
           },
         ],
+        screenshots: [
+          {
+            src: '/images/rec college.png',
+            sizes: '1280x720',
+            type: 'image/png',
+            form_factor: 'wide',
+            label: 'REC Kiosk Desktop View',
+          },
+          {
+            src: '/images/rec college.png',
+            sizes: '750x1334',
+            type: 'image/png',
+            form_factor: 'narrow',
+            label: 'REC Kiosk Mobile View',
+          },
+        ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         navigateFallback: '/index.html',
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/kioskrec\.onrender\.com\/api\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24, // 24 hours
+              },
+            },
+          },
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'images-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+              },
+            },
+          },
+        ],
+      },
+      devOptions: {
+        enabled: true,
+        type: 'module',
       },
     }),
   ],
@@ -65,7 +151,7 @@ export default defineConfig({
     'process.env': {},
   },
   preview: {
-    allowedHosts: ['kioskrec.onrender.com'], // <-- add your Render frontend host here
+    allowedHosts: ['kioskrec.onrender.z'], // <-- add your Render frontend host here
     port: 4173,
   },
 });

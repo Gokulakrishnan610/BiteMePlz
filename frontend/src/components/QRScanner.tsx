@@ -1,13 +1,14 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Html5QrcodeScanner, Html5Qrcode } from 'html5-qrcode';
 import { Camera, X, RotateCcw } from 'lucide-react';
 
 interface QRScannerProps {
   onScanSuccess: (decodedText: string) => void;
   onScanError?: (error: string) => void;
+  autoStart?: boolean;
 }
 
-const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError }) => {
+const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoStart = false }) => {
   const [isScanning, setIsScanning] = useState(false);
   const [cameras, setCameras] = useState<any[]>([]);
   const [selectedCamera, setSelectedCamera] = useState<string>('');
@@ -42,7 +43,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError }) => 
     }
   };
 
-  const startScanner = async () => {
+  const startScanner = useCallback(async () => {
     if (!selectedCamera) {
       setError('No camera available');
       return;
@@ -90,7 +91,14 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError }) => 
       setIsScanning(false);
       onScanError?.(err.message || 'Failed to start camera');
     }
-  };
+  }, [selectedCamera, onScanSuccess, onScanError]);
+
+  // Auto-start scanner when autoStart is true and cameras are available
+  useEffect(() => {
+    if (autoStart && selectedCamera && !isScanning) {
+      startScanner();
+    }
+  }, [autoStart, selectedCamera, isScanning, startScanner]);
 
   const stopScanner = async () => {
     if (scannerRef.current) {
