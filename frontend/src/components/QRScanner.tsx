@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { Camera, X, RotateCcw, RefreshCw } from 'lucide-react';
+import { Camera, X, RotateCcw } from 'lucide-react';
 
 interface QRScannerProps {
   onScanSuccess: (decodedText: string) => void;
@@ -14,21 +14,13 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
   const [selectedCamera, setSelectedCamera] = useState<string>('');
   const [currentCameraIndex, setCurrentCameraIndex] = useState(0);
   const [error, setError] = useState<string>('');
-  const [cameraMode, setCameraMode] = useState<'environment' | 'user' | 'device'>('environment');
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerContainerRef = useRef<HTMLDivElement>(null);
-  const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Get available cameras on component mount
     getCameras();
-    
-    // Cleanup on unmount
     return () => {
       stopScanner();
-      if (restartTimeoutRef.current) {
-        clearTimeout(restartTimeoutRef.current);
-      }
     };
   }, []);
 
@@ -36,14 +28,12 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
     try {
       const devices = await Html5Qrcode.getCameras();
       setCameras(devices);
-      
       if (devices.length > 0) {
         setSelectedCamera(devices[0].id);
         setCurrentCameraIndex(0);
       }
     } catch (err) {
-      console.log('Camera enumeration failed, using facingMode fallback');
-      // Don't set error here, we'll use facingMode fallback
+      // Silent fail - will use fallback
     }
   };
 
@@ -52,16 +42,14 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
       setError('');
       setIsScanning(true);
 
-      // Stop any existing scanner
       if (scannerRef.current) {
         await stopScanner();
       }
 
-      // Create new Html5Qrcode instance
       const html5QrCode = new Html5Qrcode("qr-reader");
       scannerRef.current = html5QrCode;
 
-      const config: any = {
+      const config = {
         fps: 10,
         qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
           const size = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.85);
@@ -73,43 +61,67 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
         defaultZoomValueIfSupported: 2,
       };
 
-      let success = false;
-
-      // Try different camera configurations in order of preference
-      const cameraConfigs = [
-        // 1. Try environment-facing camera (back camera) first
-        { facingMode: "environment" as const },
-        // 2. Try user-facing camera (front camera)
-        { facingMode: "user" as const },
-        // 3. Try specific device ID if available
-        ...(selectedCamera ? [{ deviceId: selectedCamera }] : [])
-      ];
-
-      for (const config of cameraConfigs) {
+      // Try to start with selected camera first
+      if (selectedCamera) {
         try {
           await html5QrCode.start(
-            config,
+            selectedCamera,
             config,
             (decodedText) => {
               onScanSuccess(decodedText);
-              // Don't stop scanner immediately, let it restart
-              handleScanSuccess();
+              // Auto restart after scan
+              setTimeout(() => {
+                if (autoStart) {
+                  startScanner();
+                }
+              }, 1000);
             },
             (errorMessage) => {
-              // Silent handling of QR scan errors
+              // Silent handling
             }
           );
-          success = true;
-          setCameraMode(config.facingMode || 'device');
-          break;
+          return;
         } catch (err) {
-          console.log(`Camera config failed:`, config, err);
-          continue;
+          // Fall through to facingMode
         }
       }
 
-      if (!success) {
-        throw new Error('All camera configurations failed');
+      // Fallback to facingMode for mobile
+      try {
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          config,
+          (decodedText) => {
+            onScanSuccess(decodedText);
+            // Auto restart after scan
+            setTimeout(() => {
+              if (autoStart) {
+                startScanner();
+              }
+            }, 1000);
+          },
+          (errorMessage) => {
+            // Silent handling
+          }
+        );
+      } catch (err) {
+        // Try user-facing camera as last resort
+        await html5QrCode.start(
+          { facingMode: "user" },
+          config,
+          (decodedText) => {
+            onScanSuccess(decodedText);
+            // Auto restart after scan
+            setTimeout(() => {
+              if (autoStart) {
+                startScanner();
+              }
+            }, 1000);
+          },
+          (errorMessage) => {
+            // Silent handling
+          }
+        );
       }
 
     } catch (err: any) {
@@ -117,9 +129,8 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
       setIsScanning(false);
       onScanError?.(err.message || 'Failed to start camera');
     }
-  }, [selectedCamera, onScanSuccess, onScanError]);
+  }, [selectedCamera, onScanSuccess, onScanError, autoStart]);
 
-  // Auto-start scanner when autoStart is true and cameras are available
   useEffect(() => {
     if (autoStart && !isScanning) {
       startScanner();
@@ -133,70 +144,24 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
         scannerRef.current.clear();
         scannerRef.current = null;
       } catch (err) {
-        // Silent fail for stopping scanner
+        // Silent fail
       }
     }
     setIsScanning(false);
-  };
-
-  const handleScanSuccess = () => {
-    // Stop current scanner
-    stopScanner();
-    
-    // Clear any existing restart timeout
-    if (restartTimeoutRef.current) {
-      clearTimeout(restartTimeoutRef.current);
-    }
-    
-    // Restart scanner after a short delay (mobile-friendly)
-    restartTimeoutRef.current = setTimeout(() => {
-      if (autoStart) {
-        startScanner();
-      }
-    }, 1000); // 1 second delay for mobile devices
   };
 
   const switchCamera = async () => {
     if (isScanning) {
       await stopScanner();
     }
-    
-    // Clear any existing restart timeout
-    if (restartTimeoutRef.current) {
-      clearTimeout(restartTimeoutRef.current);
+
+    // Cycle through available cameras
+    if (cameras.length > 1) {
+      const nextIndex = (currentCameraIndex + 1) % cameras.length;
+      setCurrentCameraIndex(nextIndex);
+      setSelectedCamera(cameras[nextIndex]?.id || '');
     }
 
-    // Cycle through camera modes
-    const modes: Array<'environment' | 'user' | 'device'> = ['environment', 'user', 'device'];
-    const currentIndex = modes.indexOf(cameraMode);
-    const nextIndex = (currentIndex + 1) % modes.length;
-    const nextMode = modes[nextIndex];
-    
-    setCameraMode(nextMode);
-    
-    // If we have multiple device cameras, cycle through them too
-    if (nextMode === 'device' && cameras.length > 1) {
-      const nextCameraIndex = (currentCameraIndex + 1) % cameras.length;
-      setCurrentCameraIndex(nextCameraIndex);
-      setSelectedCamera(cameras[nextCameraIndex]?.id || '');
-    }
-    
-    // Small delay to ensure camera is released
-    setTimeout(() => {
-      if (autoStart) {
-        startScanner();
-      }
-    }, 500);
-  };
-
-  const restartScanner = async () => {
-    await stopScanner();
-    
-    // Clear any existing restart timeout
-    if (restartTimeoutRef.current) {
-      clearTimeout(restartTimeoutRef.current);
-    }
-    
     // Small delay then restart
     setTimeout(() => {
       if (autoStart) {
@@ -210,20 +175,35 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-800 text-sm">{error}</p>
-          <button
-            onClick={() => setError('')}
-            className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
-          >
-            Dismiss
-          </button>
         </div>
       )}
 
-      {/* Camera controls */}
-      <div className="flex justify-center gap-3 flex-wrap">
+      {/* Only show camera selection if multiple cameras are available */}
+      {cameras.length > 1 && (
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-gray-700">
+            Select Camera:
+          </label>
+          <select
+            value={selectedCamera}
+            onChange={(e) => setSelectedCamera(e.target.value)}
+            disabled={isScanning}
+            className="input"
+          >
+            {cameras.map((camera) => (
+              <option key={camera.id} value={camera.id}>
+                {camera.label || `Camera ${camera.id}`}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div className="flex justify-center gap-4">
         {!isScanning ? (
           <button
             onClick={startScanner}
+            disabled={!selectedCamera}
             className="btn-primary flex items-center"
           >
             <Camera size={20} className="mr-2" />
@@ -239,36 +219,18 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
           </button>
         )}
 
-        {/* Switch camera button - always visible */}
+        {/* Always show switch camera button */}
         <button
           onClick={switchCamera}
+          disabled={!selectedCamera}
           className="btn-secondary flex items-center"
-          title={`Switch Camera (Current: ${cameraMode === 'environment' ? 'Back' : cameraMode === 'user' ? 'Front' : 'Device'})`}
+          title="Switch between front and back cameras"
         >
           <RotateCcw size={20} className="mr-2" />
           Switch Camera
         </button>
-
-        {/* Restart scanner button */}
-        <button
-          onClick={restartScanner}
-          className="btn-secondary flex items-center"
-          title="Restart Scanner"
-        >
-          <RefreshCw size={20} className="mr-2" />
-          Restart
-        </button>
-      </div>
-
-      {/* Camera info */}
-      <div className="text-center text-sm text-gray-600">
-        <p>Mode: {cameraMode === 'environment' ? 'Back Camera' : cameraMode === 'user' ? 'Front Camera' : 'Device Camera'}</p>
-        {cameras.length > 0 && (
-          <p>Available: {cameras.length} camera{cameras.length > 1 ? 's' : ''}</p>
-        )}
       </div>
       
-      {/* Scanner container */}
       <div 
         id="qr-reader" 
         ref={scannerContainerRef} 
@@ -281,7 +243,6 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
         }}
       />
 
-      {/* Scanning status */}
       {isScanning && (
         <div className="text-center">
           <p className="text-sm text-gray-600 mb-2">
@@ -295,7 +256,6 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
         </div>
       )}
 
-      {/* No camera detected */}
       {!isScanning && cameras.length === 0 && (
         <div className="text-center py-8">
           <Camera size={48} className="mx-auto text-gray-400 mb-4" />
@@ -309,27 +269,12 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
         </div>
       )}
 
-      {/* Camera selection for multiple cameras */}
-      {!isScanning && cameras.length > 1 && (
+      {/* Show camera info for single camera setup */}
+      {!isScanning && cameras.length === 1 && (
         <div className="text-center py-4">
-          <label className="text-sm font-medium text-gray-700 mb-2 block">
-            Select Camera:
-          </label>
-          <select
-            value={selectedCamera}
-            onChange={(e) => {
-              setSelectedCamera(e.target.value);
-              const index = cameras.findIndex(c => c.id === e.target.value);
-              setCurrentCameraIndex(index >= 0 ? index : 0);
-            }}
-            className="input text-sm"
-          >
-            {cameras.map((camera, index) => (
-              <option key={camera.id} value={camera.id}>
-                {camera.label || `Camera ${index + 1}`}
-              </option>
-            ))}
-          </select>
+          <p className="text-sm text-gray-600">
+            Using: {cameras[0]?.label || 'Available Camera'}
+          </p>
         </div>
       )}
     </div>
