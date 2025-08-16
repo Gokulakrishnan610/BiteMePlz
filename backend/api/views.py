@@ -209,20 +209,80 @@ class UserViewSet(viewsets.ModelViewSet):
 
         user_serializer = UserRegistrationSerializer(data=user_data)
         if not user_serializer.is_valid():
-            print(f"Serializer errors: {user_serializer.errors}")  # Debug print
-            return Response({'error': 'Validation failed', 'details': user_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             user = user_serializer.save()
-            user.is_verified = True
+            user.shop = target_shop
             user.is_sub_admin = True
             user.parent_admin = parent_admin
-            user.shop = target_shop
+            user.is_verified = True
             user.save()
-            return Response({'message': 'Sub-shop admin created successfully', 'user': UserSerializer(user).data}, status=status.HTTP_201_CREATED)
+
+            # Log the sub-admin creation
+            ShopLog.objects.create(
+                shop=target_shop,
+                action='sub_admin_created',
+                performed_by=request.user,
+                details={
+                    'sub_admin_name': user.name,
+                    'sub_admin_email': user.email
+                }
+            )
+
+            return Response({
+                'message': 'Sub-shop admin created successfully',
+                'user': UserSerializer(user).data
+            }, status=status.HTTP_201_CREATED)
+
         except Exception as e:
-            print(f"Error creating user: {str(e)}")  # Debug print
-            return Response({'error': f'Failed to create sub-shop admin: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'])
+    def change_shop_admin_password(self, request):
+        """Change password for a shop admin user (admin only)"""
+        if request.user.role != 'admin':
+            return Response({'error': 'Only admins can change shop admin passwords'}, status=status.HTTP_403_FORBIDDEN)
+        
+        shop_id = request.data.get('shop_id')
+        new_password = request.data.get('new_password')
+        
+        if not shop_id:
+            return Response({'error': 'shop_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not new_password:
+            return Response({'error': 'new_password is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if len(new_password) < 6:
+            return Response({'error': 'Password must be at least 6 characters long'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            shop = Shop.objects.get(id=shop_id)
+        except Shop.DoesNotExist:
+            return Response({'error': 'Shop not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if not shop.shop_admin:
+            return Response({'error': 'Shop has no admin user'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Change the password
+        shop.shop_admin.set_password(new_password)
+        shop.shop_admin.save()
+        
+        # Log the action
+        ShopLog.objects.create(
+            shop=shop,
+            action='admin_password_changed',
+            performed_by=request.user,
+            details={
+                'admin_user': shop.shop_admin.email,
+                'changed_by': request.user.email
+            }
+        )
+        
+        return Response({
+            'message': f'Password changed successfully for shop "{shop.name}" admin',
+            'admin_email': shop.shop_admin.email
+        }, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
     def forgot_password(self, request):

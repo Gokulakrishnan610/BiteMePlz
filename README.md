@@ -1,246 +1,120 @@
-# REC-KIOSK
+# REC Kiosk
 
-A comprehensive kiosk management system for REC (Rajalakshmi Engineering College) with QR code-based ordering and payment system.
+A comprehensive campus food ordering and management system with QR code-based ordering, real-time analytics, and multi-role user management.
 
-## 🚀 Recent Migration
+## Features
 
-This project has been migrated from **Express.js with Supabase** to **Django with SQLite** while maintaining all functionality.
+### Admin Features
+- **Shop Management**: Create, edit, and manage campus shops
+- **User Management**: Manage students, shop admins, and sub-admins
+- **Analytics Dashboard**: Comprehensive sales and order analytics
+- **Financial Reports**: Detailed financial tracking and reporting
+- **Shop Admin Password Management**: Change passwords for all shop admin users
+- **System Logs**: Track all system activities and changes
 
-## 🏗️ Architecture
+### Shop Admin Features
+- **Product Management**: Add, edit, and manage shop products
+- **Order Management**: Process and verify student orders
+- **QR Code Generation**: Generate QR codes for order verification
+- **Sub-Admin Management**: Create and manage sub-shop admins
+- **Analytics**: Shop-specific performance metrics
 
-- **Backend**: Django 4.2.7 with Django REST Framework
-- **Database**: SQLite (migrated from Supabase)
-- **Frontend**: React with TypeScript and Vite
-- **Authentication**: JWT tokens
-- **File Upload**: Django media handling
-- **QR Code**: Python qrcode library
+### Student Features
+- **Order Placement**: Browse shops and place orders
+- **QR Code Orders**: Scan QR codes to place orders
+- **Wallet System**: Manage account balance and payments
+- **Order History**: Track all past orders and transactions
 
-## 📁 Project Structure
+## New Feature: Shop Admin Password Management
 
-```
-REC-KIOSK/
-├── backend/                 # Django backend
-│   ├── api/                # Django app with models, views, serializers
-│   ├── rec_kiosk/          # Django project settings
-│   ├── manage.py           # Django management script
-│   ├── requirements.txt    # Python dependencies
-│   └── setup.py           # Setup script for initial configuration
-├── frontend/               # React frontend
-│   ├── src/               # React source code
-│   ├── package.json       # Node.js dependencies
-│   └── vite.config.ts     # Vite configuration
-└── README.md              # This file
-```
+### Overview
+Administrators can now change passwords for all shop admin users directly from the admin interface. This feature provides enhanced security and administrative control over shop access by allowing admins to set custom passwords.
 
-## 🛠️ Setup Instructions
+### How to Use
+
+#### From Django Admin Interface
+1. Navigate to Django Admin → Shops
+2. Select a shop from the list
+3. Use the "Change shop admin password" action from the dropdown
+4. Enter your desired new password (minimum 6 characters)
+5. The password will be updated immediately
+
+#### From Frontend Admin Interface
+1. **Shops List Page**: Click the key icon (🔑) on any shop card
+2. **Shop Details Page**: Use the "Change Password" button in the header
+3. **Edit Shop Page**: Use the "Change Password" button in the header
+
+### Security Features
+- **Custom Password Input**: Administrators can set specific passwords instead of random generation
+- **Password Validation**: Minimum 6 characters required
+- **Action Logging**: All password changes are logged with admin details
+- **Admin-Only Access**: Only superusers can change shop admin passwords
+- **Immediate Effect**: New passwords take effect immediately
+
+### Technical Implementation
+- **Backend API**: `/api/users/change_shop_admin_password/` endpoint
+- **Request Format**: `{"shop_id": "uuid", "new_password": "custom_password"}`
+- **Admin Actions**: Django admin bulk actions and custom views with password forms
+- **Frontend Integration**: React components with password input fields and confirmation dialogs
+- **Audit Trail**: Comprehensive logging via ShopLog model
+
+## Installation and Setup
+
+### Prerequisites
+- Python 3.8+
+- Node.js 16+
+- PostgreSQL (recommended) or SQLite
 
 ### Backend Setup
-
-1. **Navigate to backend directory:**
-   ```bash
-   cd REC-KIOSK/backend
-   ```
-
-2. **Install Python dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Create environment variables:**
-   Create a `.env` file in the backend directory:
-   ```
-   SECRET_KEY=django-insecure-your-secret-key-here-change-in-production
-   DEBUG=True
-   ALLOWED_HOSTS=localhost,127.0.0.1
-   ```
-
-4. **Run the setup script:**
-   ```bash
-   python setup.py
-   ```
-   This will:
-   - Run database migrations
-   - Create a superuser
-   - Create sample data for testing
-
-5. **Start the Django server:**
-   ```bash
-   python manage.py runserver
-   ```
-   The backend will be available at `http://localhost:8000`
-
-6. **Background jobs (Celery + Redis)**
-
-   This project uses Celery for automated tasks like expiring orders and handling wallet refunds per your multi-shop constraints.
-
-   - Install and run Redis (no Docker):
-     - Windows (Chocolatey, run PowerShell as Administrator):
-       - Install: `choco install redis-64 -y`
-        -path:`C:\Users\asiva\Downloads\Redis-x64-3.0.504`
-       - Start: `\redis-server.exe`
-       - Test: `redis-cli ping` → should return `PONG`
-     - Or via WSL (Ubuntu):
-       - `sudo apt update && sudo apt install -y redis-server`
-       - `sudo service redis-server start`
-       - `redis-cli ping`
-
-   - Start Celery (Windows PowerShell):
-     - From backend folder:
-       - `cd D:\REC-KIOSK\backend`
-       - Set env (one-time per session):
-         - `$env:DJANGO_SETTINGS_MODULE='rec_kiosk.settings'`
-       - Worker (Windows uses solo pool):
-         - `celery -A rec_kiosk worker -l info -P solo`
-       - Beat (scheduler):
-         - `celery -A rec_kiosk beat -l info`
-
-   - Alternatively, from repo root:
-     - Worker: `celery -A backend.rec_kiosk worker -l info -P solo`
-     - Beat: `celery -A backend.rec_kiosk beat -l info`
-
-   Notes:
-   - Broker URL is `redis://localhost:6379/0` (configured in `backend/rec_kiosk/settings.py`).
-   - The beat schedule is defined in `backend/rec_kiosk/celery.py` and runs every minute.
-   - Refund logic: For multi-shop orders, each shop’s order expires independently; wallet refunds are applied only to unverified, expired siblings paid by wallet.
+```bash
+cd backend
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+```
 
 ### Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-1. **Navigate to frontend directory:**
-   ```bash
-   cd REC-KIOSK/frontend
-   ```
+### Environment Variables
+Create a `.env` file in the backend directory:
+```env
+SECRET_KEY=your_secret_key
+DEBUG=True
+DATABASE_URL=your_database_url
+EMAIL_HOST=your_email_host
+EMAIL_PORT=587
+EMAIL_HOST_USER=your_email
+EMAIL_HOST_PASSWORD=your_password
+```
 
-2. **Install Node.js dependencies:**
-   ```bash
-   npm install
-   ```
+## API Documentation
 
-3. **Start the development server:**
-   ```bash
-   npm run dev
-   ```
-   The frontend will be available at `http://localhost:5173`
+### Authentication
+- JWT-based authentication
+- Role-based access control (admin, shopAdmin, student)
+- Session-based authentication for parent users
 
-## 🔑 Default Credentials
+### Key Endpoints
+- `/api/users/` - User management
+- `/api/shops/` - Shop management
+- `/api/products/` - Product management
+- `/api/orders/` - Order processing
+- `/api/transactions/` - Financial transactions
 
-After running the setup script, you can use these default accounts:
-
-- **Admin**: `admin@rec-kiosk.com` / `admin123`
-- **Shop Admin**: `shopadmin@rec-kiosk.com` / `shopadmin123`
-
-## 📋 Features
-
-### User Management
-- User registration and authentication
-- Role-based access control (Admin, Shop Admin, Student)
-- Profile management
-- Balance management
-
-### Shop Management
-- Shop creation and management
-- Shop status (open/closed)
-- QR validity time configuration
-- Shop admin assignment
-
-### Product Management
-- Product creation and management
-- Image upload support
-- Price management
-- Availability status
-
-### Order System
-- QR code generation for orders
-- Order tracking and verification
-- Payment processing
-- Order expiration handling
-
-### Analytics
-- Student spending analytics
-- Transaction history
-- Shop activity logs
-
-## 🔌 API Endpoints
-
-The Django backend provides the same API structure as the original Express.js backend:
-
-- `POST /api/users/register/` - User registration
-- `POST /api/users/login/` - User login
-- `GET /api/users/profile/` - Get user profile
-- `PUT /api/users/update_profile/` - Update user profile
-
-- `GET /api/shops/` - List shops
-- `POST /api/shops/` - Create shop
-- `POST /api/shops/{id}/toggle_open/` - Toggle shop status
-
-- `GET /api/products/` - List products
-- `POST /api/products/` - Create product
-- `GET /api/products/?shop_id={id}` - Get products by shop
-
-- `GET /api/orders/` - List orders
-- `POST /api/orders/` - Create order
-- `POST /api/orders/{id}/verify/` - Verify order
-- `POST /api/orders/{id}/pay/` - Pay for order
-
-- `GET /api/transactions/` - List transactions
-- `POST /api/transactions/` - Create transaction
-
-- `GET /api/shop-logs/` - List shop logs
-- `POST /api/shop-logs/` - Create shop log
-
-- `GET /api/student-analytics/my_analytics/` - Get user analytics
-
-- `POST /api/upload/single/` - Upload image
-
-## 🗄️ Database Schema
-
-The Django models replicate the original Supabase schema:
-
-- **User**: Custom user model with roles and balance
-- **Shop**: Shop information and configuration
-- **Product**: Product details and pricing
-- **Order**: Order management with QR codes
-- **Transaction**: Financial transaction tracking
-- **ShopLog**: Activity logging
-- **StudentAnalytics**: User analytics
-
-## 🔄 Migration Notes
-
-### Key Changes from Express.js to Django:
-
-1. **Database**: Supabase PostgreSQL → SQLite
-2. **Authentication**: JWT tokens (same structure)
-3. **File Upload**: Express multer → Django media handling
-4. **API Structure**: Same endpoints, compatible response format
-5. **QR Generation**: Node.js qrcode → Python qrcode
-
-### Frontend Compatibility:
-
-- All existing frontend code works without changes
-- API response format maintained for compatibility
-- File upload endpoints updated to match Django structure
-- Proxy configuration updated for Django port (8000)
-
-## 🚀 Deployment
-
-### Backend Deployment
-1. Set `DEBUG=False` in production
-2. Use a production database (PostgreSQL recommended)
-3. Configure static and media file serving
-4. Set up proper CORS settings
-
-### Frontend Deployment
-1. Build the frontend: `npm run build`
-2. Serve the `dist` folder
-3. Configure API proxy for production
-
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Test thoroughly
+4. Add tests if applicable
 5. Submit a pull request
 
-## 📄 License
+## License
 
-This project is licensed under the MIT License. 
+This project is licensed under the MIT License - see the LICENSE file for details. 

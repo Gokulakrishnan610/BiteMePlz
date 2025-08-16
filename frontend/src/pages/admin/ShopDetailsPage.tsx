@@ -9,7 +9,8 @@ import {
   ShoppingBag, 
   AlertCircle,
   Download,
-  Eye
+  Eye,
+  Key
 } from 'lucide-react';
 import { Line, Doughnut } from 'react-chartjs-2';
 import {
@@ -25,6 +26,7 @@ import {
   Legend
 } from 'chart.js';
 import { toast } from 'sonner';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 ChartJS.register(
   CategoryScale,
@@ -131,6 +133,16 @@ const ShopDetailsPage: React.FC = () => {
     page: 1
   });
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [changePasswordDialog, setChangePasswordDialog] = useState<{
+    is_open: boolean;
+    shopName: string;
+  }>({
+    is_open: false,
+    shopName: ''
+  });
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -250,6 +262,59 @@ const ShopDetailsPage: React.FC = () => {
     }
   };
 
+  const handleChangePasswordClick = () => {
+    setChangePasswordDialog({
+      is_open: true,
+      shopName: shop?.name || ''
+    });
+    setNewPassword(''); // Reset password field
+  };
+
+  const handleChangePasswordConfirm = async () => {
+    if (!newPassword.trim()) {
+      toast.error('Please enter a new password');
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      return;
+    }
+
+    try {
+      setChangingPassword(true);
+      const response = await api.post('/api/users/change_shop_admin_password/', {
+        shop_id: id,
+        new_password: newPassword
+      });
+      
+      toast.success('Password changed successfully!', {
+        description: `Password updated for ${response.data.admin_email}`,
+        duration: 5000
+      });
+      
+      setChangePasswordDialog({
+        is_open: false,
+        shopName: ''
+      });
+      setNewPassword('');
+    } catch (error: any) {
+      toast.error('Failed to change password', {
+        description: error.response?.data?.error || 'An error occurred'
+      });
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const handleChangePasswordCancel = () => {
+    setChangePasswordDialog({
+      is_open: false,
+      shopName: ''
+    });
+    setNewPassword('');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -329,6 +394,15 @@ const ShopDetailsPage: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center space-x-2">
+          <button
+            onClick={handleChangePasswordClick}
+            className="btn-secondary flex items-center px-3 py-2 text-sm"
+            title="Change Shop Admin Password"
+          >
+            <Key size={16} className="mr-2" />
+            <span className="hidden sm:inline">Change Password</span>
+            <span className="sm:hidden">Password</span>
+          </button>
           <span className={`badge text-xs ${shop.is_active ? 'badge-success' : 'badge-error'}`}>
             {shop.is_active ? 'Active' : 'Inactive'}
           </span>
@@ -664,6 +738,48 @@ const ShopDetailsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        is_open={changePasswordDialog.is_open}
+        title="Change Shop Admin Password"
+        message={
+          <div className="space-y-4">
+            <p>Enter a new password for the admin of <strong>"{changePasswordDialog.shopName}"</strong></p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                New Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter new password (min 6 characters)"
+                  minLength={6}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword ? "👁️" : "👁️‍🗨️"}
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Minimum 6 characters required
+              </p>
+            </div>
+          </div>
+        }
+        confirmText={changingPassword ? "Changing..." : "Change Password"}
+        cancelText="Cancel"
+        onConfirm={handleChangePasswordConfirm}
+        onCancel={handleChangePasswordCancel}
+        type="warning"
+        disabled={changingPassword || !newPassword.trim()}
+      />
     </div>
   );
 };

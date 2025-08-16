@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
-import { Store, Plus, Edit, Trash2, Eye, Clock, MapPin } from 'lucide-react';
+import { Store, Plus, Edit, Trash2, Eye, Clock, MapPin, Key } from 'lucide-react';
 import { toast } from 'sonner';
 import ConfirmDialog from '../../components/ConfirmDialog';
 
@@ -28,6 +28,18 @@ const ShopsPage: React.FC = () => {
     shop_id: '',
     shopName: ''
   });
+  const [changePasswordDialog, setChangePasswordDialog] = useState<{
+    is_open: boolean;
+    shop_id: string;
+    shopName: string;
+  }>({
+    is_open: false,
+    shop_id: '',
+    shopName: ''
+  });
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     fetchshops();
@@ -84,6 +96,62 @@ const ShopsPage: React.FC = () => {
       shop_id: '',
       shopName: ''
     });
+  };
+
+  const handleChangePasswordClick = (shop: shop) => {
+    setChangePasswordDialog({
+      is_open: true,
+      shop_id: shop.id,
+      shopName: shop.name
+    });
+    setNewPassword(''); // Reset password field
+  };
+
+  const handleChangePasswordConfirm = async () => {
+    if (!newPassword.trim()) {
+      toast.error('Please enter a new password');
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      return;
+    }
+
+    try {
+      setChangingPassword(true);
+      const response = await api.post('/api/users/change_shop_admin_password/', {
+        shop_id: changePasswordDialog.shop_id,
+        new_password: newPassword
+      });
+      
+      toast.success('Password changed successfully!', {
+        description: `Password updated for ${response.data.admin_email}`,
+        duration: 5000
+      });
+      
+      setChangePasswordDialog({
+        is_open: false,
+        shop_id: '',
+        shopName: ''
+      });
+      setNewPassword('');
+    } catch (error: any) {
+      toast.error('Failed to change password', {
+        description: error.response?.data?.error || 'An error occurred'
+      });
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const handleChangePasswordCancel = () => {
+    setChangePasswordDialog({
+      is_open: false,
+      shop_id: '',
+      shopName: ''
+    });
+    setNewPassword('');
   };
 
   const formatTime = (dateString: string) => {
@@ -179,6 +247,13 @@ const ShopsPage: React.FC = () => {
                     <Edit size={16} />
                   </Link>
                   <button
+                    onClick={() => handleChangePasswordClick(shop)}
+                    className="p-2 text-[var(--warning)] hover:bg-[var(--hover-bg)] rounded-lg transition-colors"
+                    title="Change Admin Password"
+                  >
+                    <Key size={16} />
+                  </button>
+                  <button
                     onClick={() => handleDeleteClick(shop)}
                     className="p-2 text-[var(--error)] hover:bg-[var(--hover-bg)] rounded-lg transition-colors"
                     title="Delete Shop"
@@ -221,6 +296,48 @@ const ShopsPage: React.FC = () => {
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
         type="danger"
+      />
+
+      <ConfirmDialog
+        is_open={changePasswordDialog.is_open}
+        title="Change Shop Admin Password"
+        message={
+          <div className="space-y-4">
+            <p>Enter a new password for the admin of <strong>"{changePasswordDialog.shopName}"</strong></p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                New Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter new password (min 6 characters)"
+                  minLength={6}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword ? "👁️" : "👁️‍🗨️"}
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Minimum 6 characters required
+              </p>
+            </div>
+          </div>
+        }
+        confirmText={changingPassword ? "Changing..." : "Change Password"}
+        cancelText="Cancel"
+        onConfirm={handleChangePasswordConfirm}
+        onCancel={handleChangePasswordCancel}
+        type="warning"
+        disabled={changingPassword || !newPassword.trim()}
       />
     </div>
   );
