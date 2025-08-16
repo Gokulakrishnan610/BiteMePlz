@@ -311,102 +311,99 @@ const PWAInstallPrompt: React.FC = () => {
   const isAndroid = /Android/.test(navigator.userAgent);
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 max-w-sm mx-auto">
-      <div className="bg-gradient-to-br from-purple-500/95 to-purple-600/95 backdrop-blur-md border border-purple-400/30 rounded-2xl shadow-2xl shadow-purple-500/20 overflow-hidden">
+    <div className="fixed top-0 left-0 right-0 z-50 max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto">
+      <div className="bg-gradient-to-r from-purple-500/95 to-purple-600/95 backdrop-blur-md border border-purple-400/30 rounded-xl shadow-2xl shadow-purple-500/20 overflow-hidden">
         {/* Animated header bar */}
         <div className="h-1 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 animate-pulse" />
         
-        <div className="p-6">
+        <div className="p-1 sm:p-1.5 md:p-2">
           {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
+          <div className="flex items-center justify-between mb-1 sm:mb-1.5">
+            <div className="flex items-center space-x-2 sm:space-x-3">
               <div className="relative">
-                <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-purple-700 rounded-full flex items-center justify-center">
-                  <Download size={20} className="text-white" />
+                <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 bg-gradient-to-r from-purple-600 to-purple-700 rounded-full flex items-center justify-center">
+                  <Download size={12} className="sm:w-4 sm:h-4 md:w-5 md:h-5 text-white" />
                 </div>
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse" />
+                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 md:w-3 md:h-3 bg-green-400 rounded-full border border-white animate-pulse" />
               </div>
               <div>
-                <h3 className="text-white font-semibold">Install REC Kiosk</h3>
-                <p className="text-purple-200 text-sm">Get the app experience</p>
+                <h3 className="text-white font-semibold text-xs sm:text-sm md:text-base">Install REC Kiosk</h3>
+                <p className="text-purple-200 text-xs">Get the app experience</p>
               </div>
             </div>
             <button
               onClick={handleDismiss}
               className="p-1 text-purple-200 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
             >
-              <X size={16} />
+              <X size={12} className="sm:w-3 sm:h-3 md:w-4 md:h-4" />
             </button>
           </div>
 
-          {/* Device-specific content */}
-          <div className="space-y-3 mb-4">
-            <div className="flex items-center space-x-2 text-purple-200 text-sm">
-              {isMobile ? (
-                <>
-                  {isIOS ? <Smartphone size={16} /> : isAndroid ? <Smartphone size={16} /> : <Tablet size={16} />}
-                  <span>Install on your {isIOS ? 'iPhone' : isAndroid ? 'Android' : 'mobile'} device</span>
-                </>
-              ) : (
-                <>
-                  <Monitor size={16} />
-                  <span>Install on your desktop</span>
-                </>
-              )}
-            </div>
-            
-            <p className="text-gray-300 text-sm leading-relaxed">
-              Install REC Kiosk for a better experience with offline access, 
-              faster loading, and app-like features.
-            </p>
-            
-            <div className="flex items-center space-x-4 text-xs text-gray-400">
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                <span>Offline Access</span>
+          {/* Compact content */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-1 sm:space-y-0">
+            <div className="flex flex-col sm:flex-row sm:items-center space-y-0 sm:space-y-0 sm:space-x-3">
+              <div className="flex items-center space-x-2 text-purple-200 text-xs">
+                {isMobile ? (
+                  <>
+                    {isIOS ? <Smartphone size={12} className="sm:w-3 sm:h-3 md:w-4 md:h-4" /> : isAndroid ? <Smartphone size={12} className="sm:w-3 sm:h-3 md:w-4 md:h-4" /> : <Tablet size={12} className="sm:w-3 sm:h-3 md:w-4 md:h-4" />}
+                    <span>Install on {isIOS ? 'iPhone' : isAndroid ? 'Android' : 'mobile'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Monitor size={12} className="sm:w-3 sm:h-3 md:w-4 md:h-4" />
+                    <span>Install on desktop</span>
+                  </>
+                )}
               </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-                <span>Fast Loading</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" />
-                <span>App-like UI</span>
+              
+              <div className="flex items-center space-x-2 sm:space-x-3 text-xs text-gray-300">
+                <div className="flex items-center space-x-1">
+                  <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 bg-green-400 rounded-full animate-pulse" />
+                  <span>Offline</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 bg-blue-400 rounded-full animate-pulse" />
+                  <span>Fast</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 bg-purple-400 rounded-full animate-pulse" />
+                  <span>App-like</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Actions */}
-          <div className="flex space-x-2">
-            <button
-              onClick={handleDismissForSession}
-              className="flex-1 px-3 py-2 text-xs bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors duration-200"
-            >
-              Maybe Later
-            </button>
-            <button
-              onClick={handleInstall}
-              disabled={isInstalling}
-              className="flex-1 px-3 py-2 text-xs bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1"
-            >
-              {isInstalling ? (
-                <>
-                  <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Installing...</span>
-                </>
-              ) : (
-                <>
-                  <Download size={14} />
-                  <span>Install App</span>
-                </>
-              )}
-            </button>
+            {/* Actions */}
+            <div className="flex space-x-2">
+              <button
+                onClick={handleDismissForSession}
+                className="px-2 py-0.5 sm:px-3 sm:py-0.5 text-xs bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors duration-200"
+              >
+                Later
+              </button>
+              <button
+                onClick={handleInstall}
+                disabled={isInstalling}
+                className="px-2 py-0.5 sm:px-3 sm:py-0.5 text-xs bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1"
+              >
+                {isInstalling ? (
+                  <>
+                    <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 border border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Installing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download size={10} className="sm:w-3 sm:h-3" />
+                    <span>Install</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Decorative elements */}
-        <div className="absolute top-4 right-4 w-2 h-2 bg-purple-400 rounded-full animate-ping" />
-        <div className="absolute bottom-4 right-6 w-1 h-1 bg-pink-400 rounded-full animate-pulse" />
+        <div className="absolute top-2 right-2 sm:top-3 sm:right-3 w-1 h-1 sm:w-1.5 sm:h-1.5 bg-purple-400 rounded-full animate-ping" />
+        <div className="absolute bottom-2 right-3 sm:bottom-3 sm:right-4 w-0.5 h-0.5 sm:w-1 sm:h-1 bg-pink-400 rounded-full animate-pulse" />
       </div>
     </div>
   );

@@ -51,23 +51,23 @@ export default function Navbar({ className }: NavbarProps) {
         <>
         {/* Desktop Navbar */}
         <div
-            className={`navbar fixed top-4 sm:top-6 md:top-8 lg:top-8 xl:top-10 inset-x-0 max-w-xs sm:max-w-sm md:max-w-2xl lg:max-w-6xl xl:max-w-7xl mx-auto z-50 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 hidden md:block ${className || ""}`}
+            className={`navbar fixed top-2 sm:top-3 md:top-4 lg:top-4 xl:top-5 inset-x-0 max-w-xs sm:max-w-sm md:max-w-2xl lg:max-w-6xl xl:max-w-7xl mx-auto z-50 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 hidden md:block ${className || ""}`}
             onMouseLeave={() => setActive(null)}
         >
-            <div className="relative rounded-full border border-gray-200 bg-white/95 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-between px-4 sm:px-6 lg:px-8 xl:px-10 py-1.5 sm:py-2 lg:py-2 xl:py-2.5">
+            <div className="relative rounded-full border border-gray-200 bg-white/95 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-between px-3 sm:px-4 lg:px-6 xl:px-8 py-1 sm:py-1.5 lg:py-1.5 xl:py-2">
             {/* Logo Section */}
             <div className="flex items-center flex-shrink-0">
                 <Link to="/" className="flex items-center">
                 <img
                     src="/images/rec college.png"
                     alt="REC Logo"
-                    className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-20 lg:h-20 xl:w-24 xl:h-24 object-contain"
+                    className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-14 lg:h-14 xl:w-16 xl:h-16 object-contain"
                 />
                 </Link>
             </div>
 
             {/* Left spacer for balance */}
-            <div className="w-16 sm:w-20 md:w-24 lg:w-20 xl:w-24 flex-shrink-0"></div>
+            <div className="w-12 sm:w-14 md:w-16 lg:w-14 xl:w-16 flex-shrink-0"></div>
 
             {/* Account Dropdown - Right Side */}
             <div className="flex items-center">
