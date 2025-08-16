@@ -641,10 +641,6 @@ const CartPage: React.FC = () => {
                       <span>Subtotal ({totalItems} items)</span>
                       <span>₹{getTotalPrice()}</span>
                     </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>Delivery Fee</span>
-                      <span className="text-green-600 font-medium">Free</span>
-                    </div>
                     <hr className="border-gray-200" />
                     <div className="flex justify-between text-lg font-bold text-gray-900">
                       <span>Total</span>
