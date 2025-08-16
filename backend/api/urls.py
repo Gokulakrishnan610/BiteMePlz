@@ -12,8 +12,7 @@ from rest_framework_simplejwt.views import (
 )
 from .views import (
     UserViewSet, ShopViewSet, ProductViewSet, OrderViewSet,
-    TransactionViewSet, ShopLogViewSet, StudentAnalyticsViewSet, FileUploadViewSet,
-    serve_media_file
+    TransactionViewSet, ShopLogViewSet, StudentAnalyticsViewSet, FileUploadViewSet
 )
 
 router = DefaultRouter()
@@ -413,7 +412,4 @@ urlpatterns += [
     path('', include(router.urls)),
 ]
 
-# Media file serving for production
-urlpatterns += [
-    path('media/<path:path>', serve_media_file, name='media_file'),
-]
+

@@ -5,6 +5,7 @@ from django.conf.urls.static import static
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from api.views import serve_media_file
 
 @csrf_exempt
 @require_http_methods(["OPTIONS"])
@@ -25,4 +26,9 @@ urlpatterns = [
 
 # Serve media files in development
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) 
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+else:
+    # Serve media files in production using custom view
+    urlpatterns += [
+        path('media/<path:path>', serve_media_file, name='media_file'),
+    ] 

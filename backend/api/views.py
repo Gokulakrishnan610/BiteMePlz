@@ -36,7 +36,31 @@ def serve_media_file(request, path):
     """Custom view to serve media files in production"""
     file_path = os.path.join(settings.MEDIA_ROOT, path)
     
-    if os.path.exists(file_path) and os.path.isfile(file_path):
+    # Handle directory requests (show directory listing)
+    if os.path.exists(file_path) and os.path.isdir(file_path):
+        try:
+            files = []
+            for item in os.listdir(file_path):
+                item_path = os.path.join(file_path, item)
+                if os.path.isfile(item_path):
+                    files.append({
+                        'name': item,
+                        'size': os.path.getsize(item_path),
+                        'url': f'/media/{path}/{item}' if path else f'/media/{item}'
+                    })
+            
+            # Return JSON response for directory listing
+            from django.http import JsonResponse
+            return JsonResponse({
+                'type': 'directory',
+                'path': path,
+                'files': files
+            })
+        except Exception as e:
+            raise Http404(f"Error reading directory: {e}")
+    
+    # Handle file requests
+    elif os.path.exists(file_path) and os.path.isfile(file_path):
         # Get file extension for content type
         ext = os.path.splitext(file_path)[1].lower()
         content_types = {
@@ -59,7 +83,7 @@ def serve_media_file(request, path):
         except Exception as e:
             raise Http404(f"Error reading file: {e}")
     else:
-        raise Http404("File not found")
+        raise Http404("File or directory not found")
 
 
 class UUIDEncoder(DjangoJSONEncoder):
