@@ -60,7 +60,7 @@ export const AdminShopProvider: React.FC<AdminShopProviderProps> = ({ children }
       }
       setShops(all);
     } catch (error) {
-      console.error('Failed to fetch shops:', error);
+      // Silent fail for shops fetch
     } finally {
       setLoading(false);
     }

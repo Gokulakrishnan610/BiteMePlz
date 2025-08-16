@@ -86,9 +86,9 @@ const HomePage: React.FC = () => {
           .slice(0, 2)
         return recent
       }
-    } catch (error) {
-      console.error("Error loading recent shops:", error)
-    }
+         } catch (error) {
+       // Silent fail for recent shops
+     }
 
     // Return random shops if no recent shops
     const shuffled = [...allShops].sort(() => 0.5 - Math.random())
@@ -101,9 +101,9 @@ const HomePage: React.FC = () => {
       const recentShopIds = JSON.parse(localStorage.getItem("recentShops") || "[]")
       const updatedRecent = [shopId, ...recentShopIds.filter((id: string) => id !== shopId)].slice(0, 5)
       localStorage.setItem("recentShops", JSON.stringify(updatedRecent))
-    } catch (error) {
-      console.error("Error saving recent shop:", error)
-    }
+         } catch (error) {
+       // Silent fail for saving recent shop
+     }
   }
 
   // Fetch available categories from products
@@ -122,10 +122,9 @@ const HomePage: React.FC = () => {
         const categoryArray = ["All", ...sortedCategories]
         setAvailableCategories(categoryArray)
       }
-    } catch (error) {
-      console.error("Failed to fetch categories:", error)
-      setAvailableCategories(["All", "beverages", "electronics", "food", "others", "snacks", "stationery"])
-    }
+         } catch (error) {
+       setAvailableCategories(["All", "beverages", "electronics", "food", "others", "snacks", "stationery"])
+     }
   }
 
   const fetchShops = async (signal?: AbortSignal) => {
@@ -143,10 +142,9 @@ const HomePage: React.FC = () => {
       setRecentShops(recent)
       
       return shopsArray
-    } catch (err) {
-      console.error("Error fetching shops:", err)
-      throw err
-    }
+         } catch (err) {
+       throw err
+     }
   }
 
   useEffect(() => {
@@ -188,12 +186,11 @@ const HomePage: React.FC = () => {
           filtered = shops
             .filter((shop) => shopIdsWithCategory.has(shop.id))
             .filter((shop) => !((shop.disabled_categories || []).includes(selectedCategory.toLowerCase())))
-        } catch (error) {
-          console.error("Failed to filter shops by category:", error)
-          filtered = shops.filter((shop) => {
-            return shop.category === selectedCategory || shop.category === selectedCategory.toLowerCase()
-          })
-        }
+                 } catch (error) {
+           filtered = shops.filter((shop) => {
+             return shop.category === selectedCategory || shop.category === selectedCategory.toLowerCase()
+           })
+         }
       }
 
       if (searchQuery) {
@@ -393,7 +390,6 @@ const HomePage: React.FC = () => {
                   const cardDelay = 0
 
                   if (!shop.id) {
-                    console.warn(`Shop ${shop.name} has no valid ID, skipping`)
                     return null
                   }
 
@@ -615,7 +611,6 @@ const HomePage: React.FC = () => {
                       const isOpen = isShopOpen(shop)
 
                       if (!shop.id) {
-                        console.warn(`Shop ${shop.name} has no valid ID, skipping`)
                         return null
                       }
 

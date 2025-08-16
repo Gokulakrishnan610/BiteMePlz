@@ -54,10 +54,9 @@ const ProductPage: React.FC = () => {
           try {
             const shopResponse = await api.get(`/api/shops/${data.shop}/`)
             setShop(shopResponse.data)
-          } catch (shopError) {
-            // silent fail, product page continues without shop details
-            console.warn("Failed to fetch shop details:", shopError)
-          }
+                     } catch (shopError) {
+             // silent fail, product page continues without shop details
+           }
         }
 
         setLoading(false)
@@ -90,11 +89,10 @@ const ProductPage: React.FC = () => {
       navigate("/login")
       return
     }
-    if (!product || !product.id || !shop!.id) {
-      console.error("[ProductPage] Product or its ID/shop is undefined.", product);
-      toast.error("Product information is incomplete. Please try again.");
-      return;
-    }
+         if (!product || !product.id || !shop!.id) {
+       toast.error("Product information is incomplete. Please try again.");
+       return;
+     }
     if (product.stock_mode === 'stock' && product.stock === 0) {
       toast.error("Product is out of stock")
       return

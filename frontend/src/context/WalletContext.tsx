@@ -45,7 +45,6 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       const numeric = typeof raw === 'number' ? raw : Number(raw);
       setBalance(Number.isFinite(numeric) ? numeric : 0);
     } catch (error: any) {
-      console.error('Failed to fetch balance:', error);
       const errorMessage = error.response?.data?.message || 'Failed to fetch balance';
       setError(errorMessage);
       setLastError(errorMessage);

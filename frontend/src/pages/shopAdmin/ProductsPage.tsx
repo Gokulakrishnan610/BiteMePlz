@@ -36,7 +36,6 @@ const ProductsPage: React.FC = () => {
         })));
         setLoading(false);
       } catch (error: any) {
-        console.error('Error fetching products:', error);
         toast.error('Failed to fetch products');
         setLoading(false);
       }
@@ -77,13 +76,11 @@ const ProductsPage: React.FC = () => {
 
   const toggleAvailability = async (p: Product, next: boolean) => {
     try {
-      console.log('Toggling product availability:', { product: p, next });
       const productId = p.id || p._id;
       const response = await api.put(`/api/products/${productId}/`, { 
         is_available: next, 
         shop_id: effectiveShopId 
       });
-      console.log('Update response:', response.data);
       
       setProducts((prev) => prev.map((x) => {
         const xId = x.id || x._id;
@@ -95,8 +92,6 @@ const ProductsPage: React.FC = () => {
       }));
       toast.success(`Product ${next ? 'enabled' : 'disabled'}`);
     } catch (e: any) {
-      console.error('Error toggling availability:', e);
-      console.error('Error response:', e?.response?.data);
       toast.error(e?.response?.data?.error || e?.response?.data?.message || 'Failed to update product');
     }
   };
@@ -109,7 +104,6 @@ const ProductsPage: React.FC = () => {
       toast.success('Product deleted successfully');
       setProducts((prev) => prev.filter((p) => (p.id || p._id) !== id));
     } catch (error: any) {
-      console.error('Error deleting product:', error);
       toast.error('Failed to delete product');
     }
   };

@@ -117,7 +117,6 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         style: { background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#166534' },
       });
     } catch (error: unknown) {
-      console.error('Upload error:', error);
       let errorMessage = 'Failed to upload image';
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as { response?: { data?: { message?: string } } };

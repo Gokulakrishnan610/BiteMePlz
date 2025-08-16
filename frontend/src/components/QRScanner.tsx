@@ -37,7 +37,6 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
         setSelectedCamera(devices[0].id);
       }
     } catch (err) {
-      console.error('Error getting cameras:', err);
       setError('Unable to access camera. Please ensure camera permissions are granted.');
       onScanError?.('Unable to access camera');
     }
@@ -77,16 +76,12 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
           onScanSuccess(decodedText);
           stopScanner();
         },
-        (errorMessage) => {
-          // Only log errors that aren't normal "no QR code found" messages
-          if (!errorMessage.includes('No QR code found')) {
-            console.warn('QR scan error:', errorMessage);
+                  (errorMessage) => {
+            // Silent handling of QR scan errors
           }
-        }
       );
 
     } catch (err: any) {
-      console.error('Error starting scanner:', err);
       setError(`Failed to start camera: ${err.message || 'Unknown error'}`);
       setIsScanning(false);
       onScanError?.(err.message || 'Failed to start camera');
@@ -107,7 +102,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
         scannerRef.current.clear();
         scannerRef.current = null;
       } catch (err) {
-        console.error('Error stopping scanner:', err);
+        // Silent fail for stopping scanner
       }
     }
     setIsScanning(false);
@@ -161,14 +156,12 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
             stopScanner();
           },
           (errorMessage) => {
-            if (!errorMessage.includes('No QR code found')) {
-              console.warn('QR scan error:', errorMessage);
-            }
+            // Silent handling of QR scan errors
           }
         );
         return; // Successfully started with environment camera
       } catch (envError) {
-        console.log('Environment camera failed, trying user camera...');
+        // Environment camera failed, trying user camera
       }
 
       // If environment camera fails, try user-facing camera (front camera)
@@ -181,14 +174,12 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
             stopScanner();
           },
           (errorMessage) => {
-            if (!errorMessage.includes('No QR code found')) {
-              console.warn('QR scan error:', errorMessage);
-            }
+            // Silent handling of QR scan errors
           }
         );
         return; // Successfully started with user camera
       } catch (userError) {
-        console.log('User camera failed, falling back to device ID...');
+        // User camera failed, falling back to device ID
       }
 
       // Fallback to using the device ID if facingMode fails
@@ -199,15 +190,12 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
           onScanSuccess(decodedText);
           stopScanner();
         },
-        (errorMessage) => {
-          if (!errorMessage.includes('No QR code found')) {
-            console.warn('QR scan error:', errorMessage);
+                  (errorMessage) => {
+            // Silent handling of QR scan errors
           }
-        }
       );
 
     } catch (err: any) {
-      console.error('Error starting scanner with alternate config:', err);
       setError(`Failed to start camera: ${err.message || 'Unknown error'}`);
       setIsScanning(false);
       onScanError?.(err.message || 'Failed to start camera');

@@ -58,7 +58,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
         // Clear corrupted data
         localStorage.removeItem('user');
         localStorage.removeItem('token');
@@ -123,7 +122,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
 
       const msg = extractBackendMessage(error);
-      console.error('Login error:', error);
       throw new Error(msg || 'Invalid email or password');
     }
   };
@@ -161,7 +159,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('token', data.token);
     } catch (error: any) {
-      console.error('Register error:', error);
       throw new Error(error.response?.data?.message || 'Registration failed');
     }
   };
@@ -198,9 +195,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(parentUserData));
       localStorage.setItem('parentEmail', email);
       
-      console.log('Parent login completed successfully');
     } catch (error: any) {
-      console.error('Parent login error:', error);
       throw new Error('Parent login failed');
     }
   };
