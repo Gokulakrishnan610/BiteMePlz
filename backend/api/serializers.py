@@ -283,19 +283,15 @@ class OrderSerializer(serializers.ModelSerializer):
             # Broadcast stock changes if channels present
             if _channels_available:
                 try:
-                    channel_layer = get_channel_layer()
+                    from .websocket_utils import broadcast_stock_update
                     for item in processed_order_items:
-                        async_to_sync(channel_layer.group_send)(
-                            'stock_updates',
-                            {
-                                'type': 'stock_update',
-                                'product_id': item['product_id'],
-                                'shop_id': str(order.shop.id),
-                                'stock': int(Product.objects.get(id=item['product_id']).stock),
-                            },
+                        broadcast_stock_update(
+                            product_id=str(item['product_id']),
+                            stock=int(Product.objects.get(id=item['product_id']).stock),
+                            shop_id=str(order.shop.id)
                         )
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f"Failed to broadcast stock update: {e}")
 
             return order
 
@@ -461,19 +457,15 @@ class MultiShopOrderSerializer(serializers.ModelSerializer):
             # Broadcast stock changes if channels present
             if _channels_available:
                 try:
-                    channel_layer = get_channel_layer()
+                    from .websocket_utils import broadcast_stock_update
                     for item in processed_order_items:
-                        async_to_sync(channel_layer.group_send)(
-                            'stock_updates',
-                            {
-                                'type': 'stock_update',
-                                'product_id': item['product_id'],
-                                'shop_id': str(order.shop.id),
-                                'stock': int(Product.objects.get(id=item['product_id']).stock),
-                            },
+                        broadcast_stock_update(
+                            product_id=str(item['product_id']),
+                            stock=int(Product.objects.get(id=item['product_id']).stock),
+                            shop_id=str(order.shop.id)
                         )
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f"Failed to broadcast stock update: {e}")
 
             return order
 

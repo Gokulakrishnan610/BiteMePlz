@@ -92,25 +92,87 @@ const ShopPage: React.FC = () => {
     try {
       const loc = window.location
       const wsProto = loc.protocol === 'https:' ? 'wss' : 'ws'
-      // Connect to backend WebSocket server
+      // Connect to backend WebSocket server with shop_id parameter
       const wsUrl = import.meta.env.PROD 
-        ? 'wss://kioskrec.onrender.com/ws/stock/'
-        : `${wsProto}://${loc.hostname}:8000/ws/stock/`
+        ? `wss://kioskrec.onrender.com/ws/stock/?shop_id=${id}`
+        : `${wsProto}://${loc.hostname}:8000/ws/stock/?shop_id=${id}`
+      
+      console.log('Connecting to WebSocket:', wsUrl)
       ws = new WebSocket(wsUrl)
+      
+      ws.onopen = () => {
+        console.log('WebSocket connected successfully')
+      }
+      
       ws.onmessage = (ev) => {
         try {
           const data = JSON.parse(ev.data)
-          if (data && data.type === 'stock_update') {
-            const { product_id, stock, shop_id } = data
-            if (shop_id && product_id && shop_id === id) {
-              setProducts((prev) => prev.map((p) => (p.id === product_id ? { ...p, stock: Number(stock) } : p)))
-            }
+          console.log('WebSocket message received:', data)
+          
+          switch (data.type) {
+            case 'connection_established':
+              console.log('WebSocket connection confirmed:', data.message)
+              break
+              
+            case 'stock_update':
+              if (data.shop_id === id && data.product_id) {
+                setProducts((prev) => prev.map((p) => 
+                  p.id === data.product_id ? { ...p, stock: Number(data.stock) } : p
+                ))
+                console.log(`Stock updated for product ${data.product_id}: ${data.stock}`)
+              }
+              break
+              
+            case 'order_update':
+              if (data.shop_id === id) {
+                console.log(`Order ${data.order_id} status: ${data.status}`)
+                // You can add order status updates here if needed
+              }
+              break
+              
+            case 'product_update':
+              if (data.shop_id === id && data.product_id) {
+                console.log(`Product ${data.product_id} updated:`, data.changes)
+                // Refresh products or update specific product
+                // You can implement specific product updates here
+              }
+              break
+              
+            case 'notification':
+              if (data.shop_id === id) {
+                console.log(`Notification: ${data.message}`)
+                // You can show notifications to users here
+              }
+              break
+              
+            default:
+              console.log('Unknown WebSocket message type:', data.type)
           }
-        } catch {}
+        } catch (error) {
+          console.error('Failed to parse WebSocket message:', error)
+        }
       }
-    } catch {}
+      
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error)
+      }
+      
+      ws.onclose = (event) => {
+        console.log('WebSocket connection closed:', event.code, event.reason)
+      }
+      
+    } catch (error) {
+      console.error('Failed to establish WebSocket connection:', error)
+    }
+    
     return () => {
-      try { ws && ws.close() } catch {}
+      try { 
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.close()
+        }
+      } catch (error) {
+        console.error('Error closing WebSocket:', error)
+      }
     }
   }, [id])
   const favoritesStorageKey = useMemo(() => (user ? `favorites_${user._id}` : 'favorites_guest'), [user])

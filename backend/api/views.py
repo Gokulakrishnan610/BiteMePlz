@@ -1026,6 +1026,19 @@ class ProductViewSet(viewsets.ModelViewSet):
                 }
             )
             print(f"[DEBUG] Product creation logged successfully for {product.name}")
+            
+            # Broadcast product creation via WebSocket
+            try:
+                from .websocket_utils import broadcast_product_update
+                broadcast_product_update(
+                    product_id=str(product.id),
+                    shop_id=str(product.shop.id),
+                    changes={'action': 'created', 'name': product.name, 'price': float(product.price), 'stock': product.stock}
+                )
+                print(f"[DEBUG] Product creation broadcasted via WebSocket for {product.name}")
+            except Exception as e:
+                print(f"[ERROR] Failed to broadcast product creation: {e}")
+                
         except Exception as e:
             print(f"[ERROR] Failed to log product creation for {product.name}: {str(e)}")
             # Don't fail the product creation if logging fails
@@ -1066,6 +1079,19 @@ class ProductViewSet(viewsets.ModelViewSet):
                         }
                     )
                     print(f"[DEBUG] Stock update logged successfully for {product.name}")
+                    
+                    # Broadcast stock update via WebSocket
+                    try:
+                        from .websocket_utils import broadcast_stock_update
+                        broadcast_stock_update(
+                            product_id=str(product.id),
+                            stock=new_stock,
+                            shop_id=str(product.shop.id)
+                        )
+                        print(f"[DEBUG] Stock update broadcasted via WebSocket for {product.name}")
+                    except Exception as e:
+                        print(f"[ERROR] Failed to broadcast stock update: {e}")
+                        
                 except Exception as e:
                     print(f"[ERROR] Failed to log stock update for {product.name}: {str(e)}")
             
@@ -1085,6 +1111,20 @@ class ProductViewSet(viewsets.ModelViewSet):
                         }
                     )
                     print(f"[DEBUG] Product update logged successfully for {product.name}")
+                    
+                    # Broadcast product update via WebSocket
+                    try:
+                        from .websocket_utils import broadcast_product_update
+                        changes = {field: getattr(product, field) for field in updated_fields if field != 'stock' and hasattr(product, field)}
+                        broadcast_product_update(
+                            product_id=str(product.id),
+                            shop_id=str(product.shop.id),
+                            changes=changes
+                        )
+                        print(f"[DEBUG] Product update broadcasted via WebSocket for {product.name}")
+                    except Exception as e:
+                        print(f"[ERROR] Failed to broadcast product update: {e}")
+                        
                 except Exception as e:
                     print(f"[ERROR] Failed to log product update for {product.name}: {str(e)}")
         
@@ -1372,6 +1412,18 @@ class OrderViewSet(viewsets.ModelViewSet):
                         'changed_by_name': getattr(self.request.user, 'name', 'Unknown')
                     }
                 )
+                
+                # Broadcast order status update via WebSocket
+                try:
+                    from .websocket_utils import broadcast_order_update
+                    broadcast_order_update(
+                        order_id=str(order.id),
+                        status=new_status,
+                        shop_id=str(order.shop.id)
+                    )
+                    print(f"[DEBUG] Order status update broadcasted via WebSocket for order {order.order_id}")
+                except Exception as e:
+                    print(f"[ERROR] Failed to broadcast order status update: {e}")
             
             # Special logging for verification changes
             if 'is_verified' in updated_fields:

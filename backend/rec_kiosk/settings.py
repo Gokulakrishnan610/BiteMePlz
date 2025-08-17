@@ -64,15 +64,17 @@ try:
     import channels
     INSTALLED_APPS += ['channels']
     ASGI_APPLICATION = 'rec_kiosk.asgi.application'
+    
+    # Force in-memory channel layer for development (avoids Redis compatibility issues)
     CHANNEL_LAYERS = {
         'default': {
-            'BACKEND': 'channels_redis.core.RedisChannelLayer',
-            'CONFIG': {
-                'hosts': [('127.0.0.1', 6379)],
-            },
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
         },
     }
-except Exception:
+    print("DEBUG: Using in-memory channel layer for development")
+        
+except Exception as channels_error:
+    print(f"DEBUG: Channels not available: {channels_error}")
     WSGI_APPLICATION = 'rec_kiosk.wsgi.application'
 
 # Database: Use DATABASE_URL if set (Render), otherwise SQLite
