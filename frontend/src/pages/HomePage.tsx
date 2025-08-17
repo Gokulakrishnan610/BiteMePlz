@@ -438,14 +438,14 @@ const HomePage: React.FC = () => {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                           />
                         </div>
-                        <CardContent className="p-3 flex-1 flex flex-col">
+                        <CardContent className="p-3 flex-1 flex flex-col h-[140px]">
                           <div className="flex items-start justify-between mb-1">
-                            <h3 className="font-semibold text-gray-900 text-sm leading-tight group-hover:text-purple-600 transition-colors line-clamp-2 min-h-[2.5rem]">
+                            <h3 className="font-semibold text-gray-900 text-sm leading-tight group-hover:text-purple-600 transition-colors line-clamp-2 min-h-[2.5rem] max-h-[2.5rem]">
                               {shop.name}
                             </h3>
                             <Badge
                               variant={isOpen ? "default" : "secondary"}
-                              className={`text-xs ${
+                              className={`text-xs flex-shrink-0 ${
                                 isOpen
                                   ? "bg-green-600 hover:bg-green-700 text-white"
                                   : "bg-gray-500 hover:bg-gray-600 text-white"
@@ -454,7 +454,9 @@ const HomePage: React.FC = () => {
                               {isOpen ? "Open" : "Closed"}
                             </Badge>
                           </div>
-                          <p className="text-xs text-gray-600 mb-2 line-clamp-2 min-h-[2rem]">{shop.description}</p>
+                          <p className="text-xs text-gray-600 mb-2 line-clamp-2 min-h-[2rem] max-h-[2rem] overflow-hidden">
+                            {shop.description.length > 80 ? `${shop.description.substring(0, 80)}...` : shop.description}
+                          </p>
                           <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
                             <div className="flex items-center">
                               <Star className="w-3 h-3 text-yellow-400 fill-current mr-1" />
@@ -587,12 +589,14 @@ const HomePage: React.FC = () => {
                                   className="w-full h-full object-cover"
                                 />
                               </div>
-                              <CardContent className="flex-1 p-4">
+                              <CardContent className="flex-1 p-4 flex flex-col">
                                 <div className="mb-1">
-                                  <h3 className="font-bold text-lg text-gray-900 line-clamp-1">{shop.name}</h3>
+                                  <h3 className="font-bold text-lg text-gray-900 line-clamp-1 min-h-[1.5rem] max-h-[1.5rem]">{shop.name}</h3>
                                 </div>
-                                <p className="text-gray-600 text-sm mb-2 line-clamp-1">{shop.description}</p>
-                                <div className="flex items-center justify-between text-sm">
+                                <p className="text-gray-600 text-sm mb-2 line-clamp-1 min-h-[1.25rem] max-h-[1.25rem] overflow-hidden">
+                                  {shop.description.length > 50 ? `${shop.description.substring(0, 50)}...` : shop.description}
+                                </p>
+                                <div className="flex items-center justify-between text-sm mt-auto">
                                   <div className="flex items-center gap-3 text-gray-500">
                                     <div className="flex items-center gap-1">
                                       <Clock className="h-3 w-3" />
@@ -605,7 +609,7 @@ const HomePage: React.FC = () => {
                                   </div>
                                   <Badge
                                     variant={isOpen ? "default" : "secondary"}
-                                    className={`text-xs ${
+                                    className={`text-xs flex-shrink-0 ${
                                       isOpen
                                         ? "bg-green-600 hover:bg-green-700 text-white"
                                         : "bg-gray-500 hover:bg-gray-600 text-white"
@@ -651,8 +655,8 @@ const HomePage: React.FC = () => {
                             isOpen ? "" : "pointer-events-none opacity-60"
                           }`}
                         >
-                          <Card className="overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow duration-200 bg-white">
-                            <div className="relative aspect-square overflow-hidden">
+                          <Card className="overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow duration-200 bg-white h-full flex flex-col">
+                            <div className="relative aspect-square overflow-hidden flex-shrink-0">
                               <img
                                 src={
                                   shop.image
@@ -668,14 +672,14 @@ const HomePage: React.FC = () => {
                                 </div>
                               </div>
                             </div>
-                            <CardContent className="p-3">
+                            <CardContent className="p-3 flex-1 flex flex-col h-[120px]">
                               <div className="flex items-start justify-between mb-1">
-                                <h3 className="font-semibold text-gray-900 text-sm leading-tight group-hover:text-purple-600 transition-colors line-clamp-1">
+                                <h3 className="font-semibold text-gray-900 text-sm leading-tight group-hover:text-purple-600 transition-colors line-clamp-1 min-h-[1.25rem] max-h-[1.25rem]">
                                   {shop.name}
                                 </h3>
                                 <Badge
                                   variant={isOpen ? "default" : "secondary"}
-                                  className={`text-xs ml-1 ${
+                                  className={`text-xs ml-1 flex-shrink-0 ${
                                     isOpen
                                       ? "bg-green-600 hover:bg-green-700 text-white"
                                       : "bg-gray-500 hover:bg-gray-600 text-white"
@@ -684,7 +688,9 @@ const HomePage: React.FC = () => {
                                   {isOpen ? "Open" : "Closed"}
                                 </Badge>
                               </div>
-                              <p className="text-xs text-gray-600 mb-2 line-clamp-2">{shop.description}</p>
+                              <p className="text-xs text-gray-600 mb-2 line-clamp-2 min-h-[2rem] max-h-[2rem] overflow-hidden">
+                                {shop.description.length > 60 ? `${shop.description.substring(0, 60)}...` : shop.description}
+                              </p>
                               <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
                                 <div className="flex items-center">
                                   <Star className="w-3 h-3 text-yellow-400 fill-current mr-1" />

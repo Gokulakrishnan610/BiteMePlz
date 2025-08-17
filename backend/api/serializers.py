@@ -93,6 +93,22 @@ class ProductSerializer(serializers.ModelSerializer):
                  'is_available', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
+    def create(self, validated_data):
+        """Custom create method to handle shop_id properly"""
+        # Extract shop_id from validated_data
+        shop_id = validated_data.pop('shop_id', None)
+        
+        if shop_id:
+            try:
+                shop = Shop.objects.get(id=shop_id)
+                validated_data['shop'] = shop
+            except Shop.DoesNotExist:
+                raise serializers.ValidationError(f"Shop with ID {shop_id} does not exist.")
+        else:
+            raise serializers.ValidationError("shop_id is required.")
+        
+        return super().create(validated_data)
+
     def update(self, instance, validated_data):
         """Custom update method to handle partial updates properly"""
         # Remove shop_id from validated_data as it's not a model field

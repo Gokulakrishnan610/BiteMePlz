@@ -81,7 +81,7 @@ const CreateProductPage: React.FC = () => {
         category: formData.category,
       };
       
-      await api.post('/api/products/', createData);
+      const response = await api.post('/api/products/', createData)
       
       toast.success('Product created successfully');
       

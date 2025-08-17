@@ -998,7 +998,10 @@ class ProductViewSet(viewsets.ModelViewSet):
         queryset = Product.objects.filter(is_available=True)
         if shop_id:
             print(f"DEBUG: Public/other user viewing shop products - showing only available products for shop {shop_id}")
+            print(f"DEBUG: Total available products: {queryset.count()}")
             queryset = queryset.filter(shop=shop_id)
+            print(f"DEBUG: Available products for shop {shop_id}: {queryset.count()}")
+            print(f"DEBUG: Products in shop {shop_id}: {list(queryset.values_list('name', 'is_available', 'shop_id'))}")
         if name:
             queryset = queryset.filter(name__icontains=name)
         return queryset

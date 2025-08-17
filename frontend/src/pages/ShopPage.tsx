@@ -97,21 +97,17 @@ const ShopPage: React.FC = () => {
         ? `wss://rec-kiosk.onrender.com/ws/stock/?shop_id=${id}`
         : `${wsProto}://${loc.hostname}:8000/ws/stock/?shop_id=${id}`
       
-      console.log('Connecting to WebSocket:', wsUrl)
       ws = new WebSocket(wsUrl)
       
       ws.onopen = () => {
-        console.log('WebSocket connected successfully')
       }
       
       ws.onmessage = (ev) => {
         try {
           const data = JSON.parse(ev.data)
-          console.log('WebSocket message received:', data)
           
           switch (data.type) {
             case 'connection_established':
-              console.log('WebSocket connection confirmed:', data.message)
               break
               
             case 'stock_update':
@@ -119,20 +115,17 @@ const ShopPage: React.FC = () => {
                 setProducts((prev) => prev.map((p) => 
                   p.id === data.product_id ? { ...p, stock: Number(data.stock) } : p
                 ))
-                console.log(`Stock updated for product ${data.product_id}: ${data.stock}`)
               }
               break
               
             case 'order_update':
               if (data.shop_id === id) {
-                console.log(`Order ${data.order_id} status: ${data.status}`)
                 // You can add order status updates here if needed
               }
               break
               
             case 'product_update':
               if (data.shop_id === id && data.product_id) {
-                console.log(`Product ${data.product_id} updated:`, data.changes)
                 // Refresh products or update specific product
                 // You can implement specific product updates here
               }
@@ -140,13 +133,12 @@ const ShopPage: React.FC = () => {
               
             case 'notification':
               if (data.shop_id === id) {
-                console.log(`Notification: ${data.message}`)
                 // You can show notifications to users here
               }
               break
               
             default:
-              console.log('Unknown WebSocket message type:', data.type)
+              break
           }
         } catch (error) {
           console.error('Failed to parse WebSocket message:', error)
@@ -305,20 +297,37 @@ const ShopPage: React.FC = () => {
 
     const fetchShopAndProducts = async () => {
       try {
-        const [shopResponse, productsResponse] = await Promise.all([
-          api.get(`/api/shops/${id}/`),
-          api.get(`/api/products/`, {
-            params: { shop: id },
-          }),
-        ])
-
+        // Fetch shop data
+        const shopResponse = await api.get(`/api/shops/${id}/`)
         setShop(shopResponse.data)
-        const allProducts = productsResponse.data.results || []
-        setProducts(allProducts.filter((product: Product) => product.is_available).map((product: Product) => ({
+
+        // Fetch all products with pagination handling
+        let allProducts: Product[] = []
+        let nextUrl: string | null = `/api/products/?shop_id=${id}`
+        
+        while (nextUrl) {
+          const productsResponse: any = await api.get(nextUrl)
+          const pageProducts = productsResponse.data.results || []
+          allProducts = [...allProducts, ...pageProducts]
+          
+          // Check if there's a next page and handle URL properly
+          if (productsResponse.data.next) {
+            // Extract just the path and query parameters from the next URL
+            const nextUrlObj: URL = new URL(productsResponse.data.next)
+            nextUrl = nextUrlObj.pathname + nextUrlObj.search
+          } else {
+            nextUrl = null
+          }
+        }
+        
+        const availableProducts = allProducts.filter((product: Product) => product.is_available)
+        
+        const processedProducts = availableProducts.map((product: Product) => ({
           ...product,
           stock_mode: product.stock_mode || 'stock' // Default to 'stock' for backward compatibility
-        })))
-        // setAllShops(allShopsResponse.data.results || [])
+        }))
+        
+        setProducts(processedProducts)
         setLoading(false)
       } catch (err) {
         if ((err as any)?.name !== "CanceledError") {
@@ -473,16 +482,48 @@ const ShopPage: React.FC = () => {
   //   navigate(`/shop/${shopId}`)
   // }
 
-  const disabledCategories = useMemo(() => (shop?.disabled_categories as unknown as string[]) || [], [shop])
+  // Category ID to name mapping based on fixtures
+  const categoryIdToName: { [key: string]: string } = {
+    "1": "beverages",
+    "2": "snacks",
+    // Add more mappings as needed
+  }
+
+  // Convert disabled category IDs to category names
+  const disabledCategoryNames = useMemo(() => {
+    // Handle both array and single value cases
+    let disabledIds: string[] = []
+    const disabledCategories = shop?.disabled_categories
+    
+    if (disabledCategories) {
+      if (Array.isArray(disabledCategories)) {
+        disabledIds = disabledCategories
+      } else {
+        // If it's a single value, convert to array
+        disabledIds = [String(disabledCategories)]
+      }
+    }
+    
+    const disabledNames = disabledIds.map(id => categoryIdToName[id] || id)
+    return disabledNames
+  }, [shop?.disabled_categories])
 
   const validCategories = useMemo(
-    () =>
-      products
-        .filter((product) => product.is_available && (product.stock_mode === 'live_stock' || product.stock > 0))
+    () => {
+      const availableProducts = products.filter((product) => {
+        const isAvailable = product.is_available
+        const categoryNotDisabled = !disabledCategoryNames.includes(product.category)
+        
+        return isAvailable && categoryNotDisabled
+      })
+      
+      const categories = availableProducts
         .map((product) => product.category)
         .filter((category) => category && typeof category === "string")
-        .filter((category) => !disabledCategories.includes(category as string)),
-    [products, disabledCategories],
+      
+      return categories
+    },
+    [products, disabledCategoryNames],
   )
 
   const hasFavoritesInShop = useMemo(
@@ -512,10 +553,13 @@ const ShopPage: React.FC = () => {
 
   const deferredSearch = useDeferredValue(searchQuery)
   const filteredProducts = useMemo(
-    () =>
-      products.filter((product) => {
+    () => {
+      const filtered = products.filter((product) => {
         // Hide products from disabled categories
-        if (disabledCategories.includes(product.category)) return false;
+        if (disabledCategoryNames.includes(product.category)) {
+          return false;
+        }
+        
         const categoryMatch =
           selectedCategory === "all" ||
           (selectedCategory === "favorites" && favoriteProductIds.has(product.id)) ||
@@ -529,8 +573,11 @@ const ShopPage: React.FC = () => {
           (product.category && product.category.toLowerCase().includes(query))
 
         return categoryMatch && searchMatch
-      }),
-    [products, selectedCategory, deferredSearch, favoriteProductIds, disabledCategories],
+      })
+      
+      return filtered
+    },
+    [products, selectedCategory, deferredSearch, favoriteProductIds, disabledCategoryNames],
   )
 
   const sortedProducts = useMemo(() => {
