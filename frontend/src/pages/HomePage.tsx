@@ -107,14 +107,37 @@ const HomePage: React.FC = () => {
      }
   }
 
+  // Helper function to fetch all products with pagination
+  const fetchAllProducts = async (params: any, signal?: AbortSignal) => {
+    let allProducts: Product[] = []
+    let nextUrl: string | null = `/api/products/?${new URLSearchParams(params).toString()}`
+    
+    while (nextUrl) {
+      const { data } = await api.get(nextUrl, { signal })
+      const pageProducts = data.results || data
+      allProducts = [...allProducts, ...pageProducts]
+      
+      // Check if there's a next page and handle URL properly
+      if (data.next) {
+        // Extract just the path and query parameters from the next URL
+        const nextUrlObj: URL = new URL(data.next)
+        nextUrl = nextUrlObj.pathname + nextUrlObj.search
+      } else {
+        nextUrl = null
+      }
+    }
+    
+    return allProducts
+  }
+
   // Fetch available categories from products
   const fetchAvailableCategories = async (signal?: AbortSignal) => {
     try {
-      const { data } = await api.get("/api/products/", { signal, params: { stock__gt: 0, is_available: true } })
-      const products = data.results || data
-      if (Array.isArray(products)) {
+      const allProducts = await fetchAllProducts({ stock__gt: 0, is_available: true }, signal)
+      
+      if (Array.isArray(allProducts)) {
         const categories = new Set<string>()
-        products.forEach((product: Product) => {
+        allProducts.forEach((product: Product) => {
           if (product.is_available && product.stock > 0 && product.category) {
             categories.add(product.category.toLowerCase())
           }
@@ -173,14 +196,11 @@ const HomePage: React.FC = () => {
       // If searching for a product by name
       if (searchQuery) {
         try {
-          const { data } = await api.get("/api/products/", {
-            params: {
-              name: searchQuery, // Assuming backend supports filtering by name
-              is_available: true,
-              stock__gt: 0,
-            },
+          const products = await fetchAllProducts({
+            name: searchQuery,
+            is_available: true,
+            stock__gt: 0,
           })
-          const products = data.results || data
           // Extract unique shop IDs from products
           const shopIdsWithProduct = new Set(
             products.map((product: Product) => (product.shop && (product.shop as any).id) || product.shop)
@@ -193,14 +213,11 @@ const HomePage: React.FC = () => {
         }
       } else if (selectedCategory !== "All") {
         try {
-          const { data } = await api.get("/api/products/", {
-            params: {
-              category: selectedCategory.toLowerCase(),
-              is_available: true,
-              stock__gt: 0,
-            },
+          const products = await fetchAllProducts({
+            category: selectedCategory.toLowerCase(),
+            is_available: true,
+            stock__gt: 0,
           })
-          const products = data.results || data
           const shopIdsWithCategory = new Set(
             products.map((product: Product) => (product.shop && (product.shop as any).id) || product.shop)
           )

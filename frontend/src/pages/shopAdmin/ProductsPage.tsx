@@ -27,10 +27,27 @@ const ProductsPage: React.FC = () => {
           return;
         }
         
-        const { data } = await api.get(`/api/products/?shop=${effectiveShopId}`);
+        // Fetch all products with pagination handling
+        let allProducts: Product[] = []
+        let nextUrl: string | null = `/api/products/?shop=${effectiveShopId}`
+        
+        while (nextUrl) {
+          const { data } = await api.get(nextUrl)
+          const pageProducts = data.results || []
+          allProducts = [...allProducts, ...pageProducts]
+          
+          // Check if there's a next page and handle URL properly
+          if (data.next) {
+            // Extract just the path and query parameters from the next URL
+            const nextUrlObj: URL = new URL(data.next)
+            nextUrl = nextUrlObj.pathname + nextUrlObj.search
+          } else {
+            nextUrl = null
+          }
+        }
+        
         // Handle paginated response and add backward compatibility for stock_mode
-        const productsData = data.results || data;
-        setProducts(productsData.map((product: Product) => ({
+        setProducts(allProducts.map((product: Product) => ({
           ...product,
           stock_mode: product.stock_mode || 'stock' // Default to 'stock' for backward compatibility
         })));
