@@ -45,7 +45,8 @@ const OrdersPage: React.FC = () => {
   const fetchOrders = async () => {
     try {
       const { data } = await api.get("/api/orders/myorders")
-      setOrders(data)
+      // Handle paginated response
+      setOrders(data.results || data)
       setLoading(false)
     } catch (err) {
       setError("Failed to load orders")

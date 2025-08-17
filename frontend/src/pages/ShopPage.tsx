@@ -188,7 +188,8 @@ const ShopPage: React.FC = () => {
   
   // Load cart from localStorage on component mount
   useEffect(() => {
-    const savedCart = localStorage.getItem("multiShopCart")
+    const multiShopCartKey = user ? `multiShopCart_${user._id}` : 'multiShopCart_guest';
+    const savedCart = localStorage.getItem(multiShopCartKey)
     if (savedCart) {
       try {
         const parsedCart = JSON.parse(savedCart)
@@ -197,12 +198,24 @@ const ShopPage: React.FC = () => {
         console.error("Error loading cart from localStorage:", error)
       }
     }
-  }, [])
+  }, [user?._id])
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem("multiShopCart", JSON.stringify(localCart))
-  }, [localCart])
+    const multiShopCartKey = user ? `multiShopCart_${user._id}` : 'multiShopCart_guest';
+    localStorage.setItem(multiShopCartKey, JSON.stringify(localCart))
+  }, [localCart, user?._id])
+
+  // Clear old multiShopCart data when user changes
+  useEffect(() => {
+    if (user?._id) {
+      // Clear any old multiShopCart data from previous users
+      const oldCartKeys = Object.keys(localStorage).filter(key => 
+        key.startsWith('multiShopCart_') && !key.includes(user._id)
+      );
+      oldCartKeys.forEach(key => localStorage.removeItem(key));
+    }
+  }, [user?._id]);
 
   // Check for multi-shop orders and show notice only when appropriate
   useEffect(() => {

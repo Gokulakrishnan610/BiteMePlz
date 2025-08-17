@@ -110,7 +110,7 @@ export default function Navbar({ className }: NavbarProps) {
 
         {/* Mobile Navbar */}
         <div className="navbar fixed top-4 left-4 right-4 z-50 md:hidden" onMouseLeave={() => setActive(null)}>
-            <div className="bg-white/95 backdrop-blur-md rounded-full border border-gray-200 shadow-lg px-4 py-3 flex items-center justify-between">
+            <div className="relative bg-white/95 backdrop-blur-md rounded-full border border-gray-200 shadow-lg px-4 py-3 flex items-center justify-between">
             {/* Mobile Logo */}
             <Link to="/" className="flex items-center">
                 <img
@@ -135,7 +135,10 @@ export default function Navbar({ className }: NavbarProps) {
 
             {/* Mobile Menu Dropdown */}
             {isMobileMenuOpen && (
-            <div className="mt-2 bg-white/95 backdrop-blur-md rounded-2xl border border-gray-200 shadow-xl p-4 max-h-[80vh] overflow-y-auto animate-in fade-in-0 slide-in-from-top-2 duration-300">
+            <>
+              {/* Backdrop */}
+              <div className="fixed inset-0 bg-black/20 z-30" onClick={() => setIsMobileMenuOpen(false)} />
+              <div className="absolute top-full left-0 right-0 mt-4 bg-white/95 backdrop-blur-md rounded-2xl border border-gray-200 shadow-xl p-4 max-h-[70vh] overflow-y-auto animate-in fade-in-0 slide-in-from-top-2 duration-300 z-40">
                 <div className="space-y-6">
                 {/* Account Section */}
                 <div>
@@ -173,6 +176,7 @@ export default function Navbar({ className }: NavbarProps) {
                 </div>
                 </div>
             </div>
+            </>
             )}
         </div>
         </>

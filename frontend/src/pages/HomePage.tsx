@@ -12,6 +12,7 @@ import { Input } from "../components/ui/input"
 import Navbar from "../components/Navbar"
 // import SimpleLoading from "../components/SimpleLoading"
 import { getMediaUrl } from "../lib/utils";
+import { useAuth } from "../context/AuthContext";
 
 interface Shop {
   id: string
@@ -51,6 +52,7 @@ const categoryIconMap: { [key: string]: any } = {
 }
 
 const HomePage: React.FC = () => {
+  const { user } = useAuth();
   const [shops, setShops] = useState<Shop[]>([])
   const [filteredShops, setFilteredShops] = useState<Shop[]>([])
   const [availableCategories, setAvailableCategories] = useState<string[]>(["All"])
@@ -79,7 +81,8 @@ const HomePage: React.FC = () => {
   // Get recent shops from localStorage or random shops
   const getRecentShops = (allShops: Shop[]) => {
     try {
-      const recentShopIds = JSON.parse(localStorage.getItem("recentShops") || "[]")
+      const recentShopsKey = user ? `recentShops_${user._id}` : 'recentShops_guest';
+      const recentShopIds = JSON.parse(localStorage.getItem(recentShopsKey) || "[]")
       if (recentShopIds.length > 0) {
         const recent = recentShopIds
           .map((id: string) => allShops.find((shop) => shop.id === id))
@@ -99,9 +102,10 @@ const HomePage: React.FC = () => {
   // Save shop to recent when user visits it
   const addToRecentShops = (shopId: string) => {
     try {
-      const recentShopIds = JSON.parse(localStorage.getItem("recentShops") || "[]")
+      const recentShopsKey = user ? `recentShops_${user._id}` : 'recentShops_guest';
+      const recentShopIds = JSON.parse(localStorage.getItem(recentShopsKey) || "[]")
       const updatedRecent = [shopId, ...recentShopIds.filter((id: string) => id !== shopId)].slice(0, 5)
-      localStorage.setItem("recentShops", JSON.stringify(updatedRecent))
+      localStorage.setItem(recentShopsKey, JSON.stringify(updatedRecent))
          } catch (error) {
        // Silent fail for saving recent shop
      }

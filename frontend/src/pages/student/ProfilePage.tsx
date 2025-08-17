@@ -115,7 +115,8 @@ const ProfilePage: React.FC = () => {
     const fetchSpending = async () => {
       try {
         const { data } = await api.get<MinimalOrderForSpending[]>("/api/orders/myorders")
-        const orders = Array.isArray(data) ? data : []
+        // Handle paginated response
+        const orders = Array.isArray(data.results || data) ? (data.results || data) : []
 
         const getPaid = (o: MinimalOrderForSpending) => Boolean(o.is_paid ?? o.isPaid)
         const getAmount = (o: MinimalOrderForSpending) => Number(o.total_price ?? o.totalPrice ?? 0)

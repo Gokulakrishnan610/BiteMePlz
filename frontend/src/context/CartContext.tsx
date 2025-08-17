@@ -39,22 +39,48 @@ export const useCart = () => {
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { showSuccess } = useToast();
-  const { setCartResetCallback } = useAuth();
+  const { setCartResetCallback, user } = useAuth();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+
+  // Get user-specific cart key
+  const getCartKey = () => {
+    return user ? `cartItems_${user._id}` : 'cartItems_guest';
+  };
 
   // Initialize cart from localStorage
   useEffect(() => {
-    const storedCart = localStorage.getItem('cartItems');
+    const cartKey = getCartKey();
+    const storedCart = localStorage.getItem(cartKey);
     
     if (storedCart) {
-      setCartItems(JSON.parse(storedCart));
+      try {
+        setCartItems(JSON.parse(storedCart));
+      } catch (error) {
+        // Clear corrupted data
+        localStorage.removeItem(cartKey);
+        setCartItems([]);
+      }
+    } else {
+      setCartItems([]);
     }
-  }, []);
+  }, [user?._id]); // Re-run when user changes
 
   // Update localStorage when cart changes
   useEffect(() => {
-    localStorage.setItem('cartItems', JSON.stringify(cartItems));
-  }, [cartItems]);
+    const cartKey = getCartKey();
+    localStorage.setItem(cartKey, JSON.stringify(cartItems));
+  }, [cartItems, user?._id]);
+
+  // Clear cart when user changes to ensure fresh start
+  useEffect(() => {
+    if (user?._id) {
+      // Clear any old cart data from previous users
+      const oldCartKeys = Object.keys(localStorage).filter(key => 
+        key.startsWith('cartItems_') && !key.includes(user._id)
+      );
+      oldCartKeys.forEach(key => localStorage.removeItem(key));
+    }
+  }, [user?._id]);
 
   const addToCart = (item: CartItem) => {
     // Check if item already exists in cart (same product from same shop)
@@ -97,7 +123,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = () => {
     setCartItems([]);
-    localStorage.removeItem('cartItems');
+    const cartKey = getCartKey();
+    localStorage.removeItem(cartKey);
   };
 
   // Register the clearCart function with AuthContext
