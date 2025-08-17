@@ -36,6 +36,7 @@ try:
     websocket_urlpatterns = [
         path('ws/stock/', StockConsumer.as_asgi()),
         path('ws/orders/', StockConsumer.as_asgi()),  # Reuse for now, can add separate consumer later
+        path('ws/wallet/', StockConsumer.as_asgi()),  # Wallet updates
     ]
     
     logger.info(f"WebSocket URL patterns configured: {websocket_urlpatterns}")

@@ -8,22 +8,32 @@ logger = logging.getLogger(__name__)
 class StockConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
         try:
-            # Get shop_id from query parameters
+            # Get parameters from query string
             query_string = self.scope.get('query_string', b'').decode()
             shop_id = None
+            user_id = None
             
-            # Parse query string to get shop_id
+            # Parse query string to get parameters
             if query_string:
                 params = dict(item.split('=') for item in query_string.split('&') if '=' in item)
                 shop_id = params.get('shop_id')
+                user_id = params.get('user_id')
             
+            # Determine group based on connection type
             if shop_id:
                 self.group_name = f'shop_{shop_id}'
                 self.shop_id = shop_id
+                self.user_id = user_id
                 logger.info(f"WebSocket connecting to shop: {shop_id}")
+            elif user_id:
+                self.group_name = f'wallet_updates'
+                self.shop_id = None
+                self.user_id = user_id
+                logger.info(f"WebSocket connecting to wallet updates for user: {user_id}")
             else:
                 self.group_name = 'stock_updates'
                 self.shop_id = None
+                self.user_id = None
                 logger.info("WebSocket connecting to general stock updates")
                 
             # Add to channel layer group
@@ -37,7 +47,8 @@ class StockConsumer(AsyncJsonWebsocketConsumer):
             await self.send_json({
                 'type': 'connection_established',
                 'message': 'WebSocket connected successfully',
-                'shop_id': self.shop_id
+                'shop_id': self.shop_id,
+                'user_id': self.user_id
             })
             logger.info("Connection confirmation sent")
             
@@ -49,7 +60,8 @@ class StockConsumer(AsyncJsonWebsocketConsumer):
                 await self.send_json({
                     'type': 'connection_error',
                     'message': f'Connection error: {str(e)}',
-                    'shop_id': None
+                    'shop_id': None,
+                    'user_id': None
                 })
             except:
                 pass
@@ -113,6 +125,34 @@ class StockConsumer(AsyncJsonWebsocketConsumer):
             })
         except Exception as e:
             logger.error(f"Error sending notification: {e}")
+
+    async def wallet_update(self, event):
+        """Handle wallet balance updates"""
+        try:
+            # Only send to the specific user if this is a wallet connection
+            if hasattr(self, 'user_id') and self.user_id:
+                event_user_id = event.get('user_id')
+                if event_user_id == self.user_id:
+                    await self.send_json({
+                        'type': 'wallet_update',
+                        'user_id': event.get('user_id'),
+                        'balance': event.get('balance'),
+                        'change': event.get('change', 0),
+                        'transaction_type': event.get('transaction_type'),
+                        'timestamp': event.get('timestamp')
+                    })
+            else:
+                # Send to all wallet connections (fallback)
+                await self.send_json({
+                    'type': 'wallet_update',
+                    'user_id': event.get('user_id'),
+                    'balance': event.get('balance'),
+                    'change': event.get('change', 0),
+                    'transaction_type': event.get('transaction_type'),
+                    'timestamp': event.get('timestamp')
+                })
+        except Exception as e:
+            logger.error(f"Error sending wallet update: {e}")
 
     async def receive_json(self, content):
         """Handle incoming messages from client"""

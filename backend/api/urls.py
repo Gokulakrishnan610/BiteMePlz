@@ -13,7 +13,7 @@ from rest_framework_simplejwt.views import (
 from .views import (
     UserViewSet, ShopViewSet, ProductViewSet, OrderViewSet,
     TransactionViewSet, ShopLogViewSet, StudentAnalyticsViewSet, FileUploadViewSet,
-    test_websocket
+    test_websocket, test_wallet_update
 )
 
 router = DefaultRouter()
@@ -409,6 +409,8 @@ urlpatterns = [
     path('transactions/shop/', TransactionViewSet.as_view({'get': 'shop'}), name='transaction-shop'),
     # WebSocket test endpoint
     path('test-websocket/', test_websocket, name='test-websocket'),
+    # Wallet WebSocket test endpoint
+    path('test-wallet-update/', test_wallet_update, name='test-wallet-update'),
 ]
 
 urlpatterns += [

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import api from '../api';
 
@@ -7,6 +7,7 @@ interface WalletContextType {
   loading: boolean;
   error: string | null;
   refreshBalance: () => Promise<void>;
+  isWebSocketConnected: boolean;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -29,6 +30,8 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
+  const [isWebSocketConnected, setIsWebSocketConnected] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
 
   const fetchBalance = async () => {
     if (!user || !token) {
@@ -72,11 +75,83 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     await fetchBalance();
   };
 
+  // WebSocket connection for real-time wallet updates
+  const connectWebSocket = () => {
+    if (!user || !token) return;
+
+    const wsUrl = import.meta.env.PROD
+      ? `wss://rec-kiosk.onrender.com/ws/wallet/?user_id=${user._id}`
+      : `ws://localhost:8000/ws/wallet/?user_id=${user._id}`;
+
+    console.log('Connecting to WebSocket:', wsUrl);
+    
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log('WebSocket connected successfully');
+      setIsWebSocketConnected(true);
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('WebSocket message received:', data);
+        
+        if (data.type === 'wallet_update' && data.user_id === user._id) {
+          console.log('Wallet update received:', data);
+          setBalance(data.balance);
+        } else if (data.type === 'connection_established') {
+          console.log('WebSocket connection confirmed:', data.message);
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      setIsWebSocketConnected(false);
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket connection closed');
+      setIsWebSocketConnected(false);
+      // Reconnect after 5 seconds
+      setTimeout(() => {
+        if (user && token) {
+          connectWebSocket();
+        }
+      }, 5000);
+    };
+  };
+
+  // Connect to WebSocket when user is authenticated
+  useEffect(() => {
+    if (user && token) {
+      connectWebSocket();
+    } else {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      setIsWebSocketConnected(false);
+    }
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, [user, token]);
+
   const value = {
     balance,
     loading,
     error,
-    refreshBalance
+    refreshBalance,
+    isWebSocketConnected
   };
 
   return (

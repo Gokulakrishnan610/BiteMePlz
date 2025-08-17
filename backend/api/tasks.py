@@ -153,6 +153,14 @@ def expire_orders_and_handle_refund():
                     description=f'Order {order.order_id} expired, amount returned to wallet.',
                     metadata={'reason': 'expiry_refund'}
                 )
+                
+                # Send WebSocket update for wallet balance change
+                send_wallet_update(
+                    user_id=str(user.id),
+                    balance=float(user.balance),
+                    change=float(order.total_price),
+                    transaction_type='expiry_refund'
+                )
             elif payment_method == 'razorpay' and not already_refunded:
                 # Dummy refund for Razorpay: credit the same amount to wallet, but mark as dummy
                 user = order.user
@@ -169,6 +177,14 @@ def expire_orders_and_handle_refund():
                     payment_method='dummy_razorpay',
                     description=f'Order {order.order_id} expired, dummy refund credited to wallet (Razorpay payment).',
                     metadata={'reason': 'dummy_expiry_refund'}
+                )
+                
+                # Send WebSocket update for wallet balance change
+                send_wallet_update(
+                    user_id=str(user.id),
+                    balance=float(user.balance),
+                    change=float(order.total_price),
+                    transaction_type='dummy_expiry_refund'
                 )
             else:
                 # For other non-wallet payments, log expiry once (no auto-refund)
@@ -227,3 +243,25 @@ def expire_orders_and_handle_refund():
                 pass
             order.status = 'expired'
             order.save()
+
+
+def send_wallet_update(user_id: str, balance: float, change: float = 0, transaction_type: str = 'update'):
+    """Send wallet update via WebSocket to connected clients"""
+    if not _channels_available:
+        return
+    
+    try:
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            'wallet_updates',
+            {
+                'type': 'wallet_update',
+                'user_id': user_id,
+                'balance': balance,
+                'change': change,
+                'transaction_type': transaction_type,
+                'timestamp': timezone.now().isoformat()
+            }
+        )
+    except Exception as e:
+        print(f"Error sending wallet update: {e}")

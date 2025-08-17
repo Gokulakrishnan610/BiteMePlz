@@ -1536,6 +1536,15 @@ class OrderViewSet(viewsets.ModelViewSet):
                     payment_method='balance',
                     description=f'Payment for order {order.order_id}'
                 )
+                
+                # Send WebSocket update for wallet balance change
+                from api.tasks import send_wallet_update
+                send_wallet_update(
+                    user_id=str(request.user.id),
+                    balance=float(request.user.balance),
+                    change=-float(total_price),  # Negative for deduction
+                    transaction_type='order_payment'
+                )
                 order_data = self.get_serializer(order).data
                 order_data['_id'] = str(order_data['id'])
                 return Response({'message': 'Order created successfully', 'order': order_data}, status=status.HTTP_201_CREATED)
@@ -1607,6 +1616,15 @@ class OrderViewSet(viewsets.ModelViewSet):
                                 status='success',
                                 payment_method='balance',
                                 description=f'Order {order.order_id} expired, amount returned to wallet.'
+                            )
+                            
+                            # Send WebSocket update for wallet balance change
+                            from api.tasks import send_wallet_update
+                            send_wallet_update(
+                                user_id=str(user.id),
+                                balance=float(user.balance),
+                                change=float(order.total_price),
+                                transaction_type='expiry_refund'
                             )
                 except Exception:
                     pass
@@ -1886,6 +1904,15 @@ class OrderViewSet(viewsets.ModelViewSet):
                             payment_method='balance',
                             description=f'Payment for order {order.order_id}'
                         )
+                    
+                    # Send WebSocket update for wallet balance change
+                    from api.tasks import send_wallet_update
+                    send_wallet_update(
+                        user_id=str(request.user.id),
+                        balance=float(request.user.balance),
+                        change=-float(total_price),  # Negative for deduction
+                        transaction_type='multi_shop_payment'
+                    )
                 elif payment_method == 'razorpay':
                     # For Razorpay, we'll create the orders but not mark them as paid yet
                     # The frontend will handle the payment process and call the pay endpoint
@@ -2382,6 +2409,15 @@ class OrderViewSet(viewsets.ModelViewSet):
                     type='payment',
                     payment_method='balance',
                     description=f'Payment for order {order.order_id}'
+                )
+                
+                # Send WebSocket update for wallet balance change
+                from api.tasks import send_wallet_update
+                send_wallet_update(
+                    user_id=str(order.user.id),
+                    balance=float(order.user.balance),
+                    change=-float(order.total_price),  # Negative for deduction
+                    transaction_type='order_payment'
                 )
             elif payment_method == 'razorpay' or request.data.get('razorpay_payment_id'):
                 # Verify Razorpay payment
@@ -2981,5 +3017,30 @@ def test_websocket(request):
         'status': 'success',
         'message': 'WebSocket test endpoint working',
         'websocket_url': 'wss://rec-kiosk.onrender.com/ws/stock/?shop_id=test',
+        'timestamp': timezone.now().isoformat()
+    })
+
+@api_view(['POST'])
+def test_wallet_update(request):
+    """Test endpoint to trigger wallet update via WebSocket"""
+    from api.tasks import send_wallet_update
+    
+    user_id = request.data.get('user_id')
+    balance = request.data.get('balance', 100.0)
+    change = request.data.get('change', 10.0)
+    transaction_type = request.data.get('transaction_type', 'test')
+    
+    if not user_id:
+        return Response({'error': 'user_id is required'}, status=400)
+    
+    # Send WebSocket update
+    send_wallet_update(user_id, balance, change, transaction_type)
+    
+    return Response({
+        'status': 'success',
+        'message': f'Wallet update sent for user {user_id}',
+        'balance': balance,
+        'change': change,
+        'transaction_type': transaction_type,
         'timestamp': timezone.now().isoformat()
     })
