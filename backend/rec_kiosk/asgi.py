@@ -20,11 +20,13 @@ django_asgi_app = get_asgi_application()
 try:
     from channels.routing import ProtocolTypeRouter, URLRouter
     from channels.auth import AuthMiddlewareStack
-    from api import consumers
+    from django.urls import path
+    from api.consumers import StockConsumer
     
     # WebSocket URL patterns
     websocket_urlpatterns = [
-        consumers.websocket_urlpatterns,
+        path('ws/stock/', StockConsumer.as_asgi()),
+        path('ws/orders/', StockConsumer.as_asgi()),  # Reuse for now, can add separate consumer later
     ]
     
     # ASGI application with WebSocket support
