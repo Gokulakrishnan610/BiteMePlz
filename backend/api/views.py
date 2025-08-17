@@ -26,6 +26,7 @@ from rest_framework.permissions import AllowAny
 from .authentication import ParentSessionAuthentication  # use dedicated module
 import time
 from django.db.models import Count, Avg, Sum
+from rest_framework.decorators import api_view
 
 # Custom media serving view for production
 from django.http import FileResponse, Http404, JsonResponse
@@ -2972,3 +2973,13 @@ class CreateSessionView(APIView):
                 'error': 'Failed to create session',
                 'details': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def test_websocket(request):
+    """Test endpoint to verify WebSocket configuration"""
+    return Response({
+        'status': 'success',
+        'message': 'WebSocket test endpoint working',
+        'websocket_url': 'wss://rec-kiosk.onrender.com/ws/stock/?shop_id=test',
+        'timestamp': timezone.now().isoformat()
+    })
