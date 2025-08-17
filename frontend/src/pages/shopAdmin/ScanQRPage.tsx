@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import { useAdminShop } from '../../context/AdminShopContext';
-import { QrCode, CheckCircle, XCircle, AlertCircle, RefreshCw, Building } from 'lucide-react';
+import { QrCode, CheckCircle, XCircle, AlertCircle, RefreshCw, Building, Camera } from 'lucide-react';
 import QRScanner from '../../components/QRScanner';
 
 interface OrderItemDto {
@@ -196,6 +196,18 @@ const ScanQRPage: React.FC = () => {
     }
   };
 
+  const handleClose = () => {
+    setOrder(null);
+    setResult('');
+    setScanning(false);
+    setError('');
+  };
+
+  const handleOpenCamera = () => {
+    setScanning(true);
+    setResetKey((prev) => prev + 1);
+  };
+
   // Only show items for the current shop (admin-shop-mode uses selected shop, otherwise use order's shop)
   const currentShopId = isAdminShopMode ? selectedShop?.id : order?.shop?.id;
   const items: OrderItemDto[] = order?.order_items
@@ -229,15 +241,29 @@ const ScanQRPage: React.FC = () => {
           <div className="bg-white border-b border-gray-200 p-4 flex-shrink-0">
             <div className="max-w-2xl mx-auto">
               <button 
-                onClick={() => { 
-                  setOrder(null); 
-                  setResult(''); 
-                  setScanning(false); 
-                  setError(''); 
-                }} 
+                onClick={handleClose}
                 className="w-full btn-secondary py-3 text-base font-medium"
               >
                 CLOSE
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Camera Closed State - Show when not scanning and no order */}
+        {!scanning && !order && (
+          <div className="bg-white p-8 flex-shrink-0">
+            <div className="max-w-2xl mx-auto text-center">
+              <div className="mb-6">
+                <Camera className="mx-auto h-16 w-16 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Camera is Closed</h3>
+              <p className="text-gray-600 mb-6">Click the button below to open the camera and scan a new QR code.</p>
+              <button 
+                onClick={handleOpenCamera}
+                className="w-full btn-primary py-3 text-base font-medium"
+              >
+                OPEN CAMERA
               </button>
             </div>
           </div>
@@ -366,10 +392,7 @@ const ScanQRPage: React.FC = () => {
           <div className="bg-white border-t border-gray-200 p-4 flex-shrink-0">
             <div className="max-w-2xl mx-auto">
               <button
-                onClick={() => {
-                  setScanning(true);
-                  setResetKey((prev) => prev + 1);
-                }}
+                onClick={handleVerifyOrder}
                 disabled={loading || order.is_verified || items.length === 0 || remainingItems.length > 0}
                 className="w-full btn-primary py-3 text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
