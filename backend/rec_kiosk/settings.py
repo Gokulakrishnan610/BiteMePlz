@@ -82,8 +82,7 @@ try:
                 'default': {
                     'BACKEND': 'channels_redis.core.RedisChannelLayer',
                     'CONFIG': {
-                        'hosts': [config('REDIS_URL', default='rediss://default:ARv5AAImcDFkNGUyYzI4OTMxMjc0YjhkOTk0ZGU3N2ZkMjI1Y2Y2YXAxNzE2MQ@immortal-mutt-7161.upstash.io:6379')],
-                    },
+                    'hosts': [config('REDIS_URL', default='rediss://default:ARv5AAImcDFkNGUyYzI4OTMxMjc0YjhkOTk0ZGU3N2ZkMjI1Y2Y2YXAxNzE2MQ@immortal-mutt-7161.upstash.io:6379')],                    },
                 },
             }
             print("DEBUG: Using Redis channel layer for production")
