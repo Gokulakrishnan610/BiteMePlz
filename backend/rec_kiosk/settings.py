@@ -65,13 +65,35 @@ try:
     INSTALLED_APPS += ['channels']
     ASGI_APPLICATION = 'rec_kiosk.asgi.application'
     
-    # Force in-memory channel layer for development (avoids Redis compatibility issues)
-    CHANNEL_LAYERS = {
-        'default': {
-            'BACKEND': 'channels.layers.InMemoryChannelLayer',
-        },
-    }
-    print("DEBUG: Using in-memory channel layer for development")
+    # Channel Layers Configuration
+    if DEBUG:
+        # Development: in-memory channel layer
+        CHANNEL_LAYERS = {
+            'default': {
+                'BACKEND': 'channels.layers.InMemoryChannelLayer',
+            },
+        }
+        print("DEBUG: Using in-memory channel layer for development")
+    else:
+        # Production: Redis channel layer (for Render)
+        try:
+            import redis
+            CHANNEL_LAYERS = {
+                'default': {
+                    'BACKEND': 'channels_redis.core.RedisChannelLayer',
+                    'CONFIG': {
+                        'hosts': [config('REDIS_URL', default='redis://localhost:6379')],
+                    },
+                },
+            }
+            print("DEBUG: Using Redis channel layer for production")
+        except Exception as redis_error:
+            print(f"DEBUG: Redis not available, falling back to in-memory: {redis_error}")
+            CHANNEL_LAYERS = {
+                'default': {
+                    'BACKEND': 'channels.layers.InMemoryChannelLayer',
+                },
+            }
         
 except Exception as channels_error:
     print(f"DEBUG: Channels not available: {channels_error}")

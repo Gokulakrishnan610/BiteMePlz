@@ -8,40 +8,38 @@ https://docs.djangoproject.com/en/4.2/howto/deployment/asgi/
 """
 
 import os
-import logging
-
 from django.core.asgi import get_asgi_application
 
-# Configure logging
-logger = logging.getLogger(__name__)
+# Set Django settings module
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rec_kiosk.settings')
 
+# Get Django ASGI application
+django_asgi_app = get_asgi_application()
+
+# Check if channels is available
 try:
     from channels.routing import ProtocolTypeRouter, URLRouter
     from channels.auth import AuthMiddlewareStack
-    from django.urls import path
-    from api import consumers as api_consumers
-    _channels_available = True
-    logger.info("Channels is available - WebSocket support enabled")
-except Exception as e:
-    _channels_available = False
-    logger.warning(f"Channels not available: {e}")
-
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rec_kiosk.settings')
-
-django_asgi_app = get_asgi_application()
-
-if _channels_available:
+    from api import consumers
+    
+    # WebSocket URL patterns
     websocket_urlpatterns = [
-        path('ws/stock/', api_consumers.StockConsumer.as_asgi()),
-        path('ws/orders/', api_consumers.StockConsumer.as_asgi()),  # Reuse for now, can add separate consumer later
+        consumers.websocket_urlpatterns,
     ]
     
+    # ASGI application with WebSocket support
     application = ProtocolTypeRouter({
         'http': django_asgi_app,
         'websocket': AuthMiddlewareStack(URLRouter(websocket_urlpatterns)),
     })
-    logger.info("ASGI application configured with WebSocket support")
-else:
-    # Plain ASGI app without websockets
+    
+    print("DEBUG: ASGI configured with WebSocket support")
+    
+except ImportError as e:
+    print(f"DEBUG: Channels not available, using basic ASGI: {e}")
+    # Fallback to basic ASGI without WebSocket support
     application = django_asgi_app
-    logger.info("ASGI application configured without WebSocket support")
+except Exception as e:
+    print(f"DEBUG: Error configuring ASGI with WebSocket: {e}")
+    # Fallback to basic ASGI
+    application = django_asgi_app

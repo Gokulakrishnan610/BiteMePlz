@@ -1,4 +1,5 @@
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
+from django.urls import path
 import json
 
 
@@ -73,5 +74,12 @@ class StockConsumer(AsyncJsonWebsocketConsumer):
             'shop_id': event.get('shop_id'),
             'timestamp': event.get('timestamp')
         })
+
+
+# WebSocket URL patterns for ASGI routing
+websocket_urlpatterns = [
+    path('ws/stock/', StockConsumer.as_asgi()),
+    path('ws/orders/', StockConsumer.as_asgi()),  # Reuse for now, can add separate consumer later
+]
 
 
