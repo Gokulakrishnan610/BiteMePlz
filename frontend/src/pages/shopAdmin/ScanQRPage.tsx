@@ -89,16 +89,34 @@ const ScanQRPage: React.FC = () => {
       ? `wss://rec-kiosk.onrender.com/ws/orders/?shop_id=${shopId}`
       : `ws://localhost:8000/ws/orders/?shop_id=${shopId}`;
 
-    console.log('Connecting to WebSocket for order updates:', wsUrl);
-    console.log('Shop ID for WebSocket:', shopId);
-    console.log('Environment:', import.meta.env.PROD ? 'PRODUCTION' : 'DEVELOPMENT');
+    console.log('🔗 Connecting to WebSocket for order updates:', wsUrl);
+    console.log('🏪 Shop ID for WebSocket:', shopId);
+    console.log('🌍 Environment:', import.meta.env.PROD ? 'PRODUCTION' : 'DEVELOPMENT');
+    
+    // Validate URL before connecting
+    try {
+      new URL(wsUrl);
+    } catch (error) {
+      console.error('❌ Invalid WebSocket URL:', wsUrl, error);
+      return;
+    }
     
     const ws = new WebSocket(wsUrl);
+    
+    // Add connection timeout
+    const connectionTimeout = setTimeout(() => {
+      if (ws.readyState === WebSocket.CONNECTING) {
+        console.error('⏰ WebSocket connection timeout after 10 seconds');
+        ws.close();
+      }
+    }, 10000);
     setWsRef(ws);
 
     ws.onopen = () => {
-      console.log('WebSocket connected for order updates');
-      console.log('WebSocket readyState:', ws.readyState);
+      console.log('✅ WebSocket connected for order updates');
+      console.log('🔧 WebSocket readyState:', ws.readyState);
+      console.log('🔗 WebSocket URL:', wsUrl);
+      clearTimeout(connectionTimeout); // Clear the connection timeout
       setWsConnected(true);
       
       // Send a test message to verify connection
@@ -110,10 +128,10 @@ const ScanQRPage: React.FC = () => {
             shop_id: shopId,
             timestamp: new Date().toISOString()
           };
-          console.log('Sending test message:', testMessage);
+          console.log('📤 Sending test message:', testMessage);
           ws.send(JSON.stringify(testMessage));
         } else {
-          console.log('WebSocket not ready, readyState:', ws.readyState);
+          console.log('❌ WebSocket not ready, readyState:', ws.readyState);
         }
       }, 1000);
     };
@@ -175,7 +193,21 @@ const ScanQRPage: React.FC = () => {
     };
 
     ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      console.error('❌ WebSocket error:', error);
+      console.error('🔗 WebSocket URL attempted:', wsUrl);
+      console.error('🏪 Shop ID:', shopId);
+      console.error('🌍 Environment:', import.meta.env.PROD ? 'PRODUCTION' : 'DEVELOPMENT');
+      console.error('🔧 WebSocket readyState:', ws.readyState);
+      
+      // Log additional error details if available
+      if (error instanceof Event) {
+        console.error('📋 Error event details:', {
+          type: error.type,
+          target: error.target,
+          isTrusted: error.isTrusted
+        });
+      }
+      
       setWsConnected(false);
     };
 
@@ -196,7 +228,8 @@ const ScanQRPage: React.FC = () => {
     };
 
     return () => {
-      console.log('Cleaning up WebSocket connection');
+      console.log('🧹 Cleaning up WebSocket connection');
+      clearTimeout(connectionTimeout); // Clear timeout on cleanup
       if (ws.readyState === WebSocket.OPEN) {
         ws.close(1000, 'Component unmounting');
       }
@@ -434,7 +467,7 @@ const ScanQRPage: React.FC = () => {
         {/* Top Section - Camera Scanner (Only show when scanning, fixed) */}
         {scanning && (
           <div className="bg-white p-4 flex-shrink-0">
-            <div className="h-48">
+            <div className="min-h-[300px] max-h-[400px]">
               <QRScanner 
                 key={resetKey} 
                 autoStart={true} 

@@ -2,6 +2,38 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { Camera, X } from 'lucide-react';
 
+// Add CSS to ensure QR scanner visibility
+const qrScannerStyles = `
+  #qr-reader {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    z-index: 10 !important;
+  }
+  
+  #qr-reader video {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+  
+  #qr-reader__scan_region {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  
+  #qr-reader__scan_region video {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+`;
+
 interface QRScannerProps {
   onScanSuccess: (decodedText: string) => void;
   onScanError?: (error: string) => void;
@@ -19,9 +51,16 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
   const scannerContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Inject QR scanner styles
+    const styleElement = document.createElement('style');
+    styleElement.textContent = qrScannerStyles;
+    document.head.appendChild(styleElement);
+    
     getCameras();
     return () => {
       stopScanner();
+      // Clean up injected styles
+      document.head.removeChild(styleElement);
     };
   }, []);
 
@@ -52,12 +91,43 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
       setIsStarting(true);
       setIsScanning(true);
 
+      console.log('🎥 Starting QR Scanner...');
+      console.log('📱 Mobile mode:', isMobileMode);
+      console.log('📷 Available cameras:', cameras.length);
+
       if (scannerRef.current) {
         await stopScanner();
       }
 
       const html5QrCode = new Html5Qrcode("qr-reader");
       scannerRef.current = html5QrCode;
+      
+      console.log('🔧 Scanner container:', document.getElementById('qr-reader'));
+      console.log('📐 Container dimensions:', {
+        width: document.getElementById('qr-reader')?.offsetWidth,
+        height: document.getElementById('qr-reader')?.offsetHeight
+      });
+      
+      // Check for video elements after a short delay
+      setTimeout(() => {
+        const videoElements = document.querySelectorAll('#qr-reader video');
+        console.log('📹 Video elements found:', videoElements.length);
+        videoElements.forEach((video, index) => {
+          const videoElement = video as HTMLVideoElement;
+          console.log(`📹 Video ${index}:`, {
+            width: videoElement.videoWidth,
+            height: videoElement.videoHeight,
+            readyState: videoElement.readyState,
+            paused: videoElement.paused,
+            currentTime: videoElement.currentTime,
+            style: {
+              display: getComputedStyle(videoElement).display,
+              visibility: getComputedStyle(videoElement).visibility,
+              opacity: getComputedStyle(videoElement).opacity
+            }
+          });
+        });
+      }, 2000);
 
       const config = {
         fps: 10,
@@ -247,11 +317,13 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
           border: '2px solid #8B5CF6',
           borderRadius: '12px',
           overflow: 'hidden',
-          minHeight: isMobileMode ? '200px' : '250px',
-          maxHeight: isMobileMode ? '40vh' : '50vh',
+          minHeight: isMobileMode ? '250px' : '300px',
+          maxHeight: isMobileMode ? '50vh' : '60vh',
           width: '100%',
           maxWidth: '100vw',
-          boxShadow: 'none'
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          position: 'relative',
+          zIndex: 10
         }}
       />
 
@@ -267,9 +339,10 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
 
       {isScanning && !isStarting && (
         <div className="text-center">
-          <div className="flex justify-center">
+          <div className="flex justify-center items-center gap-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
             <div className="animate-pulse bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs">
-              Point camera at QR code...
+              Camera active - point at QR code...
             </div>
           </div>
         </div>
@@ -284,6 +357,35 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
             className="btn-secondary text-sm"
           >
             Retry
+          </button>
+        </div>
+      )}
+
+      {/* Camera not visible warning */}
+      {isScanning && !isStarting && (
+        <div className="mt-2 text-center space-y-2">
+          <p className="text-xs text-gray-500">
+            If camera is not visible, try refreshing the page or check camera permissions
+          </p>
+          <button
+            onClick={() => {
+              console.log('🔍 Manual camera check...');
+              const videoElements = document.querySelectorAll('#qr-reader video');
+              console.log('📹 Found video elements:', videoElements.length);
+              videoElements.forEach((video, index) => {
+                const videoElement = video as HTMLVideoElement;
+                console.log(`📹 Video ${index} status:`, {
+                  readyState: videoElement.readyState,
+                  paused: videoElement.paused,
+                  currentTime: videoElement.currentTime,
+                  width: videoElement.videoWidth,
+                  height: videoElement.videoHeight
+                });
+              });
+            }}
+            className="text-xs text-blue-600 hover:text-blue-800 underline"
+          >
+            Debug Camera Status
           </button>
         </div>
       )}

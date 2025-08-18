@@ -30,6 +30,11 @@ const api = axios.create({
   timeout: 15000,
 });
 
+// Debug logging to show which backend URL is being used
+console.log('🔗 API Base URL:', api.defaults.baseURL || resolveApiBaseUrl());
+console.log('🌍 Environment:', import.meta.env.PROD ? 'PRODUCTION' : 'DEVELOPMENT');
+console.log('🔧 VITE_API_BASE_URL:', (import.meta as any).env?.VITE_API_BASE_URL || 'Not set');
+
 export function setApiBaseUrl(newUrl: string) {
   if (!newUrl || typeof newUrl !== 'string') return;
   api.defaults.baseURL = newUrl;
