@@ -55,6 +55,7 @@ const ScanQRPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [wsConnected, setWsConnected] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [wsRef, setWsRef] = useState<WebSocket | null>(null);
 
   // WebSocket connection for real-time order updates
   useEffect(() => {
@@ -65,8 +66,10 @@ const ScanQRPage: React.FC = () => {
       : `ws://localhost:8000/ws/orders/?shop_id=${selectedShop.id}`;
 
     console.log('Connecting to WebSocket for order updates:', wsUrl);
+    console.log('Selected shop ID:', selectedShop.id);
     
     const ws = new WebSocket(wsUrl);
+    setWsRef(ws);
 
     ws.onopen = () => {
       console.log('WebSocket connected for order updates');
@@ -80,16 +83,25 @@ const ScanQRPage: React.FC = () => {
         
         if (data.type === 'order_verification' && data.shop_id === selectedShop.id) {
           console.log('Order verification update received:', data);
+          console.log('Current order ID:', order?.id);
+          console.log('Message order ID:', data.order_id);
+          console.log('Shop ID match:', data.shop_id === selectedShop.id);
           
           // Update the current order if it matches
           if (order && order.id === data.order_id) {
+            console.log('Updating order with real-time data:', data.order_data);
             setOrder(data.order_data as OrderDto);
-            console.log('Order updated in real-time:', data.order_data);
             // Clear success message since we got the real-time update
             setSuccessMessage(null);
+          } else {
+            console.log('Order ID mismatch or no current order');
           }
         } else if (data.type === 'connection_established') {
           console.log('WebSocket connection confirmed:', data.message);
+        } else if (data.type === 'message_received') {
+          console.log('Echo message received:', data.message);
+        } else {
+          console.log('Other WebSocket message type:', data.type);
         }
       } catch (error) {
         console.error('Error parsing WebSocket message:', error);
@@ -107,15 +119,17 @@ const ScanQRPage: React.FC = () => {
       // Reconnect after 5 seconds
       setTimeout(() => {
         if (selectedShop?.id) {
-          // Reconnect logic will be handled by the useEffect
+          console.log('Attempting to reconnect WebSocket...');
         }
       }, 5000);
     };
 
     return () => {
+      console.log('Cleaning up WebSocket connection');
       ws.close();
+      setWsRef(null);
     };
-  }, [selectedShop?.id, order?.id]);
+  }, [selectedShop?.id]); // Removed order?.id dependency to prevent reconnections
 
   // Stop camera when component unmounts or user navigates away
   useEffect(() => {
@@ -298,6 +312,18 @@ const ScanQRPage: React.FC = () => {
           <span className="text-xs text-blue-700">
             {wsConnected ? 'Real-time updates active' : 'Connecting to real-time updates...'}
           </span>
+          {wsConnected && (
+            <button
+              onClick={() => {
+                if (wsRef) {
+                  wsRef.send(JSON.stringify({ type: 'test', message: 'Hello WebSocket!' }));
+                }
+              }}
+              className="ml-2 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+            >
+              Test WS
+            </button>
+          )}
         </div>
       </div>
 

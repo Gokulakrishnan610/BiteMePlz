@@ -126,6 +126,25 @@ class StockConsumer(AsyncJsonWebsocketConsumer):
         except Exception as e:
             logger.error(f"Error sending notification: {e}")
 
+    async def order_verification(self, event):
+        """Handle order verification updates"""
+        try:
+            logger.info(f"Order verification event received: {event}")
+            message = {
+                'type': 'order_verification',
+                'order_id': event.get('order_id'),
+                'shop_id': event.get('shop_id'),
+                'order_data': event.get('order_data'),
+                'timestamp': event.get('timestamp')
+            }
+            logger.info(f"Sending order verification message: {message}")
+            await self.send_json(message)
+            logger.info("Order verification message sent successfully")
+        except Exception as e:
+            logger.error(f"Error sending order verification update: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+
     async def wallet_update(self, event):
         """Handle wallet balance updates"""
         try:
