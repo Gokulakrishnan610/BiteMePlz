@@ -47,7 +47,7 @@ const ScanQRPage: React.FC = () => {
   const { selectedShop } = useAdminShop();
   const isAdminShopMode = user?.role === 'admin' && !!selectedShop;
 
-  const [scanning, setScanning] = useState(true); // Always start scanning
+  const [scanning, setScanning] = useState(true); // Start with camera open
   const [result, setResult] = useState<string | null>(null);
   const [order, setOrder] = useState<OrderDto | null>(null);
   const [loading, setLoading] = useState(false);
@@ -137,6 +137,11 @@ const ScanQRPage: React.FC = () => {
       setScanning(false);
     };
   }, []);
+
+  // Debug logging for scanning state changes
+  useEffect(() => {
+    console.log('Scanning state changed:', scanning);
+  }, [scanning]);
 
   const extractOrderId = (raw: string): string | null => {
     if (!raw) return null;
@@ -271,6 +276,7 @@ const ScanQRPage: React.FC = () => {
         setScanning(true);
         setResetKey((prev) => prev + 1);
         setSuccessMessage(null);
+        setError(''); // Clear any errors
       }, 1500);
     } catch (error: any) {
       console.error('Error verifying order:', error);
@@ -281,16 +287,21 @@ const ScanQRPage: React.FC = () => {
   };
 
   const handleClose = () => {
+    console.log('Closing camera...');
     setOrder(null);
     setResult('');
     setScanning(false);
     setError('');
     setSuccessMessage(null);
+    setResetKey((prev) => prev + 1); // Reset QR scanner
   };
 
   const handleOpenCamera = () => {
+    console.log('Opening camera...');
     setScanning(true);
     setResetKey((prev) => prev + 1);
+    setError(''); // Clear any errors
+    setSuccessMessage(null); // Clear any success messages
   };
 
   // Only show items for the current shop (admin-shop-mode uses selected shop, otherwise use order's shop)
@@ -351,6 +362,19 @@ const ScanQRPage: React.FC = () => {
                 onScanSuccess={handleScan} 
                 onScanError={handleError} 
               />
+              {/* Fallback message if camera doesn't load */}
+              <div className="mt-2 text-center text-sm text-gray-500">
+                Camera is active - point at a QR code to scan
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Debug info - remove this in production */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="bg-yellow-50 border-b border-yellow-200 p-2 flex-shrink-0">
+            <div className="max-w-2xl mx-auto text-xs text-yellow-800">
+              Debug: scanning={scanning.toString()}, order={order ? 'exists' : 'none'}, resetKey={resetKey}
             </div>
           </div>
         )}
