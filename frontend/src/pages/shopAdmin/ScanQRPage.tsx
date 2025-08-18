@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import { useAdminShop } from '../../context/AdminShopContext';
-import { QrCode, CheckCircle, XCircle, AlertCircle, RefreshCw, Building, Camera } from 'lucide-react';
+import { CheckCircle, Camera } from 'lucide-react';
 import QRScanner from '../../components/QRScanner';
 
 interface OrderItemDto {
@@ -55,164 +55,57 @@ const ScanQRPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [wsConnected, setWsConnected] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [wsRef, setWsRef] = useState<WebSocket | null>(null);
+  
 
   // WebSocket connection for real-time order updates
   useEffect(() => {
-    console.log('WebSocket useEffect triggered');
-    console.log('selectedShop:', selectedShop);
-    console.log('selectedShop?.id:', selectedShop?.id);
-    console.log('user:', user);
-    console.log('user?.shop:', user?.shop);
-    
     // Determine the shop ID to use for WebSocket connection
     let shopId: string | null = null;
     
     if (isAdminShopMode) {
       // Admin in shop mode - use selected shop
       shopId = selectedShop?.id || null;
-      console.log('Admin shop mode - using selectedShop.id:', shopId);
     } else if (user?.role === 'shopAdmin') {
       // Shop admin - use their assigned shop
       shopId = user.shop || null;
-      console.log('Shop admin mode - using user.shop:', shopId);
     }
     
     if (!shopId) {
-      console.log('No shop ID available, skipping WebSocket connection');
-      console.log('isAdminShopMode:', isAdminShopMode);
-      console.log('user?.role:', user?.role);
       return;
     }
 
     const wsUrl = import.meta.env.PROD
       ? `wss://rec-kiosk.onrender.com/ws/orders/?shop_id=${shopId}`
       : `ws://localhost:8000/ws/orders/?shop_id=${shopId}`;
-
-    console.log('🔗 Connecting to WebSocket for order updates:', wsUrl);
-    console.log('🏪 Shop ID for WebSocket:', shopId);
-    console.log('🌍 Environment:', import.meta.env.PROD ? 'PRODUCTION' : 'DEVELOPMENT');
-    
-    // Validate URL before connecting
-    try {
-      new URL(wsUrl);
-    } catch (error) {
-      console.error('❌ Invalid WebSocket URL:', wsUrl, error);
-      return;
-    }
     
     const ws = new WebSocket(wsUrl);
-    
-    // Add connection timeout
-    const connectionTimeout = setTimeout(() => {
-      if (ws.readyState === WebSocket.CONNECTING) {
-        console.error('⏰ WebSocket connection timeout after 10 seconds');
-        ws.close();
-      }
-    }, 10000);
-    setWsRef(ws);
 
     ws.onopen = () => {
-      console.log('✅ WebSocket connected for order updates');
-      console.log('🔧 WebSocket readyState:', ws.readyState);
-      console.log('🔗 WebSocket URL:', wsUrl);
-      clearTimeout(connectionTimeout); // Clear the connection timeout
       setWsConnected(true);
-      
-      // Send a test message to verify connection
-      setTimeout(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-          const testMessage = {
-            type: 'test', 
-            message: 'WebSocket connection test',
-            shop_id: shopId,
-            timestamp: new Date().toISOString()
-          };
-          console.log('📤 Sending test message:', testMessage);
-          ws.send(JSON.stringify(testMessage));
-        } else {
-          console.log('❌ WebSocket not ready, readyState:', ws.readyState);
-        }
-      }, 1000);
     };
 
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('WebSocket message received:', data);
         
         if (data.type === 'order_verification' && data.shop_id === shopId) {
-          console.log('Order verification update received:', data);
-          console.log('Current order ID:', order?.id);
-          console.log('Message order ID:', data.order_id);
-          console.log('Shop ID match:', data.shop_id === shopId);
-          
           // Update the current order if it matches (convert both to strings for comparison)
           if (order && String(order.id) === String(data.order_id)) {
-            console.log('Updating order with real-time data:', data.order_data);
-            console.log('Previous order state:', {
-              is_verified: order.is_verified,
-              status: order.status,
-              verified_at: order.verified_at
-            });
-            console.log('New order state:', {
-              is_verified: data.order_data.is_verified,
-              status: data.order_data.status,
-              verified_at: data.order_data.verified_at
-            });
-            
             setOrder(data.order_data as OrderDto);
             // Clear success message since we got the real-time update
             setSuccessMessage(null);
-            console.log('Order updated via WebSocket successfully');
-          } else {
-            console.log('Order ID mismatch or no current order');
-            console.log('Order ID comparison:', {
-              currentOrderId: order?.id,
-              messageOrderId: data.order_id,
-              currentOrderIdType: typeof order?.id,
-              messageOrderIdType: typeof data.order_id,
-              stringComparison: String(order?.id) === String(data.order_id),
-              hasCurrentOrder: !!order
-            });
           }
-        } else if (data.type === 'connection_established') {
-          console.log('WebSocket connection confirmed:', data.message);
-          console.log('Connection shop_id:', data.shop_id);
-          console.log('Expected shop_id:', shopId);
-        } else if (data.type === 'message_received') {
-          console.log('Echo message received:', data.message);
-        } else if (data.type === 'test') {
-          console.log('Test message received:', data.message);
-        } else {
-          console.log('Other WebSocket message type:', data.type);
         }
       } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
+        // ignore malformed messages
       }
     };
 
     ws.onerror = (error) => {
-      console.error('❌ WebSocket error:', error);
-      console.error('🔗 WebSocket URL attempted:', wsUrl);
-      console.error('🏪 Shop ID:', shopId);
-      console.error('🌍 Environment:', import.meta.env.PROD ? 'PRODUCTION' : 'DEVELOPMENT');
-      console.error('🔧 WebSocket readyState:', ws.readyState);
-      
-      // Log additional error details if available
-      if (error instanceof Event) {
-        console.error('📋 Error event details:', {
-          type: error.type,
-          target: error.target,
-          isTrusted: error.isTrusted
-        });
-      }
-      
       setWsConnected(false);
     };
 
     ws.onclose = (event) => {
-      console.log('WebSocket connection closed:', event.code, event.reason);
       setWsConnected(false);
       
       // Only reconnect if the component is still mounted and shop is still selected
@@ -220,7 +113,6 @@ const ScanQRPage: React.FC = () => {
       if (event.code !== 1000) {
         setTimeout(() => {
           if (shopId) {
-            console.log('Attempting to reconnect WebSocket...');
             // The useEffect will handle reconnection since shopId is still valid
           }
         }, 5000);
@@ -228,12 +120,9 @@ const ScanQRPage: React.FC = () => {
     };
 
     return () => {
-      console.log('🧹 Cleaning up WebSocket connection');
-      clearTimeout(connectionTimeout); // Clear timeout on cleanup
       if (ws.readyState === WebSocket.OPEN) {
-        ws.close(1000, 'Component unmounting');
+        ws.close(1000);
       }
-      setWsRef(null);
     };
   }, [selectedShop?.id, user?.shop, isAdminShopMode, user?.role]); // Updated dependencies
 
@@ -244,10 +133,7 @@ const ScanQRPage: React.FC = () => {
     };
   }, []);
 
-  // Debug logging for scanning state changes
-  useEffect(() => {
-    console.log('Scanning state changed:', scanning);
-  }, [scanning]);
+  
 
   const extractOrderId = (raw: string): string | null => {
     if (!raw) return null;
@@ -370,10 +256,7 @@ const ScanQRPage: React.FC = () => {
       if (isAdminShopMode && selectedShop) {
         payload.selected_shop_id = selectedShop.id;
       }
-      
-      console.log('Sending verification request for order:', order.id);
       const { data } = await api.put(`/api/orders/${order.id}/verify/`, payload);
-      console.log('Verification API response:', data);
       
       // Update order with API response
       setOrder(data as OrderDto);
@@ -399,7 +282,6 @@ const ScanQRPage: React.FC = () => {
   };
 
   const handleClose = () => {
-    console.log('Closing camera...');
     setOrder(null);
     setResult('');
     setScanning(false);
@@ -409,7 +291,6 @@ const ScanQRPage: React.FC = () => {
   };
 
   const handleOpenCamera = () => {
-    console.log('Opening camera...');
     setScanning(true);
     setResetKey((prev) => prev + 1);
     setError(''); // Clear any errors
@@ -435,18 +316,6 @@ const ScanQRPage: React.FC = () => {
           <span className="text-xs text-blue-700">
             {wsConnected ? 'Real-time updates active' : 'Connecting to real-time updates...'}
           </span>
-          {wsConnected && (
-            <button
-              onClick={() => {
-                if (wsRef) {
-                  wsRef.send(JSON.stringify({ type: 'test', message: 'Hello WebSocket!' }));
-                }
-              }}
-              className="ml-2 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-            >
-              Test WS
-            </button>
-          )}
         </div>
       </div>
 
@@ -482,14 +351,7 @@ const ScanQRPage: React.FC = () => {
           </div>
         )}
         
-        {/* Debug info - remove this in production */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="bg-yellow-50 border-b border-yellow-200 p-2 flex-shrink-0">
-            <div className="max-w-2xl mx-auto text-xs text-yellow-800">
-              Debug: scanning={scanning.toString()}, order={order ? 'exists' : 'none'}, resetKey={resetKey}
-            </div>
-          </div>
-        )}
+        
 
         {/* Top Section - CLOSE Button (Show after scan, fixed) */}
         {order && (

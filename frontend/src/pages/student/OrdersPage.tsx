@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import api from "../../api"
 import { Package, AlertCircle, Trash2, ArrowLeft, Clock, CheckCircle, XCircle } from "lucide-react"
@@ -29,6 +29,9 @@ interface Order {
   qr_code?: string
   qr_valid_until?: string
   payment_result?: any
+  // Optional fields from API we may receive; kept optional to avoid breaking existing UI
+  id?: string
+  shop?: { id?: string; _id?: string; name?: string } | string
 }
 
 const OrdersPage: React.FC = () => {
@@ -55,6 +58,94 @@ const OrdersPage: React.FC = () => {
   }
 
   // removed old Razorpay continue-payment/cancel handlers (handled during checkout)
+
+  // Real-time: Subscribe to WebSocket order updates for all shops in the user's orders
+  const wsMapRef = useRef<Map<string, WebSocket>>(new Map())
+
+  useEffect(() => {
+    if (!orders || orders.length === 0) {
+      // Cleanup any existing sockets if no orders
+      wsMapRef.current.forEach((ws) => {
+        try { ws.close() } catch {}
+      })
+      wsMapRef.current.clear()
+      return
+    }
+
+    // Collect unique shop ids from orders
+    const uniqueShopIds = new Set<string>()
+    orders.forEach((o) => {
+      const shopId = typeof o.shop === 'string' ? o.shop : (o.shop?.id || (o.shop as any)?._id)
+      if (shopId) uniqueShopIds.add(String(shopId))
+    })
+
+    const loc = window.location
+    const wsProto = loc.protocol === 'https:' ? 'wss' : 'ws'
+
+    // Open sockets for any new shop ids
+    uniqueShopIds.forEach((shopId) => {
+      if (wsMapRef.current.has(shopId)) return
+      const wsUrl = import.meta.env.PROD
+        ? `wss://rec-kiosk.onrender.com/ws/orders/?shop_id=${shopId}`
+        : `${wsProto}://${loc.hostname}:8000/ws/orders/?shop_id=${shopId}`
+      try {
+        const ws = new WebSocket(wsUrl)
+        wsMapRef.current.set(shopId, ws)
+
+        ws.onopen = () => {
+        }
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data)
+            if (data?.type === 'order_verification' && String(data.shop_id) === String(shopId)) {
+              const incomingId: string | undefined = data.order_id || data.order_data?.id || data.order_data?._id
+              if (!incomingId) return
+              // Update any matching order in list
+              setOrders((prev) => prev.map((ord) => {
+                const ordId = (ord.id || ord._id || '').toString()
+                if (ordId && String(ordId) === String(incomingId)) {
+                  const next = {
+                    ...ord,
+                    // Prefer fields from payload to ensure status reflects verification immediately
+                    is_verified: Boolean(data.order_data?.is_verified ?? true),
+                    status: data.order_data?.status || 'completed',
+                  }
+                  return next as Order
+                }
+                return ord
+              }))
+            }
+          } catch {}
+        }
+
+        ws.onerror = () => {
+        }
+
+        ws.onclose = () => {
+          // Remove on close; will be re-added if orders effect runs again
+          wsMapRef.current.delete(shopId)
+        }
+      } catch {}
+    })
+
+    // Close sockets for shops no longer present
+    Array.from(wsMapRef.current.keys()).forEach((existingShopId) => {
+      if (!uniqueShopIds.has(existingShopId)) {
+        const ws = wsMapRef.current.get(existingShopId)
+        try { ws?.close() } catch {}
+        wsMapRef.current.delete(existingShopId)
+      }
+    })
+
+    // Cleanup on unmount
+    return () => {
+      wsMapRef.current.forEach((ws) => {
+        try { ws.close() } catch {}
+      })
+      wsMapRef.current.clear()
+    }
+  }, [orders])
 
   const handleDelete = async (order_id: string) => {
     if (!window.confirm("Are you sure you want to delete this order?")) {

@@ -49,6 +49,22 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
   const [isMobileMode, setIsMobileMode] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerContainerRef = useRef<HTMLDivElement>(null);
+  const [showTapToStart, setShowTapToStart] = useState(false);
+
+  const selectBackCameraId = (devices: any[]): string | null => {
+    if (!Array.isArray(devices)) return null;
+    const labelHas = (label: string, needles: string[]) => {
+      const lower = (label || '').toLowerCase();
+      return needles.some((n) => lower.includes(n));
+    };
+    const backNeedles = ['back', 'rear', 'environment', 'world', 'arrière', 'trasera', 'trás', '后', '뒤'];
+    // Prefer labels that indicate back/rear
+    const back = devices.find((d) => labelHas(d.label || '', backNeedles));
+    if (back) return back.id;
+    // Some devices list back camera last
+    if (devices.length > 1) return devices[devices.length - 1].id;
+    return devices[0]?.id || null;
+  };
 
   useEffect(() => {
     // Inject QR scanner styles
@@ -77,12 +93,47 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
       setIsMobileMode(isMobile);
       
       if (devices.length > 0) {
-        setSelectedCamera(devices[0].id);
+        const backId = selectBackCameraId(devices);
+        setSelectedCamera(backId || devices[0].id);
       }
     } catch (err) {
       console.log('Camera enumeration failed, using mobile fallback:', err);
       setIsMobileMode(true);
     }
+  };
+
+  const ensureVideoAttributes = () => {
+    const videoElements = document.querySelectorAll('#qr-reader video');
+    videoElements.forEach((video) => {
+      const v = video as HTMLVideoElement;
+      v.setAttribute('playsinline', 'true');
+      v.setAttribute('webkit-playsinline', 'true');
+      v.muted = true;
+      v.autoplay = true;
+      v.controls = false;
+      v.style.visibility = 'visible';
+      v.style.opacity = '1';
+      v.style.transform = 'translateZ(0)';
+    });
+  };
+
+  // Wait until the container exists and has a non-zero size to avoid starting the camera in a hidden/zero-sized element
+  const waitForContainerVisible = async (maxMs: number = 3000, intervalMs: number = 100) => {
+    const start = Date.now();
+    return new Promise<void>((resolve, reject) => {
+      const check = () => {
+        const el = document.getElementById('qr-reader');
+        if (el && el.offsetWidth > 0 && el.offsetHeight > 0) {
+          resolve();
+        } else if (Date.now() - start >= maxMs) {
+          console.warn('QRScanner: container not visible within timeout; continuing anyway');
+          resolve();
+        } else {
+          setTimeout(check, intervalMs);
+        }
+      };
+      check();
+    });
   };
 
   const startScanner = useCallback(async () => {
@@ -99,6 +150,15 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
         await stopScanner();
       }
 
+      // Ensure container is present and visible
+      await waitForContainerVisible();
+
+      // Apply a safe minimum height if container is still zero height
+      const containerEl = document.getElementById('qr-reader') as HTMLDivElement | null;
+      if (containerEl && (containerEl.offsetHeight === 0 || containerEl.clientHeight === 0)) {
+        containerEl.style.minHeight = isMobileMode ? '280px' : '320px';
+      }
+
       const html5QrCode = new Html5Qrcode("qr-reader");
       scannerRef.current = html5QrCode;
       
@@ -112,21 +172,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
       setTimeout(() => {
         const videoElements = document.querySelectorAll('#qr-reader video');
         console.log('📹 Video elements found:', videoElements.length);
-        videoElements.forEach((video, index) => {
-          const videoElement = video as HTMLVideoElement;
-          console.log(`📹 Video ${index}:`, {
-            width: videoElement.videoWidth,
-            height: videoElement.videoHeight,
-            readyState: videoElement.readyState,
-            paused: videoElement.paused,
-            currentTime: videoElement.currentTime,
-            style: {
-              display: getComputedStyle(videoElement).display,
-              visibility: getComputedStyle(videoElement).visibility,
-              opacity: getComputedStyle(videoElement).opacity
-            }
-          });
-        });
+        ensureVideoAttributes();
       }, 2000);
 
       const config = {
@@ -148,10 +194,10 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
         throw new Error('Camera permission denied. Please allow camera access.');
       }
 
-      // Strategy 1: Try environment camera (back camera on mobile)
+      // Strategy 1: Try environment camera (force back camera on mobile)
       try {
         await html5QrCode.start(
-          { facingMode: "environment" },
+          { facingMode: { exact: "environment" } as any },
           config,
           (decodedText) => {
             console.log('QR Code scanned:', decodedText);
@@ -167,12 +213,58 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
         setIsStarting(false);
         return;
       } catch (err) {
-        console.log('Environment camera failed, trying user camera:', err);
+        console.log('Exact environment camera failed:', err);
         
-        // Strategy 2: Try user-facing camera
+        // Strategy 1b: Try ideal environment
         try {
           await html5QrCode.start(
-            { facingMode: "user" },
+            { facingMode: { ideal: "environment" } as any },
+            config,
+            (decodedText) => {
+              console.log('QR Code scanned:', decodedText);
+              setIsStarting(false);
+              setIsScanning(false);
+              onScanSuccess(decodedText);
+            },
+            (errorMessage) => {
+              console.log('Scan error:', errorMessage);
+            }
+          );
+          setIsStarting(false);
+          return;
+        } catch (errEnvIdeal) {
+          console.log('Ideal environment camera failed:', errEnvIdeal);
+        }
+        
+        // Strategy 2: Try explicit back camera by device id
+        try {
+          const devices = cameras.length > 0 ? cameras : await Html5Qrcode.getCameras();
+          const backId = selectBackCameraId(devices);
+          if (backId) {
+            await html5QrCode.start(
+              backId,
+              config,
+              (decodedText) => {
+                console.log('QR Code scanned:', decodedText);
+                setIsStarting(false);
+                setIsScanning(false);
+                onScanSuccess(decodedText);
+              },
+              (errorMessage) => {
+                console.log('Scan error:', errorMessage);
+              }
+            );
+            setIsStarting(false);
+            return;
+          }
+        } catch (byIdErr) {
+          console.log('Back camera by deviceId failed:', byIdErr);
+        }
+
+        // Strategy 3: Try user-facing as last resort (still better than nothing on desktops)
+        try {
+          await html5QrCode.start(
+            { facingMode: { ideal: "user" } as any },
             config,
             (decodedText) => {
               console.log('QR Code scanned:', decodedText);
@@ -189,24 +281,30 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
         } catch (err2) {
           console.log('User camera failed:', err2);
           
-          // Strategy 3: Try with specific camera ID if available
-          if (selectedCamera && cameras.length > 0) {
+          // Strategy 4: Try with any available camera IDs as ultimate fallback
+          if (cameras.length > 0) {
             try {
-              await html5QrCode.start(
-                selectedCamera,
-                config,
-                (decodedText) => {
-                  console.log('QR Code scanned:', decodedText);
+              for (const dev of cameras) {
+                try {
+                  await html5QrCode.start(
+                    dev.id,
+                    config,
+                    (decodedText) => {
+                      console.log('QR Code scanned:', decodedText);
+                      setIsStarting(false);
+                      setIsScanning(false);
+                      onScanSuccess(decodedText);
+                    },
+                    (errorMessage) => {
+                      console.log('Scan error:', errorMessage);
+                    }
+                  );
                   setIsStarting(false);
-                  setIsScanning(false);
-                  onScanSuccess(decodedText);
-                },
-                (errorMessage) => {
-                  console.log('Scan error:', errorMessage);
+                  return;
+                } catch (loopErr) {
+                  // try next device
                 }
-              );
-              setIsStarting(false);
-              return;
+              }
             } catch (err3) {
               console.log('Specific camera ID failed:', err3);
             }
@@ -240,11 +338,21 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
       setIsStarting(false);
       onScanError?.(err.message || 'Failed to start camera');
     }
-  }, [selectedCamera, onScanSuccess, onScanError, cameras.length]);
+  }, [selectedCamera, onScanSuccess, onScanError, cameras.length, isMobileMode]);
 
   useEffect(() => {
     if (autoStart && !isScanning && !isStarting) {
-      startScanner();
+      startScanner()
+        .catch(() => {})
+        .finally(() => {
+          // If not started within a short time, prompt user to tap (helps iOS policies)
+          setTimeout(() => {
+            if (!isScanning && !isStarting) setShowTapToStart(true);
+          }, 800);
+        });
+    } else {
+      // When autoStart is false, show prompt to start on tap
+      setShowTapToStart(true);
     }
   }, [autoStart, isScanning, isStarting, startScanner]);
 
@@ -261,6 +369,39 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
     setIsScanning(false);
     setIsStarting(false);
   };
+
+  // Restart camera on orientation change or resize for mobile layout issues
+  useEffect(() => {
+    const restartIfVisible = () => {
+      const el = document.getElementById('qr-reader');
+      const isVisible = !!el && el.offsetWidth > 0 && el.offsetHeight > 0;
+      if (isVisible && autoStart) {
+        // Small debounce to avoid rapid restarts
+        stopScanner().finally(() => startScanner());
+      }
+    };
+    window.addEventListener('orientationchange', restartIfVisible);
+    window.addEventListener('resize', restartIfVisible);
+    return () => {
+      window.removeEventListener('orientationchange', restartIfVisible);
+      window.removeEventListener('resize', restartIfVisible);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart, startScanner]);
+
+  // Pause camera when tab becomes hidden; resume when visible and autoStart is true
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') {
+        stopScanner();
+      } else if (autoStart && !isScanning && !isStarting) {
+        startScanner();
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart, isScanning, isStarting, startScanner]);
 
   return (
     <div className="space-y-4 w-full">
@@ -288,7 +429,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
       )}
 
       {/* Camera Selection - Only for desktop */}
-      {cameras.length > 1 && !isMobileMode && (
+      {cameras.length > 1 && (
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-gray-700">
             Camera:
@@ -311,7 +452,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
       <div 
         id="qr-reader" 
         ref={scannerContainerRef} 
-        className="w-full mx-auto"
+        className="w-full mx-auto relative"
         style={{ 
           display: 'block',
           border: '2px solid #8B5CF6',
@@ -325,7 +466,29 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanError, autoS
           position: 'relative',
           zIndex: 10
         }}
+        onClick={() => {
+          // Allow manual user-gesture start for iOS/Safari
+          if (!isScanning && !isStarting) {
+            setShowTapToStart(false);
+            startScanner().catch(() => setShowTapToStart(true));
+          }
+        }}
       />
+
+      {/* Tap-to-start overlay hint (helps iOS autoplay policies) */}
+      {!error && showTapToStart && !isScanning && !isStarting && (
+        <div className="-mt-6 text-center">
+          <button
+            onClick={() => {
+              setShowTapToStart(false);
+              startScanner().catch(() => setShowTapToStart(true));
+            }}
+            className="px-3 py-1 text-xs rounded bg-purple-600 text-white hover:bg-purple-700"
+          >
+            Tap to start camera
+          </button>
+        </div>
+      )}
 
       {isStarting && (
         <div className="text-center">
