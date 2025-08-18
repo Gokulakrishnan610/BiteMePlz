@@ -120,6 +120,10 @@ def broadcast_order_verification(order_id: str, shop_id: str, order_data: Dict[s
         
         print(f"DEBUG: Broadcasting order verification to group {group_name}")
         print(f"DEBUG: Message content: {message}")
+        print(f"DEBUG: Order ID being broadcast: {order_id}")
+        print(f"DEBUG: Shop ID being broadcast: {shop_id}")
+        print(f"DEBUG: Order data keys: {list(order_data.keys()) if order_data else 'None'}")
+        print(f"DEBUG: Order verification status in data: {order_data.get('is_verified') if order_data else 'None'}")
         
         async_to_sync(channel_layer.group_send)(group_name, message)
         print(f"DEBUG: Order verification broadcasted for order {order_id} in shop {shop_id}")

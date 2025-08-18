@@ -2366,13 +2366,23 @@ class OrderViewSet(viewsets.ModelViewSet):
         try:
             from .websocket_utils import broadcast_order_verification
             order_data = OrderSerializer(order).data
+            print(f"DEBUG: About to broadcast order verification")
+            print(f"DEBUG: Order ID: {order.id} (type: {type(order.id)})")
+            print(f"DEBUG: Shop ID: {order.shop.id} (type: {type(order.shop.id)})")
+            print(f"DEBUG: Order data keys: {list(order_data.keys())}")
+            print(f"DEBUG: Order data ID: {order_data.get('id')} (type: {type(order_data.get('id'))})")
+            print(f"DEBUG: Order verification status: {order_data.get('is_verified')}")
+            
             broadcast_order_verification(
                 order_id=str(order.id),
                 shop_id=str(order.shop.id),
                 order_data=order_data
             )
+            print(f"DEBUG: Order verification broadcast completed successfully")
         except Exception as e:
             print(f"DEBUG: Failed to broadcast order verification update: {e}")
+            import traceback
+            traceback.print_exc()
             # Non-fatal, don't block the response
 
         return Response(OrderSerializer(order).data)

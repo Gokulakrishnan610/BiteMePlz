@@ -74,6 +74,18 @@ const ScanQRPage: React.FC = () => {
     ws.onopen = () => {
       console.log('WebSocket connected for order updates');
       setWsConnected(true);
+      
+      // Send a test message to verify connection
+      setTimeout(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ 
+            type: 'test', 
+            message: 'WebSocket connection test',
+            shop_id: selectedShop.id,
+            timestamp: new Date().toISOString()
+          }));
+        }
+      }, 1000);
     };
 
     ws.onmessage = (event) => {
@@ -87,19 +99,41 @@ const ScanQRPage: React.FC = () => {
           console.log('Message order ID:', data.order_id);
           console.log('Shop ID match:', data.shop_id === selectedShop.id);
           
-          // Update the current order if it matches
-          if (order && order.id === data.order_id) {
+          // Update the current order if it matches (convert both to strings for comparison)
+          if (order && String(order.id) === String(data.order_id)) {
             console.log('Updating order with real-time data:', data.order_data);
+            console.log('Previous order state:', {
+              is_verified: order.is_verified,
+              status: order.status,
+              verified_at: order.verified_at
+            });
+            console.log('New order state:', {
+              is_verified: data.order_data.is_verified,
+              status: data.order_data.status,
+              verified_at: data.order_data.verified_at
+            });
+            
             setOrder(data.order_data as OrderDto);
             // Clear success message since we got the real-time update
             setSuccessMessage(null);
+            console.log('Order updated via WebSocket successfully');
           } else {
             console.log('Order ID mismatch or no current order');
+            console.log('Order ID comparison:', {
+              currentOrderId: order?.id,
+              messageOrderId: data.order_id,
+              currentOrderIdType: typeof order?.id,
+              messageOrderIdType: typeof data.order_id,
+              stringComparison: String(order?.id) === String(data.order_id),
+              hasCurrentOrder: !!order
+            });
           }
         } else if (data.type === 'connection_established') {
           console.log('WebSocket connection confirmed:', data.message);
         } else if (data.type === 'message_received') {
           console.log('Echo message received:', data.message);
+        } else if (data.type === 'test') {
+          console.log('Test message received:', data.message);
         } else {
           console.log('Other WebSocket message type:', data.type);
         }
@@ -113,23 +147,30 @@ const ScanQRPage: React.FC = () => {
       setWsConnected(false);
     };
 
-    ws.onclose = () => {
-      console.log('WebSocket connection closed');
+    ws.onclose = (event) => {
+      console.log('WebSocket connection closed:', event.code, event.reason);
       setWsConnected(false);
-      // Reconnect after 5 seconds
-      setTimeout(() => {
-        if (selectedShop?.id) {
-          console.log('Attempting to reconnect WebSocket...');
-        }
-      }, 5000);
+      
+      // Only reconnect if the component is still mounted and shop is still selected
+      // Don't reconnect if it was a normal closure (code 1000)
+      if (event.code !== 1000) {
+        setTimeout(() => {
+          if (selectedShop?.id) {
+            console.log('Attempting to reconnect WebSocket...');
+            // The useEffect will handle reconnection since selectedShop?.id is still valid
+          }
+        }, 5000);
+      }
     };
 
     return () => {
       console.log('Cleaning up WebSocket connection');
-      ws.close();
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close(1000, 'Component unmounting');
+      }
       setWsRef(null);
     };
-  }, [selectedShop?.id]); // Removed order?.id dependency to prevent reconnections
+  }, [selectedShop?.id]); // Keep this dependency to ensure connection when shop changes
 
   // Stop camera when component unmounts or user navigates away
   useEffect(() => {
@@ -264,12 +305,18 @@ const ScanQRPage: React.FC = () => {
       if (isAdminShopMode && selectedShop) {
         payload.selected_shop_id = selectedShop.id;
       }
+      
+      console.log('Sending verification request for order:', order.id);
       const { data } = await api.put(`/api/orders/${order.id}/verify/`, payload);
+      console.log('Verification API response:', data);
+      
+      // Update order with API response
       setOrder(data as OrderDto);
       setError(''); // Clear any previous errors
       setSuccessMessage('Order verified successfully!');
 
       // Wait for WebSocket update, then reset after delay
+      // The WebSocket update will clear the success message if it arrives
       setTimeout(() => {
         setOrder(null);
         setResult('');

@@ -130,6 +130,9 @@ class StockConsumer(AsyncJsonWebsocketConsumer):
         """Handle order verification updates"""
         try:
             logger.info(f"Order verification event received: {event}")
+            logger.info(f"Current channel: {self.channel_name}")
+            logger.info(f"Current group: {getattr(self, 'group_name', 'unknown')}")
+            
             message = {
                 'type': 'order_verification',
                 'order_id': event.get('order_id'),
@@ -138,6 +141,13 @@ class StockConsumer(AsyncJsonWebsocketConsumer):
                 'timestamp': event.get('timestamp')
             }
             logger.info(f"Sending order verification message: {message}")
+            
+            # Log the order data structure for debugging
+            if event.get('order_data'):
+                logger.info(f"Order data keys: {list(event.get('order_data', {}).keys())}")
+                logger.info(f"Order ID in data: {event.get('order_data', {}).get('id')}")
+                logger.info(f"Order verification status: {event.get('order_data', {}).get('is_verified')}")
+            
             await self.send_json(message)
             logger.info("Order verification message sent successfully")
         except Exception as e:
