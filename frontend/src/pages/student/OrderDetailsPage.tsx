@@ -111,8 +111,12 @@ const OrderDetailsPage: React.FC = () => {
         try {
           const data = JSON.parse(event.data)
           if (data?.type === 'order_verification' && String(data.shop_id) === String(shopId)) {
-            const incomingId: string | undefined = data.order_id || data.order_data?.id || data.order_data?._id
-            if (incomingId && String(incomingId) === String(currentOrderId)) {
+            const incomingDbId: string | undefined = (data.order_data?.id || data.order_data?._id || data.order_id)?.toString?.()
+            const incomingCode: string | undefined = (data.order_data?.order_id || data.order_code || data.order_id)?.toString?.()
+            const currentCode: string | undefined = (order?.order_id || (order as any)?.order_id)?.toString?.()
+            const dbIdMatch = incomingDbId && currentOrderId && String(incomingDbId) === String(currentOrderId)
+            const codeMatch = incomingCode && currentCode && String(incomingCode) === String(currentCode)
+            if (dbIdMatch || codeMatch) {
               setOrder((prev) => {
                 if (!prev) return prev
                 return {

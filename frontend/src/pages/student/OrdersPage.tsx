@@ -99,12 +99,15 @@ const OrdersPage: React.FC = () => {
           try {
             const data = JSON.parse(event.data)
             if (data?.type === 'order_verification' && String(data.shop_id) === String(shopId)) {
-              const incomingId: string | undefined = data.order_id || data.order_data?.id || data.order_data?._id
-              if (!incomingId) return
+              const incomingDbId: string | undefined = (data.order_data?.id || data.order_data?._id || data.order_id)?.toString?.()
+              const incomingCode: string | undefined = (data.order_data?.order_id || data.order_code || data.order_id)?.toString?.()
               // Update any matching order in list
               setOrders((prev) => prev.map((ord) => {
-                const ordId = (ord.id || ord._id || '').toString()
-                if (ordId && String(ordId) === String(incomingId)) {
+                const ordDbId = (ord.id || ord._id || '').toString()
+                const ordCode = (ord.order_id || '').toString()
+                const dbIdMatch = incomingDbId && ordDbId && String(ordDbId) === String(incomingDbId)
+                const codeMatch = incomingCode && ordCode && String(ordCode) === String(incomingCode)
+                if (dbIdMatch || codeMatch) {
                   const next = {
                     ...ord,
                     // Prefer fields from payload to ensure status reflects verification immediately
