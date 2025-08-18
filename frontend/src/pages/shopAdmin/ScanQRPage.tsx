@@ -59,31 +59,61 @@ const ScanQRPage: React.FC = () => {
 
   // WebSocket connection for real-time order updates
   useEffect(() => {
-    if (!selectedShop?.id) return;
+    console.log('WebSocket useEffect triggered');
+    console.log('selectedShop:', selectedShop);
+    console.log('selectedShop?.id:', selectedShop?.id);
+    console.log('user:', user);
+    console.log('user?.shop:', user?.shop);
+    
+    // Determine the shop ID to use for WebSocket connection
+    let shopId: string | null = null;
+    
+    if (isAdminShopMode) {
+      // Admin in shop mode - use selected shop
+      shopId = selectedShop?.id || null;
+      console.log('Admin shop mode - using selectedShop.id:', shopId);
+    } else if (user?.role === 'shopAdmin') {
+      // Shop admin - use their assigned shop
+      shopId = user.shop || null;
+      console.log('Shop admin mode - using user.shop:', shopId);
+    }
+    
+    if (!shopId) {
+      console.log('No shop ID available, skipping WebSocket connection');
+      console.log('isAdminShopMode:', isAdminShopMode);
+      console.log('user?.role:', user?.role);
+      return;
+    }
 
     const wsUrl = import.meta.env.PROD
-      ? `wss://rec-kiosk.onrender.com/ws/orders/?shop_id=${selectedShop.id}`
-      : `ws://localhost:8000/ws/orders/?shop_id=${selectedShop.id}`;
+      ? `wss://rec-kiosk.onrender.com/ws/orders/?shop_id=${shopId}`
+      : `ws://localhost:8000/ws/orders/?shop_id=${shopId}`;
 
     console.log('Connecting to WebSocket for order updates:', wsUrl);
-    console.log('Selected shop ID:', selectedShop.id);
+    console.log('Shop ID for WebSocket:', shopId);
+    console.log('Environment:', import.meta.env.PROD ? 'PRODUCTION' : 'DEVELOPMENT');
     
     const ws = new WebSocket(wsUrl);
     setWsRef(ws);
 
     ws.onopen = () => {
       console.log('WebSocket connected for order updates');
+      console.log('WebSocket readyState:', ws.readyState);
       setWsConnected(true);
       
       // Send a test message to verify connection
       setTimeout(() => {
         if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ 
+          const testMessage = {
             type: 'test', 
             message: 'WebSocket connection test',
-            shop_id: selectedShop.id,
+            shop_id: shopId,
             timestamp: new Date().toISOString()
-          }));
+          };
+          console.log('Sending test message:', testMessage);
+          ws.send(JSON.stringify(testMessage));
+        } else {
+          console.log('WebSocket not ready, readyState:', ws.readyState);
         }
       }, 1000);
     };
@@ -93,11 +123,11 @@ const ScanQRPage: React.FC = () => {
         const data = JSON.parse(event.data);
         console.log('WebSocket message received:', data);
         
-        if (data.type === 'order_verification' && data.shop_id === selectedShop.id) {
+        if (data.type === 'order_verification' && data.shop_id === shopId) {
           console.log('Order verification update received:', data);
           console.log('Current order ID:', order?.id);
           console.log('Message order ID:', data.order_id);
-          console.log('Shop ID match:', data.shop_id === selectedShop.id);
+          console.log('Shop ID match:', data.shop_id === shopId);
           
           // Update the current order if it matches (convert both to strings for comparison)
           if (order && String(order.id) === String(data.order_id)) {
@@ -130,6 +160,8 @@ const ScanQRPage: React.FC = () => {
           }
         } else if (data.type === 'connection_established') {
           console.log('WebSocket connection confirmed:', data.message);
+          console.log('Connection shop_id:', data.shop_id);
+          console.log('Expected shop_id:', shopId);
         } else if (data.type === 'message_received') {
           console.log('Echo message received:', data.message);
         } else if (data.type === 'test') {
@@ -155,9 +187,9 @@ const ScanQRPage: React.FC = () => {
       // Don't reconnect if it was a normal closure (code 1000)
       if (event.code !== 1000) {
         setTimeout(() => {
-          if (selectedShop?.id) {
+          if (shopId) {
             console.log('Attempting to reconnect WebSocket...');
-            // The useEffect will handle reconnection since selectedShop?.id is still valid
+            // The useEffect will handle reconnection since shopId is still valid
           }
         }, 5000);
       }
@@ -170,7 +202,7 @@ const ScanQRPage: React.FC = () => {
       }
       setWsRef(null);
     };
-  }, [selectedShop?.id]); // Keep this dependency to ensure connection when shop changes
+  }, [selectedShop?.id, user?.shop, isAdminShopMode, user?.role]); // Updated dependencies
 
   // Stop camera when component unmounts or user navigates away
   useEffect(() => {

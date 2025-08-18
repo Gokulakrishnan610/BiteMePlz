@@ -17,7 +17,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rec_kiosk.settings')
 django.setup()
 
 from api.websocket_utils import broadcast_order_verification
-from api.models import Order, Shop
+from api.models import Order, Shop, User
 from api.serializers import OrderSerializer
 
 def test_broadcast_order_verification():
@@ -48,11 +48,13 @@ def test_broadcast_order_verification():
         )
         
         print("Broadcast test completed")
+        return str(order.shop.id)  # Return shop ID for WebSocket test
         
     except Exception as e:
         print(f"Error testing broadcast: {e}")
         import traceback
         traceback.print_exc()
+        return None
 
 async def test_websocket_connection(shop_id):
     """Test WebSocket connection and listen for messages"""
@@ -70,6 +72,7 @@ async def test_websocket_connection(shop_id):
             test_message = {
                 "type": "test",
                 "message": "Test from Python script",
+                "shop_id": shop_id,
                 "timestamp": datetime.now().isoformat()
             }
             await websocket.send(json.dumps(test_message))
@@ -83,6 +86,13 @@ async def test_websocket_connection(shop_id):
                     data = json.loads(message)
                     print(f"Received message: {data}")
                     
+                    if data.get('type') == 'connection_established':
+                        print(f"✅ Connection established! Shop ID: {data.get('shop_id')}")
+                        if data.get('shop_id') == shop_id:
+                            print("✅ Shop ID matches!")
+                        else:
+                            print(f"❌ Shop ID mismatch! Expected: {shop_id}, Got: {data.get('shop_id')}")
+                    
                     if data.get('type') == 'order_verification':
                         print("✅ Order verification message received!")
                         print(f"Order ID: {data.get('order_id')}")
@@ -95,32 +105,50 @@ async def test_websocket_connection(shop_id):
     except Exception as e:
         print(f"WebSocket connection error: {e}")
 
+def list_shops_and_users():
+    """List available shops and users for testing"""
+    print("\nAvailable shops:")
+    shops = Shop.objects.all()
+    for shop in shops:
+        print(f"  - {shop.name} (ID: {shop.id})")
+    
+    print("\nAvailable users:")
+    users = User.objects.filter(role__in=['admin', 'shopAdmin'])
+    for user in users:
+        shop_info = f" (Shop: {user.shop})" if user.shop else ""
+        print(f"  - {user.name} ({user.role}){shop_info}")
+
 def main():
     """Main test function"""
     print("WebSocket Order Verification Test")
     print("=" * 40)
     
+    # List available shops and users
+    list_shops_and_users()
+    
     # Test 1: Broadcast function
     print("\n1. Testing broadcast function...")
-    test_broadcast_order_verification()
+    shop_id = test_broadcast_order_verification()
     
     # Test 2: WebSocket connection
     print("\n2. Testing WebSocket connection...")
     
-    # Get a shop ID
-    try:
-        shop = Shop.objects.first()
-        if shop:
-            print(f"Using shop: {shop.name} (ID: {shop.id})")
-            
-            # Run the WebSocket test
-            asyncio.run(test_websocket_connection(str(shop.id)))
-        else:
-            print("No shops found in database")
-    except Exception as e:
-        print(f"Error in WebSocket test: {e}")
-        import traceback
-        traceback.print_exc()
+    if shop_id:
+        print(f"Using shop ID from broadcast test: {shop_id}")
+        asyncio.run(test_websocket_connection(shop_id))
+    else:
+        # Get a shop ID from database
+        try:
+            shop = Shop.objects.first()
+            if shop:
+                print(f"Using first shop: {shop.name} (ID: {shop.id})")
+                asyncio.run(test_websocket_connection(str(shop.id)))
+            else:
+                print("No shops found in database")
+        except Exception as e:
+            print(f"Error in WebSocket test: {e}")
+            import traceback
+            traceback.print_exc()
     
     print("\nTest completed!")
 

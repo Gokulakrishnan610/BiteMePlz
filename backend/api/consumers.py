@@ -13,11 +13,19 @@ class StockConsumer(AsyncJsonWebsocketConsumer):
             shop_id = None
             user_id = None
             
+            logger.info(f"Raw query string: {query_string}")
+            logger.info(f"Query string type: {type(query_string)}")
+            
             # Parse query string to get parameters
             if query_string:
                 params = dict(item.split('=') for item in query_string.split('&') if '=' in item)
                 shop_id = params.get('shop_id')
                 user_id = params.get('user_id')
+                logger.info(f"Parsed params: {params}")
+                logger.info(f"Extracted shop_id: {shop_id}")
+                logger.info(f"Extracted user_id: {user_id}")
+            else:
+                logger.warning("No query string found")
             
             # Determine group based on connection type
             if shop_id:
@@ -34,7 +42,7 @@ class StockConsumer(AsyncJsonWebsocketConsumer):
                 self.group_name = 'stock_updates'
                 self.shop_id = None
                 self.user_id = None
-                logger.info("WebSocket connecting to general stock updates")
+                logger.warning("No shop_id or user_id found, connecting to general stock updates")
                 
             # Add to channel layer group
             await self.channel_layer.group_add(self.group_name, self.channel_name)
@@ -54,6 +62,8 @@ class StockConsumer(AsyncJsonWebsocketConsumer):
             
         except Exception as e:
             logger.error(f"Error in WebSocket connect: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             # Try to accept anyway and send error message
             try:
                 await self.accept()
