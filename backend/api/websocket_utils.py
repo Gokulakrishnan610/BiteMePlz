@@ -101,6 +101,28 @@ def broadcast_notification(message: str, category: str, shop_id: str):
         print(f"ERROR: Failed to broadcast notification: {e}")
 
 
+def broadcast_order_verification(order_id: str, shop_id: str, order_data: Dict[str, Any]):
+    """Broadcast order verification update to all connected clients for a specific shop"""
+    if not _channels_available:
+        return
+    
+    try:
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'shop_{shop_id}',
+            {
+                'type': 'order_verification',
+                'order_id': order_id,
+                'shop_id': shop_id,
+                'order_data': order_data,
+                'timestamp': datetime.now().isoformat()
+            }
+        )
+        print(f"DEBUG: Order verification broadcasted for order {order_id} in shop {shop_id}")
+    except Exception as e:
+        print(f"ERROR: Failed to broadcast order verification: {e}")
+
+
 def broadcast_to_all_shops(event_type: str, data: Dict[str, Any]):
     """Broadcast to all connected clients across all shops"""
     if not _channels_available:

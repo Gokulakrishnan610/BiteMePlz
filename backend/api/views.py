@@ -2362,6 +2362,19 @@ class OrderViewSet(viewsets.ModelViewSet):
                 description=f'Order verification for {order.order_id}'
             )
 
+        # Broadcast WebSocket update for real-time order verification
+        try:
+            from .websocket_utils import broadcast_order_verification
+            order_data = OrderSerializer(order).data
+            broadcast_order_verification(
+                order_id=str(order.id),
+                shop_id=str(order.shop.id),
+                order_data=order_data
+            )
+        except Exception as e:
+            print(f"DEBUG: Failed to broadcast order verification update: {e}")
+            # Non-fatal, don't block the response
+
         return Response(OrderSerializer(order).data)
 
     @action(detail=True, methods=['put'])

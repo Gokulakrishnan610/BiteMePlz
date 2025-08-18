@@ -53,6 +53,69 @@ const ScanQRPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [wsConnected, setWsConnected] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // WebSocket connection for real-time order updates
+  useEffect(() => {
+    if (!selectedShop?.id) return;
+
+    const wsUrl = import.meta.env.PROD
+      ? `wss://rec-kiosk.onrender.com/ws/orders/?shop_id=${selectedShop.id}`
+      : `ws://localhost:8000/ws/orders/?shop_id=${selectedShop.id}`;
+
+    console.log('Connecting to WebSocket for order updates:', wsUrl);
+    
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      console.log('WebSocket connected for order updates');
+      setWsConnected(true);
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('WebSocket message received:', data);
+        
+        if (data.type === 'order_verification' && data.shop_id === selectedShop.id) {
+          console.log('Order verification update received:', data);
+          
+          // Update the current order if it matches
+          if (order && order.id === data.order_id) {
+            setOrder(data.order_data as OrderDto);
+            console.log('Order updated in real-time:', data.order_data);
+            // Clear success message since we got the real-time update
+            setSuccessMessage(null);
+          }
+        } else if (data.type === 'connection_established') {
+          console.log('WebSocket connection confirmed:', data.message);
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      setWsConnected(false);
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket connection closed');
+      setWsConnected(false);
+      // Reconnect after 5 seconds
+      setTimeout(() => {
+        if (selectedShop?.id) {
+          // Reconnect logic will be handled by the useEffect
+        }
+      }, 5000);
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [selectedShop?.id, order?.id]);
 
   // Stop camera when component unmounts or user navigates away
   useEffect(() => {
@@ -177,6 +240,7 @@ const ScanQRPage: React.FC = () => {
       return;
     }
     try {
+      setLoading(true);
       const payload: any = {};
       if (isAdminShopMode && selectedShop) {
         payload.selected_shop_id = selectedShop.id;
@@ -184,15 +248,21 @@ const ScanQRPage: React.FC = () => {
       const { data } = await api.put(`/api/orders/${order.id}/verify/`, payload);
       setOrder(data as OrderDto);
       setError(''); // Clear any previous errors
+      setSuccessMessage('Order verified successfully!');
 
-      // Auto-reset and reopen scanner
-      setOrder(null);
-      setResult('');
-      setScanning(true);
-      setResetKey((prev) => prev + 1);
+      // Wait for WebSocket update, then reset after delay
+      setTimeout(() => {
+        setOrder(null);
+        setResult('');
+        setScanning(true);
+        setResetKey((prev) => prev + 1);
+        setSuccessMessage(null);
+      }, 1500);
     } catch (error: any) {
       console.error('Error verifying order:', error);
       setError(error.response?.data?.message || 'Failed to verify order');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -201,6 +271,7 @@ const ScanQRPage: React.FC = () => {
     setResult('');
     setScanning(false);
     setError('');
+    setSuccessMessage(null);
   };
 
   const handleOpenCamera = () => {
@@ -220,6 +291,28 @@ const ScanQRPage: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+      {/* WebSocket Connection Status */}
+      <div className="bg-blue-50 border-b border-blue-200 p-2 flex-shrink-0">
+        <div className="max-w-2xl mx-auto flex items-center justify-center space-x-2">
+          <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+          <span className="text-xs text-blue-700">
+            {wsConnected ? 'Real-time updates active' : 'Connecting to real-time updates...'}
+          </span>
+        </div>
+      </div>
+
+      {/* Success Message Display */}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 p-3 flex-shrink-0">
+          <div className="max-w-2xl mx-auto">
+            <p className="text-green-800 text-sm text-center flex items-center justify-center">
+              <CheckCircle className="inline-block mr-2" size={16} />
+              {successMessage}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Main Content - Fixed height, no page scrolling */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Top Section - Camera Scanner (Only show when scanning, fixed) */}
