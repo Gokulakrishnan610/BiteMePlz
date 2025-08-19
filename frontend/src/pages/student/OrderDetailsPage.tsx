@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../api';
 import { ArrowLeft, AlertCircle, QrCode, Trash2, Clock, Wallet } from 'lucide-react';
@@ -79,6 +79,69 @@ const OrderDetailsPage: React.FC = () => {
       items: OrderItem[];
     }>;
   } | null>(null);
+
+  // Realtime: connect to the order's shop group and update when verified
+  const wsRef = useRef<WebSocket | null>(null)
+
+  useEffect(() => {
+    // Require order to be loaded to know shopId; connect when order fetched
+    const shopId = (order?.shop as any)?.id || (order?.shop as any)?._id
+    const currentOrderId = (order?._id || (order as any)?.id)?.toString?.()
+    if (!shopId || !currentOrderId) {
+      // Cleanup if previously open
+      if (wsRef.current) {
+        try { wsRef.current.close() } catch {}
+        wsRef.current = null
+      }
+      return
+    }
+
+    // Build URL
+    const loc = window.location
+    const wsProto = loc.protocol === 'https:' ? 'wss' : 'ws'
+    const wsUrl = import.meta.env.PROD
+      ? `wss://rec-kiosk.onrender.com/ws/orders/?shop_id=${shopId}`
+      : `${wsProto}://${loc.hostname}:8000/ws/orders/?shop_id=${shopId}`
+
+    try {
+      const ws = new WebSocket(wsUrl)
+      wsRef.current = ws
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data?.type === 'order_verification' && String(data.shop_id) === String(shopId)) {
+            const incomingDbId: string | undefined = (data.order_data?.id || data.order_data?._id || data.order_id)?.toString?.()
+            const incomingCode: string | undefined = (data.order_data?.order_id || data.order_code || data.order_id)?.toString?.()
+            const currentCode: string | undefined = (order?.order_id || (order as any)?.order_id)?.toString?.()
+            const dbIdMatch = incomingDbId && currentOrderId && String(incomingDbId) === String(currentOrderId)
+            const codeMatch = incomingCode && currentCode && String(incomingCode) === String(currentCode)
+            if (dbIdMatch || codeMatch) {
+              setOrder((prev) => {
+                if (!prev) return prev
+                return {
+                  ...prev,
+                  is_verified: Boolean(data.order_data?.is_verified ?? true),
+                  status: data.order_data?.status || 'completed',
+                }
+              })
+            }
+          }
+        } catch {}
+      }
+
+      ws.onclose = () => {
+        wsRef.current = null
+      }
+    } catch {}
+
+    return () => {
+      if (wsRef.current) {
+        try { wsRef.current.close() } catch {}
+        wsRef.current = null
+      }
+    }
+  }, [order?.shop, order?._id])
 
   useEffect(() => {
     const checkOrderExpiry = async () => {

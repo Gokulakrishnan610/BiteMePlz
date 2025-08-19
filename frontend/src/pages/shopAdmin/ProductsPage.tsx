@@ -373,4 +373,4 @@ const ProductsPage: React.FC = () => {
   )
 }
 
-export default ProductsPage
+export default ProductsPage;

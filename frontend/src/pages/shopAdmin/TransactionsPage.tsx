@@ -1200,4 +1200,4 @@ const TransactionsPage: React.FC = () => {
   )
 }
 
-export default TransactionsPage
+export default TransactionsPage;
