@@ -1,4 +1,3 @@
-import qrcode
 import uuid
 import io
 import base64
@@ -1385,6 +1384,131 @@ class OrderViewSet(viewsets.ModelViewSet):
         
         return order
 
+    @action(detail=False, methods=['get'])
+    def search(self, request):
+        """Admin/ShopAdmin search for orders by code or date/user.
+        Query params: q (order code/user), date (YYYY-MM-DD), shop_id (optional)
+        """
+        try:
+            if getattr(request.user, 'role', None) not in ['admin', 'shopAdmin']:
+                return Response({'error': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+
+            qs = Order.objects.all().order_by('-created_at')
+            q = request.query_params.get('q')
+            date = request.query_params.get('date')
+            shop_id = request.query_params.get('shop_id')
+            if q:
+                from django.db.models import Q
+                qs = qs.filter(Q(order_id__icontains=q) | Q(user__email__icontains=q) | Q(user__name__icontains=q))
+            if date:
+                try:
+                    from datetime import datetime
+                    d = datetime.fromisoformat(date)
+                    qs = qs.filter(created_at__date=d.date())
+                except Exception:
+                    pass
+            if shop_id:
+                qs = qs.filter(shop__id=shop_id)
+            data = OrderSerializer(qs[:50], many=True).data
+            return Response({'results': data})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        """Reject an order and refund wallet if paid by balance."""
+        try:
+            if getattr(request.user, 'role', None) not in ['admin', 'shopAdmin']:
+                return Response({'error': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+
+            try:
+                order = self.get_object()
+            except Exception:
+                try:
+                    order = Order.objects.get(order_id=pk)
+                except Order.DoesNotExist:
+                    return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            if order.status in ['expired', 'completed']:
+                return Response({'error': f'Cannot reject order with status {order.status}'}, status=status.HTTP_400_BAD_REQUEST)
+
+            with transaction.atomic():
+                payment_method = (order.payment_result or {}).get('method', 'balance')
+                if payment_method == 'balance' and order.is_paid:
+                    order.user.balance += order.total_price
+                    order.user.save()
+                    Transaction.objects.create(
+                        user=order.user,
+                        shop=order.shop,
+                        order=order,
+                        amount=order.total_price,
+                        type='refund',
+                        description=f'Refund for rejected order {order.order_id}',
+                        metadata={'reason': 'admin_reject'}
+                    )
+                order.status = 'expired'
+                order.is_verified = False
+                order.save()
+            return Response(OrderSerializer(order).data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['get'])
+    def bill(self, request, pk=None):
+        """Return a simple bill HTML for the order."""
+        try:
+            try:
+                order = self.get_object()
+            except Exception:
+                order = Order.objects.get(order_id=pk)
+
+            items_html = ''.join([
+                f"<tr><td style='padding:6px 8px;border:1px solid #e5e7eb'>{i.get('name')}</td>"
+                f"<td style='padding:6px 8px;border:1px solid #e5e7eb;text-align:right'>{i.get('quantity')}</td>"
+                f"<td style='padding:6px 8px;border:1px solid #e5e7eb;text-align:right'>₹{i.get('price')}</td>"
+                f"<td style='padding:6px 8px;border:1px solid #e5e7eb;text-align:right'>₹{float(i.get('price'))*int(i.get('quantity'))}</td></tr>"
+                for i in (order.order_items or [])
+            ])
+            html = f"""
+<!doctype html>
+<html><head><meta charset='utf-8'><title>Bill {order.order_id}</title></head>
+<body style='font-family:Arial,Helvetica,sans-serif;color:#111827'>
+  <div style='max-width:720px;margin:24px auto;padding:16px;border:1px solid #e5e7eb;border-radius:8px'>
+    <h2 style='margin:0 0 8px 0'>Bill</h2>
+    <div style='font-size:14px;color:#374151'>
+      <div><strong>Order ID:</strong> {order.order_id}</div>
+      <div><strong>Date:</strong> {order.created_at.strftime('%Y-%m-%d %H:%M')}</div>
+      <div><strong>Shop:</strong> {order.shop.name}</div>
+      <div><strong>Customer:</strong> {order.user.name}</div>
+    </div>
+    <table style='width:100%;border-collapse:collapse;margin-top:12px;font-size:14px'>
+      <thead>
+        <tr style='background:#f3f4f6'>
+          <th style='text-align:left;padding:8px;border:1px solid #e5e7eb'>Item</th>
+          <th style='text-align:right;padding:8px;border:1px solid #e5e7eb'>Qty</th>
+          <th style='text-align:right;padding:8px;border:1px solid #e5e7eb'>Price</th>
+          <th style='text-align:right;padding:8px;border:1px solid #e5e7eb'>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items_html}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan='3' style='text-align:right;padding:8px;border:1px solid #e5e7eb'><strong>Grand Total</strong></td>
+          <td style='text-align:right;padding:8px;border:1px solid #e5e7eb'><strong>₹{order.total_price}</strong></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</body></html>
+"""
+            return Response({'html': html})
+        except Order.DoesNotExist:
+            return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     def perform_update(self, serializer):
         """Log order updates"""
         old_order = self.get_object()
@@ -1522,30 +1646,38 @@ class OrderViewSet(viewsets.ModelViewSet):
                 return Response({'error': 'Parent session cannot pay with balance. Use razorpay.'}, status=status.HTTP_400_BAD_REQUEST)
 
             if payment_method == 'balance':
-                if request.user.balance < total_price:
+                # Strong balance handling (atomic + Decimal + row lock)
+                from decimal import Decimal, ROUND_HALF_UP
+                user_locked = User.objects.select_for_update().get(id=request.user.id)
+                current_balance: Decimal = Decimal(user_locked.balance)
+                charge: Decimal = Decimal(total_price).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                if current_balance < charge:
                     return Response({'error': 'Insufficient balance'}, status=status.HTTP_400_BAD_REQUEST)
-                request.user.balance -= total_price
-                request.user.save()
+                new_balance = (current_balance - charge).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                user_locked.balance = new_balance
+                user_locked.save(update_fields=['balance'])
+
                 order.is_paid = True
                 order.paid_at = timezone.now()
                 order.payment_result = {'method': 'balance', 'status': 'success'}
-                order.save()
+                order.save(update_fields=['is_paid', 'paid_at', 'payment_result'])
+
                 Transaction.objects.create(
                     user=order.user,
                     shop=order.shop,
                     order=order,
-                    amount=order.total_price,
+                    amount=charge,
                     type='payment',
                     payment_method='balance',
                     description=f'Payment for order {order.order_id}'
                 )
-                
+
                 # Send WebSocket update for wallet balance change
                 from api.tasks import send_wallet_update
                 send_wallet_update(
-                    user_id=str(request.user.id),
-                    balance=float(request.user.balance),
-                    change=-float(total_price),  # Negative for deduction
+                    user_id=str(order.user.id),
+                    balance=float(user_locked.balance),
+                    change=-float(charge),  # Negative for deduction
                     transaction_type='order_payment'
                 )
                 order_data = self.get_serializer(order).data
@@ -1778,199 +1910,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
-    @action(detail=False, methods=['post'])
-    def multi_shop(self, request):
-        """Create orders for multiple shops in a single request.
-
-        Generates a single combined QR payload (containing per-shop order ids, shop names, and item
-        summaries) and stores that same QR on each created order.
-        """
-        try:
-            # Extract data from request
-            order_items = request.data.get('order_items', [])
-            payment_method = request.data.get('paymentMethod', 'balance')
-            
-            if not order_items:
-                return Response({'error': 'Order items are required'}, status=status.HTTP_400_BAD_REQUEST)
-
-            from decimal import Decimal
-
-            # Group items by shop
-            items_by_shop = {}
-            for item in order_items:
-                shop_id = item.get('shop_id')
-                if not shop_id:
-                    return Response({'error': 'Shop ID is required for each item'}, status=status.HTTP_400_BAD_REQUEST)
-                
-                if shop_id not in items_by_shop:
-                    items_by_shop[shop_id] = []
-                
-                items_by_shop[shop_id].append(item)
-            
-            # Create an order for each shop
-            orders = []
-            total_price = Decimal('0.0')
-            
-            with transaction.atomic():
-                for shop_id, items in items_by_shop.items():
-                    # Validate that all items in this shop group belong to the same shop
-                    for item in items:
-                        product_id = item.get('product_id')
-                        if product_id:
-                            try:
-                                product = Product.objects.get(id=product_id)
-                                if str(product.shop.id) != str(shop_id):
-                                    raise Exception(f"Product {product.name} (ID: {product_id}) does not belong to the target shop (ID: {shop_id}).")
-                            except Product.DoesNotExist:
-                                raise Exception(f"Product with ID {product_id} does not exist.")
-                    
-                    # Create order data with only the items for this specific shop
-                    order_data = {
-                        'shop_id': shop_id,
-                        'order_items': items
-                    }
-                    
-                    # Create serializer with context - use MultiShopOrderSerializer for multi-shop orders
-                    from .serializers import MultiShopOrderSerializer
-                    serializer = MultiShopOrderSerializer(data=order_data, context={'request': request, 'order_items': items})
-                    serializer.is_valid(raise_exception=True)
-                    
-                    # Create order using the serializer's create method
-                    order = serializer.save()
-
-                    orders.append(order)
-                    total_price += order.total_price
-                    print(f"[multi_shop] created order for shop {shop_id} total={order.total_price}")
-
-                # Generate one combined QR after creating all orders and attach to each order
-                try:
-                    combined_qr_orders = []
-                    for o in orders:
-                        # Prepare item summaries for QR
-                        try:
-                            item_summary = [
-                                {
-                                    'name': it.get('name'),
-                                    'quantity': it.get('quantity'),
-                                }
-                                for it in (o.order_items or [])
-                            ]
-                        except Exception:
-                            item_summary = []
-
-                        combined_qr_orders.append({
-                            'order_id': o.order_id,
-                            'shop_id': str(o.shop.id),
-                            'shop_name': o.shop.name,
-                            'items': item_summary,
-                        })
-
-                    combined_qr_payload = {
-                        'type': 'multi_order',
-                        'user_id': str(request.user.id),
-                        'total_price': str(total_price),
-                        'orders': combined_qr_orders,
-                    }
-
-                    combined_qr_str = json.dumps(combined_qr_payload)
-                    for o in orders:
-                        o.qr_code = combined_qr_str
-                        o.qr_valid_until = o.expires_at
-                        o.save()
-                except Exception:
-                    # Non-fatal if QR generation fails
-                    pass
-                
-                # Process payment if using balance
-                if payment_method == 'balance':
-                    if request.user.balance < total_price:
-                        raise Exception('Insufficient balance')
-                    
-                    # Deduct from balance
-                    request.user.balance -= total_price
-                    request.user.save()
-                    
-                    # Mark orders as paid
-                    for order in orders:
-                        order.is_paid = True
-                        order.paid_at = timezone.now()
-                        order.payment_result = {'method': 'balance', 'status': 'success'}
-                        order.save()
-                        
-                        # Create transaction
-                        Transaction.objects.create(
-                            user=order.user,
-                            shop=order.shop,
-                            order=order,
-                            amount=order.total_price,
-                            type='payment',
-                            payment_method='balance',
-                            description=f'Payment for order {order.order_id}'
-                        )
-                    
-                    # Send WebSocket update for wallet balance change
-                    from api.tasks import send_wallet_update
-                    send_wallet_update(
-                        user_id=str(request.user.id),
-                        balance=float(request.user.balance),
-                        change=-float(total_price),  # Negative for deduction
-                        transaction_type='multi_shop_payment'
-                    )
-                elif payment_method == 'razorpay':
-                    # For Razorpay, we'll create the orders but not mark them as paid yet
-                    # The frontend will handle the payment process and call the pay endpoint
-                    import razorpay
-                    from django.conf import settings
-                    
-                    # Initialize Razorpay client
-                    client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-                    
-                    # Create Razorpay order
-                    print(f"[multi_shop] total_price all orders={total_price}, paise={int(total_price * 100)}")
-                    razorpay_order = client.order.create({
-                        'amount': int(total_price * 100),  # Amount in paise
-                        'currency': 'INR',
-                        'receipt': f'order_{uuid.uuid4().hex[:8]}',
-                        'payment_capture': 1  # Auto-capture
-                    })
-                    
-                    # Tag each order with the shared Razorpay order id (pending status)
-                    for o in orders:
-                        o.payment_result = {
-                            'method': 'razorpay',
-                            'status': 'pending',
-                            'razorpay_order_id': razorpay_order['id']
-                        }
-                        o.save()
-                    
-                    # Prepare response orders data with `_id`
-                    from .serializers import MultiShopOrderSerializer as _MS
-                    orders_data = _MS(orders, many=True).data
-                    for od in orders_data:
-                        od['_id'] = str(od['id'])
-                    
-                    # Return response with Razorpay order details
-                    return Response({
-                        'message': 'Orders created successfully',
-                        'orders': orders_data,
-                        'razorpay_order_id': razorpay_order['id'],
-                        'razorpayKeyId': settings.RAZORPAY_KEY_ID
-                    }, status=status.HTTP_201_CREATED)
-            
-            # Prepare response orders data with `_id` for balance flow
-            from .serializers import MultiShopOrderSerializer as _MS2
-            orders_data = _MS2(orders, many=True).data
-            for od in orders_data:
-                od['_id'] = str(od['id'])
-            
-            # Return response for balance payment
-            return Response({
-                'message': 'Orders created successfully',
-                'orders': orders_data
-            }, status=status.HTTP_201_CREATED)
-            
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    # Multi-shop endpoint removed
 
     @action(detail=False, methods=['get', 'post'])
     def scan_qr_code(self, request):
@@ -2043,34 +1983,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         # The serializer already handles order creation, so we just need to handle post-creation tasks
         order = serializer.save()
         
-        # Generate QR payload as JSON string for frontend to render and scanners to parse
-        # Enrich payload with shop name and item summaries
-        try:
-            items_for_qr = [
-                {
-                    'name': item.get('name'),
-                    'quantity': item.get('quantity'),
-                }
-                for item in (order.order_items or [])
-            ]
-        except Exception:
-            items_for_qr = []
-
-        qr_data = {
-            'type': 'single_order',
-            'order_id': order.order_id,
-            'user_id': str(order.user.id),
-            'shop_id': str(order.shop.id),
-            'shop_name': order.shop.name,
-            'total_price': str(order.total_price),
-            'items': items_for_qr,
-        }
-
-        # Store JSON string so the frontend can render a QR from this payload directly
-        order.qr_code = json.dumps(qr_data)
-        order.qr_valid_until = order.expires_at
-        order.save()
-        
+        # QR generation removed: do not set qr_code/qr_valid_until
         return order
 
     @action(detail=True, methods=['patch'])

@@ -29,7 +29,7 @@ import Navbar from "../components/Navbar"
 import api from "../api"
 import { useCart } from "../context/CartContext"
 import { useAuth } from "../context/AuthContext"
-import { toast } from 'sonner'
+// import { toast } from 'sonner'
 import { getMediaUrl } from "../lib/utils";
 // no-op alias imports removed
 
@@ -181,6 +181,7 @@ const ShopPage: React.FC = () => {
       console.error('Failed to load favorites:', e)
     }
   }, [favoritesStorageKey])
+  // Multi-shop notice state (kept false to disable UI)
   const [showMultiShopNotice, setShowMultiShopNotice] = useState(false)
   const [multiShopNoticeShown, setMultiShopNoticeShown] = useState(false)
   
@@ -217,35 +218,9 @@ const ShopPage: React.FC = () => {
     }
   }, [user?._id]);
 
-  // Check for multi-shop orders and show notice only when appropriate
-  useEffect(() => {
-    if (!id || localCart.length === 0) {
-      setShowMultiShopNotice(false)
-      setMultiShopNoticeShown(false)
-      return
-    }
+  // Multi-shop effect removed
 
-    const hasItemsFromOtherShops = localCart.some((item: LocalCartItem) => item.shopId !== id)
-    
-    // Only show notice if we haven't shown it yet for this session and there are items from other shops
-    if (hasItemsFromOtherShops && !multiShopNoticeShown) {
-      setShowMultiShopNotice(true)
-      setMultiShopNoticeShown(true)
-      // Auto-hide after 5 seconds
-      const timer = setTimeout(() => setShowMultiShopNotice(false), 5000)
-      return () => clearTimeout(timer)
-    } else if (!hasItemsFromOtherShops) {
-      setShowMultiShopNotice(false)
-      // Reset the shown flag when there are no more items from other shops
-      setMultiShopNoticeShown(false)
-    }
-  }, [localCart, id, multiShopNoticeShown])
-
-  // Reset multi-shop notice state when shop ID changes
-  useEffect(() => {
-    setShowMultiShopNotice(false)
-    setMultiShopNoticeShown(false)
-  }, [id])
+  // Multi-shop reset removed
 
   // Sync local cart with global cart when global cart changes
   useEffect(() => {
@@ -390,20 +365,20 @@ const ShopPage: React.FC = () => {
 
   const handleAddToLocalCart = (product: Product) => {
     if (!user) {
-      toast.error("Please login to add items to cart")
-      navigate("/login")
+      // toast.error("Please login to add items to cart")
+      // navigate("/login")
       return
     }
     if (!isShopAcceptingOrders()) {
-      toast.error("Shop is no longer accepting orders for today")
+      // toast.error("Shop is no longer accepting orders for today")
       return
     }
     if (product.stock_mode === 'stock' && product.stock === 0) {
-      toast.error("Product is out of stock")
+      // toast.error("Product is out of stock")
       return
     }
 
-    // Add to local cart for multi-shop functionality
+    // Add to local cart
     setLocalCart((prev) => {
       const existing = prev.find((item) => item.productId === product.id)
       if (existing) {
@@ -426,7 +401,7 @@ const ShopPage: React.FC = () => {
 
     // Also add to the main cart context for backend integration
     if (!product.id || !shop?.id) {
-      toast.error("Product or shop information is incomplete. Please try again.")
+      // toast.error("Product or shop information is incomplete. Please try again.")
       return
     }
     
@@ -751,15 +726,7 @@ const ShopPage: React.FC = () => {
               </div>
               <p className="text-xs sm:text-sm text-gray-500 truncate">{shop.description}</p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate("/")}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-transparent border-purple-200 text-purple-600 hover:bg-purple-50"
-            >
-              <Store size={12} />
-              More
-            </Button>
+            {/* Removed "More" button on mobile */}
             {totalCartItems > 0 && (
               <Button
                 variant="ghost"
@@ -852,15 +819,7 @@ const ShopPage: React.FC = () => {
               <ArrowLeft className="h-4 w-4" />
               <span className="font-medium">Back</span>
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/")}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors"
-            >
-              <Grid3X3 className="h-4 w-4" />
-              <span className="font-medium">Browse Other Shops</span>
-            </Button>
+            {/* Removed "Browse Other Shops" button on desktop */}
           </div>
         </div>
       </div>

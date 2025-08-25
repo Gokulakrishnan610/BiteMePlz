@@ -5,7 +5,6 @@ import {
   BarChart3, 
   Package, 
   ShoppingBag, 
-  QrCode, 
   LogOut, 
   Menu, 
   X,
@@ -135,16 +134,7 @@ const ShopAdminLayout: React.FC = () => {
               <span>Transactions</span>
             </Link>
             
-            <Link
-              to="/kisok-sp-back-office/scan"
-              className={`flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100 hover:text-purple-600 transition-all duration-200 border-l-4 border-transparent hover:border-purple-600 rounded-xl ${
-                is_active('/kisok-sp-back-office/scan') ? 'bg-gray-100 text-purple-600 border-purple-600' : ''
-              }`}
-              onClick={closeSidebar}
-            >
-              <QrCode size={20} className="mr-3" />
-              <span>Scan QR</span>
-            </Link>
+            {/* Scan QR removed */}
             
             {/* Only show Sub-Admins link for original shop admins (not sub-admins) */}
             {user && !user.is_sub_admin && (
@@ -183,7 +173,7 @@ const ShopAdminLayout: React.FC = () => {
                 {user?.is_sub_admin ? 'Sub-Admin Panel' : 'Shop Management'}
               </h2>
               <p className="text-gray-600 text-sm truncate">
-                {user?.is_sub_admin ? 'Scan QR codes and manage orders' : 'Manage your shop and products'}
+                {user?.is_sub_admin ? 'Manage orders' : 'Manage your shop and products'}
               </p>
             </div>
           </div>

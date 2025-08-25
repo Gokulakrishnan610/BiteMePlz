@@ -22,7 +22,7 @@ import {
 import { useCart } from "../../context/CartContext"
 import { useAuth } from "../../context/AuthContext"
 import api from "../../api"
-import { toast } from 'sonner'
+// import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
@@ -99,7 +99,7 @@ const CartPage: React.FC = () => {
     const sId = typeof shop_id === 'object' ? shop_id.id : shop_id;
     if (newQuantity <= 0) {
       removeFromCart(pId, sId)
-      toast.success("Item removed from cart")
+      // toast.success("Item removed from cart")
       return
     }
     updateQuantity(pId, sId, newQuantity)
@@ -112,7 +112,7 @@ const CartPage: React.FC = () => {
           clearInterval(newTimer)
           setPaymentInitiated(false)
           setCurrentorder_id(null)
-          toast.error("Payment time expired")
+          // toast.error("Payment time expired")
           navigate("/")
           return 0
         }
@@ -125,7 +125,7 @@ const CartPage: React.FC = () => {
   const handleBalancePayment = async () => {
     if (balance < getTotalPrice()) {
       const shortfall = getTotalPrice() - balance;
-      toast.error(`Insufficient balance. You need ₹${shortfall} more.`);
+      // toast.error(`Insufficient balance. You need ₹${shortfall} more.`);
       return;
     }
     // Filter out invalid cart items
@@ -137,7 +137,7 @@ const CartPage: React.FC = () => {
       }
     );
     if (validCartItems.length !== cartItems.length) {
-      toast.error("Some cart items are invalid and will not be ordered. Please review your cart.");
+      // toast.error("Some cart items are invalid and will not be ordered. Please review your cart.");
       return;
     }
     const shopIds = getShopIds();
@@ -145,20 +145,8 @@ const CartPage: React.FC = () => {
       setIsLoading(true);
       setPaymentInitiated(true);
 
-      const endpoint = shopIds.length > 1 ? "/api/orders/multi_shop/" : "/api/orders/";
-      const requestData =
-        shopIds.length > 1
-          ? {
-              order_items: validCartItems.map((item) => ({
-                product_id: typeof item.product_id === 'object' && item.product_id !== null ? item.product_id.id : item.product_id,
-                quantity: item.quantity,
-                shop_id: typeof item.shop_id === 'object' && item.shop_id !== null ? item.shop_id.id : item.shop_id,
-                shop_name: item.shop_name,
-              })),
-              total_price: getTotalPrice(),
-              paymentMethod: "balance",
-            }
-          : {
+      const endpoint = "/api/orders/";
+      const requestData = {
               order_items: validCartItems.map((item) => ({
                 product_id: typeof item.product_id === 'object' && item.product_id !== null ? item.product_id.id : item.product_id,
                 quantity: item.quantity,
@@ -173,16 +161,12 @@ const CartPage: React.FC = () => {
     // debug removed
       const orderResponse = await api.post(endpoint, requestData);
       clearCart();
-      toast.success("Payment successful! Your order has been placed.");
+      // toast removed
       try { await refreshBalance(); } catch {}
-      if (shopIds.length > 1) {
-        navigate(`/order/${orderResponse.data.orders[0]._id}`, { replace: true });
-      } else {
-        navigate(`/order/${orderResponse.data.order._id}`, { replace: true });
-      }
+      navigate(`/order/${orderResponse.data.order._id}`, { replace: true });
     } catch (error: any) {
       // silent catch, user sees toast
-      toast.error(error.response?.data?.message || error.message || "Payment failed");
+      // toast.error(error.response?.data?.message || error.message || "Payment failed");
       setPaymentInitiated(false);
     } finally {
       setIsLoading(false);
@@ -192,7 +176,7 @@ const CartPage: React.FC = () => {
   const initiateRazorpayPayment = async () => {
     const shopIds = getShopIds();
     // debug removed
-    toast("Razorpay payment initiated");
+    // toast("Razorpay payment initiated");
     // Filter out invalid cart items
     const validCartItems = cartItems.filter(
       (item) => {
@@ -202,7 +186,7 @@ const CartPage: React.FC = () => {
       }
     );
     if (validCartItems.length !== cartItems.length) {
-      toast.error("Some cart items are invalid and will not be ordered. Please review your cart.");
+      // toast.error("Some cart items are invalid and will not be ordered. Please review your cart.");
       // debug removed
       return;
     }
@@ -213,7 +197,7 @@ const CartPage: React.FC = () => {
         !(typeof item.shop_id === 'object' && item.shop_id !== null ? item.shop_id.id : item.shop_id)
     );
     if (hasInvalidCartItems) {
-      toast.error('Your cart contains items with missing product or shop IDs. Please remove them and try again.');
+      // toast.error('Your cart contains items with missing product or shop IDs. Please remove them and try again.');
       // debug removed
       return;
     }
@@ -221,7 +205,7 @@ const CartPage: React.FC = () => {
       setIsLoading(true);
       setPaymentInitiated(true);
       // debug removed
-      const endpoint = shopIds.length > 1 ? "/api/orders/multi_shop/" : "/api/orders/";
+      const endpoint = "/api/orders/";
       // Always map validCartItems to required fields and ensure image is not blank
       // debug removed
       const mappedOrderItems = validCartItems.map((item) => ({
@@ -233,24 +217,17 @@ const CartPage: React.FC = () => {
         image: item.image && item.image.trim() !== "" ? item.image : "https://via.placeholder.com/150", // fallback image
       }));
       // debug removed
-      const requestData =
-        shopIds.length > 1
-          ? {
-              order_items: mappedOrderItems,
-              total_price: getTotalPrice(),
-              paymentMethod: "razorpay",
-            }
-          : {
-              order_items: mappedOrderItems,
-              shop_id: shopIds[0],
-              total_price: getTotalPrice(),
-              paymentMethod: "razorpay",
-            };
+      const requestData = {
+        order_items: mappedOrderItems,
+        shop_id: shopIds[0],
+        total_price: getTotalPrice(),
+        paymentMethod: "razorpay",
+      };
       // debug removed
       const orderResponse = await api.post(endpoint, requestData);
 
       // Handle different response structures for single vs multi-shop orders
-      const orderId = shopIds.length > 1 ? orderResponse.data.orders[0]._id : orderResponse.data.order._id;
+      const orderId = orderResponse.data.order._id;
       setCurrentorder_id(orderId);
       startPaymentTimer();
       const options = {
@@ -270,7 +247,7 @@ const CartPage: React.FC = () => {
             
             // Check if user is logged in
             if (!token || !user) {
-              toast.error("Authentication required. Please log in again.");
+              // toast.error("Authentication required. Please log in again.");
               return;
             }
 
@@ -284,12 +261,12 @@ const CartPage: React.FC = () => {
             
             // debug removed
             clearCart();
-            toast.success("Payment successful! Your order has been placed.");
+            // toast removed
             try { await refreshBalance(); } catch {}
             navigate(`/order/${orderId}`, { replace: true });
           } catch (error: any) {
             // silent catch, user sees toast
-            toast.error(error.response?.data?.message || "Payment verification failed");
+            // toast.error(error.response?.data?.message || "Payment verification failed");
           } finally {
             setPaymentInitiated(false);
             setCurrentorder_id(null);
@@ -306,7 +283,7 @@ const CartPage: React.FC = () => {
             if (currentorder_id) {
               try {
                 await api.put(`/api/orders/${currentorder_id}/cancel/`);
-                toast.error("Payment cancelled");
+                // toast.error("Payment cancelled");
               } catch (error) {
                 // silent catch
               }
@@ -326,7 +303,7 @@ const CartPage: React.FC = () => {
       // debug removed
       const loaded = await loadRazorpayScript();
       if (!loaded) {
-        toast.error("Failed to load Razorpay SDK. Please try again.");
+        // toast.error("Failed to load Razorpay SDK. Please try again.");
         setPaymentInitiated(false);
         setCurrentorder_id(null);
         return;
@@ -334,7 +311,7 @@ const CartPage: React.FC = () => {
       // debug removed
       const razorpay = new window.Razorpay(options);
       razorpay.open();
-      toast("Razorpay window opened (if no popup, check for blockers)");
+      // toast removed
 
       setTimeout(
         () => {
@@ -344,7 +321,7 @@ const CartPage: React.FC = () => {
               api
                 .put(`/api/orders/${currentorder_id}/cancel/`)
                 .then(() => {
-                  toast.error("Payment time expired");
+                  // toast.error("Payment time expired");
                   setPaymentInitiated(false);
                   setCurrentorder_id(null);
                 })
@@ -357,7 +334,7 @@ const CartPage: React.FC = () => {
     } catch (error: any) {
       setPaymentInitiated(false);
       setCurrentorder_id(null);
-      toast.error(error.response?.data?.message || error.message || "Payment failed");
+      // toast.error(error.response?.data?.message || error.message || "Payment failed");
     } finally {
       setIsLoading(false);
     }
@@ -369,7 +346,7 @@ const CartPage: React.FC = () => {
 
   const handleClearCart = () => {
     clearCart()
-    toast.success("Cart cleared successfully")
+    // toast.success("Cart cleared successfully")
   }
 
   // removed unused handleDeleteItem – using direct delete instead
@@ -377,7 +354,7 @@ const CartPage: React.FC = () => {
   const confirmDelete = () => {
     if (itemToDelete) {
       removeFromCart(itemToDelete.product, itemToDelete.shop_id);
-      toast.success(`${itemToDelete.name} removed from cart`)
+      // toast.success(`${itemToDelete.name} removed from cart`)
       setShowDeleteConfirm(false)
       setItemToDelete(null)
     }
@@ -388,10 +365,10 @@ const CartPage: React.FC = () => {
     const sId = typeof shop_id === 'object' ? shop_id.id : shop_id;
     try {
        removeFromCart(pId, sId)
-      toast.success(`${name} removed from cart`)
+      // toast.success(`${name} removed from cart`)
     } catch (error) {
       console.error("Error removing item:", error)
-      toast.error("Failed to remove item")
+      // toast.error("Failed to remove item")
     }
   }
 

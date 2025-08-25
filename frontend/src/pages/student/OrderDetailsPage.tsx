@@ -2,8 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../api';
-import { ArrowLeft, AlertCircle, QrCode, Trash2, Clock, Wallet } from 'lucide-react';
-import QRCode from 'react-qr-code';
+import { ArrowLeft, AlertCircle, Trash2, Clock, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWallet } from '../../context/WalletContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
@@ -63,6 +62,8 @@ const OrderDetailsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [billHtml, setBillHtml] = useState<string | null>(null);
+  const [billOpen, setBillOpen] = useState<boolean>(false);
   // Removed unused timeLeft state (timer display not used)
   const [isQRExpired, setIsQRExpired] = useState(false);
   const [qrMeta, setQrMeta] = useState<any>(null);
@@ -161,7 +162,7 @@ const OrderDetailsPage: React.FC = () => {
           const { data } = await api.get(`/api/orders/${id}/`);
           setOrder(data);
           if (data.status === 'expired') {
-            toast.success('Order expired. Amount refunded to wallet.');
+            // toast removed
           }
         } catch (error: any) {
           if (error?.response?.status !== 404) {
@@ -185,13 +186,8 @@ const OrderDetailsPage: React.FC = () => {
           createdAt: data.createdAt || data.created_at || data.created_at?.toString?.() || '',
         };
         setOrder(normalized);
-        // Parse QR payload for UI hints
-        try {
-          const meta = JSON.parse(data.qr_code || '{}');
-          setQrMeta(meta && typeof meta === 'object' ? meta : null);
-        } catch {
-          setQrMeta(null);
-        }
+        // QR removed: do not parse qr_code
+        setQrMeta(null);
         // If multi-order, fetch grouped details to render all shops on this page
         try {
           const { data: gd } = await api.get(`/api/orders/${id}/group_details/`);
@@ -214,26 +210,13 @@ const OrderDetailsPage: React.FC = () => {
   }, [id]);
 
   useEffect(() => {
-    if (!order?.qr_valid_until) return;
-    const checkAndSetExpiry = () => {
-      const now = new Date().getTime();
-      const validUntil = new Date(order.qr_valid_until).getTime();
-      const difference = validUntil - now;
-      if (difference <= 0) {
-        setIsQRExpired(true);
-      } else {
-        setIsQRExpired(false);
-      }
-    };
-
-    checkAndSetExpiry();
-    const interval = setInterval(checkAndSetExpiry, 1000);
-    return () => clearInterval(interval);
+    // QR removed: no expiry tracking
+    setIsQRExpired(false);
   }, [order]);
 
   useEffect(() => {
     if (order?.status === 'expired' && order.is_paid && !order.is_verified) {
-      toast.success('Order expired. Amount refunded to wallet.');
+      // toast removed
       refreshBalance();
     }
   }, [order, refreshBalance]);
@@ -245,10 +228,10 @@ const OrderDetailsPage: React.FC = () => {
     try {
       setDeleting(true);
       await api.delete(`/api/orders/${(order._id || order.id)}/`);
-      toast.success('Order deleted successfully');
+      // toast removed
       navigate('/orders', { replace: true });
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to delete order');
+      // toast removed
       setDeleting(false);
     }
   };
@@ -320,6 +303,20 @@ const OrderDetailsPage: React.FC = () => {
                 {deleting ? 'Deleting...' : 'Delete Order'}
               </Button>
             )}
+            {order.is_paid && (
+              <Button
+                onClick={async () => {
+                  try {
+                    const { data } = await api.get(`/api/orders/${order._id}/bill/`)
+                    setBillHtml(data.html || '')
+                    setBillOpen(true)
+                  } catch {}
+                }}
+                className="ml-2 bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                Bill
+              </Button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -330,12 +327,12 @@ const OrderDetailsPage: React.FC = () => {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle className="text-2xl font-bold text-gray-900 mb-4">
-                        {`Order #${((order._id || order.id || '').toString()).slice(-8)}`}
+                      <CardTitle className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-wide mb-4">
+                        {order.order_id ? `Order #${order.order_id}` : `Order #${((order._id || order.id || '').toString()).slice(-8)}`}
                       </CardTitle>
-                      {(order.shop?.name || qrMeta?.shop_name) && (
+                      {order.shop?.name && (
                         <div className="mb-3 text-sm text-gray-700">
-                          <span className="font-semibold">Shop:</span> {order.shop?.name || qrMeta?.shop_name}
+                          <span className="font-semibold">Shop:</span> {order.shop?.name}
                         </div>
                       )}
                       <div className="flex flex-wrap gap-2 mb-4">
@@ -378,11 +375,7 @@ const OrderDetailsPage: React.FC = () => {
                 <CardContent>
                   <div className="space-y-2 text-sm text-gray-600">
                     <p>Placed on {new Date(order.createdAt || (order as any).created_at).toLocaleString()}</p>
-                    {qrMeta?.type === 'multi_order' && groupDetails && (
-                      <div className="mt-2 p-3 bg-blue-50 text-blue-800 rounded">
-                        This QR contains multiple shop orders. All shops and items are shown below.
-                      </div>
-                    )}
+                    {/* QR removed */}
                     {order.payment_result?.razorpay_payment_id && (
                       <p>Payment ID: {order.payment_result.razorpay_payment_id}</p>
                     )}
@@ -392,58 +385,7 @@ const OrderDetailsPage: React.FC = () => {
               </Card>
 
               {/* Order Items (Grouped if multi-order) */}
-              {qrMeta?.type === 'multi_order' && groupDetails ? (
-                <>
-                  {groupDetails.shops.map((shop, sidx) => (
-                    <Card key={sidx}>
-                      <CardHeader>
-                        <CardTitle className="text-xl font-semibold">{shop.shop_name}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {shop.items.map((item, index) => (
-                            <div key={index} className="flex items-center p-4 bg-gray-50 rounded-lg">
-                              <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
-                                <img
-                                  src={(item as any).image || 'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg'}
-                                  alt={item.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                              <div className="ml-4 flex-1">
-                                <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                                <p className="text-sm text-gray-600">
-                                  {item.quantity} x ₹{item.price}
-                                </p>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-semibold text-gray-900">₹{item.quantity * (item as any).price}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="mt-6 pt-6 border-t border-gray-200">
-                          <div className="flex justify-between items-center">
-                            <span className="text-lg font-semibold text-gray-900">Shop Total</span>
-                            <span className="text-lg font-bold text-purple-600">₹{shop.total_price}</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-xl font-semibold">Grand Total</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex justify-between items-center">
-                        <span className="text-lg font-semibold text-gray-900">Total</span>
-                        <span className="text-lg font-bold text-purple-600">₹{groupDetails.total_price}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </>
-              ) : (
+              {
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-xl font-semibold">Order Items</CardTitle>
@@ -479,7 +421,7 @@ const OrderDetailsPage: React.FC = () => {
                     </div>
                   </CardContent>
                 </Card>
-              )}
+              }
                 {order.status === 'expired' && !order.is_verified && (
                   <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded mb-4">
                     <strong>Refund Policy:</strong><br/>
@@ -507,47 +449,21 @@ const OrderDetailsPage: React.FC = () => {
                       <div className="p-3 bg-gray-50 rounded-lg">
                         <p className="text-sm text-gray-600 mb-1">Items Purchased</p>
                         <div className="space-y-1">
-                          {qrMeta?.type === 'multi_order' && groupDetails ? (
-                            groupDetails.shops.map((shop, sidx) => (
-                              <div key={sidx} className="space-y-1">
-                                {shop.items.map((it, idx) => (
-                                  <p key={`${sidx}-${idx}`} className="font-medium text-gray-900">
-                                    <span className="text-gray-500 mr-1">{shop.shop_name} —</span>
-                                    {it.name}
-                                    <span className="text-gray-600"> × {it.quantity}</span>
-                                  </p>
-                                ))}
-                              </div>
-                            ))
-                          ) : (
-                            order.order_items.map((it, idx) => {
-                              const shopLabel = (it as any).shop_name || order.shop?.name || qrMeta?.shop_name;
-                              return (
-                                <p key={idx} className="font-medium text-gray-900">
-                                  {shopLabel && <span className="text-gray-500 mr-1">{shopLabel} —</span>}
-                                  {it.name}
-                                  <span className="text-gray-600"> × {it.quantity}</span>
-                                </p>
-                              );
-                            })
-                          )}
+                          {order.order_items.map((it, idx) => (
+                            <p key={idx} className="font-medium text-gray-900">
+                              {it.name}
+                              <span className="text-gray-600"> × {it.quantity}</span>
+                            </p>
+                          ))}
                         </div>
                       </div>
 
                       <div className="p-3 bg-gray-50 rounded-lg">
                         <p className="text-sm text-gray-600 mb-1">Amount Paid</p>
-                        <p className="font-medium text-gray-900">₹{qrMeta?.type === 'multi_order' && groupDetails ? groupDetails.total_price : order.total_price}</p>
+                        <p className="font-medium text-gray-900">₹{order.total_price}</p>
                       </div>
 
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <p className="text-sm text-gray-600 mb-1">QR Code Valid Until</p>
-                        <div className="flex items-center">
-                          <Clock size={16} className="mr-2 text-gray-500" />
-                          <p className={`font-medium ${isQRExpired ? 'text-red-600' : 'text-gray-900'}`}>
-                            {isQRExpired ? 'Expired' : formatISTTime(order.qr_valid_until ?? order.expires_at ?? null)}
-                          </p>
-                        </div>
-                      </div>
+                      {/* QR removed */}
 
                       
 
@@ -572,37 +488,16 @@ const OrderDetailsPage: React.FC = () => {
                   </CardContent>
                 </Card>
 
-                {/* QR Code */}
-                {order.qr_code && !isQRExpired && !order.is_verified && (
+                {/* QR removed: show after-payment instructions */}
+                {order.is_paid && !order.is_verified && (
                   <Card>
-                    <CardHeader>
-                      <div className="flex items-center">
-                        <QrCode size={24} className="text-purple-600 mr-2" />
-                        <CardTitle className="text-xl font-semibold">Verification QR</CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="bg-white p-6 rounded-lg border-2 border-gray-200 flex justify-center">
-                        <QRCode value={order.qr_code} size={200} />
-                      </div>
-                      <p className="text-sm text-gray-600 mt-4 text-center">
-                        Show this QR code to the shop staff to verify your purchase
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* QR Expired Message */}
-                {isQRExpired && !order.is_verified && (
-                  <Card className="border-red-200 bg-red-50">
                     <CardContent className="p-6">
                       <div className="flex items-center mb-2">
-                        <AlertCircle className="text-red-600 mr-2" size={20} />
-                        <p className="font-semibold text-red-800">QR Code Expired</p>
+                        <AlertCircle className="text-purple-600 mr-2" size={20} />
+                        <p className="font-semibold text-gray-900">Order Placed</p>
                       </div>
-                      <p className="text-red-700 text-sm">
-                        QR code has expired. You can still use your balance until{' '}
-                        {parseLocalDateTime(order.final_validity)?.toLocaleString() || 'Not Set'}
+                      <p className="text-gray-700 text-sm">
+                        Present your order ID at the counter for fulfillment. No QR required.
                       </p>
                     </CardContent>
                   </Card>
@@ -612,6 +507,19 @@ const OrderDetailsPage: React.FC = () => {
           </div>
         </div>
       </div>
+      {billOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white w-[95vw] max-w-3xl max-h-[85vh] rounded-lg shadow-lg overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b">
+              <h3 className="font-semibold text-gray-900">Bill</h3>
+              <button onClick={() => setBillOpen(false)} className="text-gray-600 hover:text-gray-900">Close</button>
+            </div>
+            <div className="overflow-auto" style={{maxHeight: '70vh'}}>
+              <div dangerouslySetInnerHTML={{ __html: billHtml || '' }} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

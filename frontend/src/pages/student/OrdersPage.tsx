@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import api from "../../api"
 import { Package, AlertCircle, Trash2, ArrowLeft, Clock, CheckCircle, XCircle } from "lucide-react"
-import QRCode from "react-qr-code"
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Badge } from "../../components/ui/badge"
@@ -39,6 +38,8 @@ const OrdersPage: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [billHtml, setBillHtml] = useState<string | null>(null)
+  const [billOpen, setBillOpen] = useState<boolean>(false)
   // cleaned up unused processing/payment states
 
   useEffect(() => {
@@ -156,10 +157,10 @@ const OrdersPage: React.FC = () => {
     }
     try {
       await api.delete(`/api/orders/${order_id}/`)
-      toast.success("Order deleted successfully")
+      // toast removed
       setOrders(orders.filter((order) => order._id !== order_id))
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to delete order")
+      // toast removed
     }
   }
 
@@ -304,7 +305,7 @@ const OrdersPage: React.FC = () => {
                 <CardHeader className="bg-purple-600 text-white">
                   <div className="flex justify-between items-start">
                     <div>
-                      <CardTitle className="text-white text-lg">Order #{order.order_id}</CardTitle>
+                      <CardTitle className="text-white text-xl md:text-2xl font-extrabold tracking-wide">Order #{order.order_id}</CardTitle>
                       <p className="text-white/80 text-sm">
                         {new Date(order.createdAt).toLocaleDateString("en-IN", {
                           year: "numeric",
@@ -353,18 +354,11 @@ const OrdersPage: React.FC = () => {
                     ))}
                   </div>
 
-                  {/* Inline QR display for paid, unverified, active orders */}
-                  {order.is_paid && !order.is_verified && order.status !== "expired" && order.qr_code && (
+                  {/* QR removed: show simple confirmation after payment */}
+                  {order.is_paid && !order.is_verified && order.status !== "expired" && (
                     <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
-                      <h4 className="font-semibold text-gray-900 mb-2">Verification QR</h4>
-                      <div className="bg-white p-4 rounded-lg border flex justify-center">
-                        <QRCode value={order.qr_code} size={160} />
-                      </div>
-                      {order.qr_valid_until && (
-                        <p className="text-xs text-gray-500 mt-2 text-center">
-                          Valid until {new Date(order.qr_valid_until).toLocaleString("en-IN")}
-                        </p>
-                      )}
+                      <h4 className="font-semibold text-gray-900 mb-1">Order Placed</h4>
+                      <p className="text-sm text-gray-700">Present your order ID at the counter for fulfillment.</p>
                     </div>
                   )}
 
@@ -380,6 +374,22 @@ const OrdersPage: React.FC = () => {
                         View Order Details
                       </Button>
                     </Link>
+
+                    {/* Bill button - available when paid */}
+                    {order.is_paid && (
+                      <Button
+                        onClick={async () => {
+                          try {
+                            const { data } = await api.get(`/api/orders/${order._id}/bill/`)
+                            setBillHtml(data.html || '')
+                            setBillOpen(true)
+                          } catch {}
+                        }}
+                        className="bg-purple-600 hover:bg-purple-700 text-white"
+                      >
+                        Bill
+                      </Button>
+                    )}
 
                     {/* Conditional buttons based on order status */}
                     {order.status === "completed" && order.is_verified && (
@@ -439,9 +449,29 @@ const OrdersPage: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+        {billOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white w-[95vw] max-w-3xl max-h-[85vh] rounded-lg shadow-lg overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b">
+                <h3 className="font-semibold text-gray-900">Bill</h3>
+                <button onClick={() => setBillOpen(false)} className="text-gray-600 hover:text-gray-900">Close</button>
+              </div>
+              <div className="overflow-auto" style={{maxHeight: '70vh'}}>
+                <div dangerouslySetInnerHTML={{ __html: billHtml || '' }} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
 }
 
 export default OrdersPage
+
+// Inline Bill Modal
+// Rendered at bottom of page via state billOpen/billHtml
+// Keeping simple to avoid extra dependencies
+/**
+ * Below modal markup injected by state above
+ */

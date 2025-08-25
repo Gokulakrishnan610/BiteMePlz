@@ -35,6 +35,7 @@ import AdminEditShopPage from './pages/admin/EditShopPage';
 import TransactionsPage from './pages/admin/TransactionsPage';
 import AnalyticsPage from './pages/admin/AnalyticsPage';
 import FinancialReportsPage from './pages/admin/FinancialReportsPage';
+import VerifyOrdersPage from './pages/admin/VerifyOrdersPage';
 import ShopLogsPage from './pages/shopAdmin/ShopLogsPage';
 import StudentAnalyticsPage from './pages/shopAdmin/StudentAnalyticsPage';
 import MaintenancePage from './pages/admin/MaintenancePage';
@@ -46,7 +47,6 @@ import ShopAdminCreateProductPage from './pages/shopAdmin/CreateProductPage';
 import ShopAdminEditProductPage from './pages/shopAdmin/EditProductPage';
 import ShopAdminOrdersPage from './pages/shopAdmin/OrdersPage';
 import ShopAdminTransactionsPage from './pages/shopAdmin/TransactionsPage';
-import ShopAdminScanQRPage from './pages/shopAdmin/ScanQRPage';
 import SubShopAdminsPage from './pages/shopAdmin/SubShopAdminsPage';
 
 // Components
@@ -143,6 +143,7 @@ function App() {
             <Route path="shops/create" element={<AdminCreateShopPage />} />
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
+            <Route path="verify-orders" element={<VerifyOrdersPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="financial-reports" element={<FinancialReportsPage />} />
                         
@@ -156,7 +157,6 @@ function App() {
             <Route path="shop-admin/products/edit/:id" element={<ShopAdminEditProductPage />} />
             <Route path="shop-admin/orders" element={<ShopAdminOrdersPage />} />
             <Route path="shop-admin/transactions" element={<ShopAdminTransactionsPage />} />
-            <Route path="shop-admin/scan" element={<ShopAdminScanQRPage />} />
             <Route path="shop-admin/sub-admins" element={<SubShopAdminsPage />} />
           </Route>
           
@@ -182,7 +182,6 @@ function App() {
             <Route path="products/edit/:id" element={<ShopAdminEditProductPage />} />
             <Route path="orders" element={<ShopAdminOrdersPage />} />
             <Route path="transactions" element={<ShopAdminTransactionsPage />} />
-            <Route path="scan" element={<ShopAdminScanQRPage />} />
             <Route 
               path="sub-admins" 
               element={

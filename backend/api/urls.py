@@ -399,10 +399,11 @@ urlpatterns = [
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('orders/<uuid:pk>/pay/', OrderViewSet.as_view({'put': 'pay'}), name='order-pay'),
-    path('orders/scan-qr-code/', OrderViewSet.as_view({'get': 'scan_qr_code', 'post': 'scan_qr_code'}), name='order-scan-qr-code'),
+    path('orders/search/', OrderViewSet.as_view({'get': 'search'}), name='order-search'),
+    path('orders/<uuid:pk>/reject/', OrderViewSet.as_view({'post': 'reject'}), name='order-reject'),
+    path('orders/<uuid:pk>/bill/', OrderViewSet.as_view({'get': 'bill'}), name='order-bill'),
+    # Removed QR scan endpoint; orders are retrievable directly by id in details endpoints
     path('orders/<uuid:pk>/mark-item-bought/', OrderViewSet.as_view({'patch': 'mark_item_bought'}), name='order-mark-item-bought'),
-    # Manual registration for multi_shop action
-    path('orders/multi_shop/', OrderViewSet.as_view({'post': 'multi_shop'}), name='order-multi-shop'),
     # Manual registration for shop orders action
     path('orders/shop/', OrderViewSet.as_view({'get': 'shop'}), name='order-shop'),
     # Manual registration for shop transactions action
