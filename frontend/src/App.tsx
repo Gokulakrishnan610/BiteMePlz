@@ -35,7 +35,6 @@ import AdminEditShopPage from './pages/admin/EditShopPage';
 import TransactionsPage from './pages/admin/TransactionsPage';
 import AnalyticsPage from './pages/admin/AnalyticsPage';
 import FinancialReportsPage from './pages/admin/FinancialReportsPage';
-import VerifyOrdersPage from './pages/admin/VerifyOrdersPage';
 import ShopLogsPage from './pages/shopAdmin/ShopLogsPage';
 import StudentAnalyticsPage from './pages/shopAdmin/StudentAnalyticsPage';
 import MaintenancePage from './pages/admin/MaintenancePage';
@@ -144,7 +143,7 @@ function App() {
             <Route path="shops/create" element={<AdminCreateShopPage />} />
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
-            <Route path="verify-orders" element={<VerifyOrdersPage />} />
+            {/* Removed admin Verify Orders route; verification is in shop mode */}
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="financial-reports" element={<FinancialReportsPage />} />
                         
@@ -159,6 +158,7 @@ function App() {
             <Route path="shop-admin/orders" element={<ShopAdminOrdersPage />} />
             <Route path="shop-admin/transactions" element={<ShopAdminTransactionsPage />} />
             <Route path="shop-admin/sub-admins" element={<SubShopAdminsPage />} />
+            <Route path="shop-admin/order-verification" element={<OrderVerificationPage />} />
           </Route>
           
           {/* shop Admin Routes */}
