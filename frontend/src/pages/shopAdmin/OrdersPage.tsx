@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import api from "../../api"
 import { ShoppingBag, AlertCircle, Calendar, X, ArrowUpDown } from "lucide-react"
 import { useAuth } from "../../context/AuthContext"
@@ -50,39 +50,40 @@ const OrdersPage: React.FC = () => {
   // Determine the effective shop ID
   const effectiveShopId = user?.role === "admin" && selectedShop ? selectedShop.id : user?.shop
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        if (!effectiveShopId) {
-          setLoading(false)
-          return
-        }
-
-        const { data }: { data: any } = await api.get(`/api/orders/shop/?shop_id=${effectiveShopId}`)
-        // Transform backend data to match frontend format
-        const transformedOrders = (data.results || data).map((order: any) => ({
-          _id: order._id,
-          order_id: order.order_id,
-          user: order.user,
-          items: order.order_items || [],
-          totalPrice: order.total_price,
-          // Reflect true backend status: pending | completed | expired
-          status: order.status === 'expired' ? 'expired' : (order.is_verified ? 'verified' : 'pending'),
-          payment_status: order.is_paid ? "paid" : "pending",
-          created_at: order.createdAt,
-          shop: { name: "Current Shop" }, // Placeholder since we're in shop context
-        }))
-        setOrders(transformedOrders)
+  const fetchOrders = useCallback(async () => {
+    try {
+      setLoading(true)
+      if (!effectiveShopId) {
         setLoading(false)
-      } catch (err) {
-        console.error("Error fetching orders:", err)
-        toast.error("Failed to fetch orders")
-        setLoading(false)
+        return
       }
-    }
 
-    fetchOrders()
+      const { data }: { data: any } = await api.get(`/api/orders/shop/?shop_id=${effectiveShopId}`)
+      // Transform backend data to match frontend format
+      const transformedOrders = (data.results || data).map((order: any) => ({
+        _id: order._id,
+        order_id: order.order_id,
+        user: order.user,
+        items: order.order_items || [],
+        totalPrice: order.total_price,
+        // Reflect true backend status: pending | completed | expired
+        status: order.status === 'expired' ? 'expired' : (order.is_verified ? 'verified' : 'pending'),
+        payment_status: order.is_paid ? "paid" : "pending",
+        created_at: order.createdAt,
+        shop: { name: "Current Shop" }, // Placeholder since we're in shop context
+      }))
+      setOrders(transformedOrders)
+      setLoading(false)
+    } catch (err) {
+      console.error("Error fetching orders:", err)
+      toast.error("Failed to fetch orders")
+      setLoading(false)
+    }
   }, [effectiveShopId])
+
+  useEffect(() => {
+    fetchOrders()
+  }, [effectiveShopId, fetchOrders])
 
   const handleSort = (field: SortField) => {
     if (field === sortField) {
@@ -220,6 +221,13 @@ const OrdersPage: React.FC = () => {
               <X size={14} />
             </button>
           )}
+          <button
+            onClick={fetchOrders}
+            className="ml-2 px-3 py-1.5 text-xs sm:text-sm rounded-md bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-60"
+            disabled={loading}
+          >
+            {loading ? 'Refreshing…' : 'Refresh'}
+          </button>
         </div>
       </div>
 

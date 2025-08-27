@@ -1484,6 +1484,10 @@ class OrderViewSet(viewsets.ModelViewSet):
                 order.save()
                 # Always record a cancellation transaction for audit trail (amount 0 when no refund)
                 try:
+                    performer = getattr(request, 'user', None)
+                    performer_name = getattr(performer, 'name', getattr(performer, 'username', '')) if performer else 'System'
+                    performer_email = getattr(performer, 'email', '') if performer else ''
+                    performer_role = getattr(performer, 'role', '') if performer else ''
                     Transaction.objects.create(
                         user=order.user,
                         shop=order.shop,
@@ -1491,7 +1495,15 @@ class OrderViewSet(viewsets.ModelViewSet):
                         amount=0,
                         type='cancellation',
                         status='success',
-                        description=f'Order {order.order_id} rejected by admin'
+                        description=f"Order {order.order_id} rejected by {performer_name}",
+                        metadata={
+                            'cancelled_by': {
+                                'id': str(getattr(performer, 'id', '')) if performer else None,
+                                'name': performer_name,
+                                'email': performer_email,
+                                'role': performer_role,
+                            }
+                        }
                     )
                 except Exception:
                     pass
