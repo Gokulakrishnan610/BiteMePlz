@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import api from "../../api";
 import { useAuth } from "../../context/AuthContext";
 import { useAdminShop } from "../../context/AdminShopContext";
@@ -37,35 +37,37 @@ const OrderVerificationPage: React.FC = () => {
 
   const effectiveShopId = user?.role === "admin" && selectedShop ? selectedShop.id : user?.shop;
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        if (!effectiveShopId) {
-          setLoading(false);
-          return;
-        }
-        const { data }: { data: any } = await api.get(`/api/orders/shop/?shop_id=${effectiveShopId}`);
-        const filtered = (data.results || data).filter((order: any) => order.is_paid && !order.is_verified && order.status !== 'expired');
-        const transformedOrders = filtered.map((order: any) => ({
-          _id: order._id,
-          order_id: order.order_id,
-          user: order.user,
-          items: order.order_items || [],
-          totalPrice: order.total_price,
-          status: order.is_verified ? "verified" : "pending",
-          payment_status: order.is_paid ? "paid" : "pending",
-          created_at: order.createdAt,
-          shop: { name: "Current Shop" },
-        }));
-        setOrders(transformedOrders);
+  const fetchOrders = useCallback(async () => {
+    try {
+      setLoading(true);
+      if (!effectiveShopId) {
         setLoading(false);
-      } catch (err) {
-        toast.error("Failed to fetch orders");
-        setLoading(false);
+        return;
       }
-    };
-    fetchOrders();
+      const { data }: { data: any } = await api.get(`/api/orders/shop/?shop_id=${effectiveShopId}`);
+      const filtered = (data.results || data).filter((order: any) => order.is_paid && !order.is_verified && order.status !== 'expired');
+      const transformedOrders = filtered.map((order: any) => ({
+        _id: order._id,
+        order_id: order.order_id,
+        user: order.user,
+        items: order.order_items || [],
+        totalPrice: order.total_price,
+        status: order.is_verified ? "verified" : "pending",
+        payment_status: order.is_paid ? "paid" : "pending",
+        created_at: order.createdAt,
+        shop: { name: "Current Shop" },
+      }));
+      setOrders(transformedOrders);
+      setLoading(false);
+    } catch (err) {
+      toast.error("Failed to fetch orders");
+      setLoading(false);
+    }
   }, [effectiveShopId]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [effectiveShopId, fetchOrders]);
 
   const handleAccept = async (orderId: string) => {
     try {
@@ -91,7 +93,16 @@ const OrderVerificationPage: React.FC = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-      <h1 className="text-xl sm:text-2xl font-bold mb-4">Order Verification</h1>
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <h1 className="text-xl sm:text-2xl font-bold">Order Verification</h1>
+        <button
+          onClick={fetchOrders}
+          className="px-3 py-2 text-sm rounded-md bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-60"
+          disabled={loading}
+        >
+          {loading ? 'Refreshing…' : 'Refresh'}
+        </button>
+      </div>
       {orders.length === 0 ? (
         <div className="text-center py-8 sm:py-12 px-4">
           <h2 className="text-lg sm:text-xl font-semibold text-gray-600 mb-2">No Orders to Verify</h2>

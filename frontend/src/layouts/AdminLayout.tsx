@@ -129,7 +129,7 @@ const AdminLayout: React.FC = () => {
                 </h3>
                 <div className="space-y-2">
                   <SidebarLink to="/kisok-ac-back-office/transactions" icon={Receipt} active={is_active('/kisok-ac-back-office/transactions')} closeSidebar={closeSidebar} label="Transactions" />
-                  <SidebarLink to="/kisok-ac-back-office/verify-orders" icon={ShoppingBag} active={is_active('/kisok-ac-back-office/verify-orders')} closeSidebar={closeSidebar} label="Verify Orders" />
+                  {/* Removed Verify Orders from admin. Use shop mode Order Verification. */}
                   <SidebarLink to="/kisok-ac-back-office/analytics" icon={TrendingUp} active={is_active('/kisok-ac-back-office/analytics')} closeSidebar={closeSidebar} label="Analytics" />
                   <SidebarLink to="/kisok-ac-back-office/financial-reports" icon={DollarSign} active={is_active('/kisok-ac-back-office/financial-reports')} closeSidebar={closeSidebar} label="Reports" />
                 </div>
@@ -157,6 +157,7 @@ const AdminLayout: React.FC = () => {
                   <SidebarLink to="/kisok-ac-back-office/shop-admin" icon={BarChart3} active={is_active('/kisok-ac-back-office/shop-admin')} closeSidebar={closeSidebar} label="Dashboard" />
                   <SidebarLink to="/kisok-ac-back-office/shop-admin/products" icon={Package} active={isPathActive('/kisok-ac-back-office/shop-admin/products')} closeSidebar={closeSidebar} label="Products" />
                   <SidebarLink to="/kisok-ac-back-office/shop-admin/orders" icon={ShoppingBag} active={isPathActive('/kisok-ac-back-office/shop-admin/orders')} closeSidebar={closeSidebar} label="Orders" />
+                  <SidebarLink to="/kisok-ac-back-office/shop-admin/order-verification" icon={Receipt} active={isPathActive('/kisok-ac-back-office/shop-admin/order-verification')} closeSidebar={closeSidebar} label="Order Verification" />
                   <SidebarLink to="/kisok-ac-back-office/shop-admin/transactions" icon={Receipt} active={isPathActive('/kisok-ac-back-office/shop-admin/transactions')} closeSidebar={closeSidebar} label="Transactions" />
                   {/* Scan QR removed */}
                   <SidebarLink to="/kisok-ac-back-office/shop-admin/sub-admins" icon={UserPlus} active={isPathActive('/kisok-ac-back-office/shop-admin/sub-admins')} closeSidebar={closeSidebar} label="Sub-Admins" />

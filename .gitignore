@@ -57,3 +57,4 @@ staticfiles/
 *.njsproj
 *.sln
 *.sw?
+backend/db.sqlite3
