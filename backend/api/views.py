@@ -1967,6 +1967,21 @@ class OrderViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Shop ID is required'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
+            # Before returning, auto-mark any overdue orders as expired to keep UI in sync
+            now = timezone.now()
+            overdue = Order.objects.filter(
+                shop=shop_id,
+                status='pending',
+                is_verified=False,
+                expires_at__lt=now,
+            )
+            for o in overdue:
+                try:
+                    o.status = 'expired'
+                    o.save(update_fields=['status', 'updated_at'])
+                except Exception:
+                    pass
+
             orders = Order.objects.filter(shop=shop_id)
             # Convert orders to dictionaries with proper UUID handling
             orders_data = []
@@ -2005,11 +2020,22 @@ class OrderViewSet(viewsets.ModelViewSet):
                     },
                     'total_price': float(order.total_price),
                     'is_paid': order.is_paid,
+                    'payment_result': order.payment_result,
                     'is_verified': order.is_verified,
                     'status': order.status,
                     'order_items': processed_items,
                     'createdAt': order.created_at.isoformat() if order.created_at else None,
                 }
+                # Convenience flag to help UI distinguish admin rejection from natural expiry
+                try:
+                    pr = order.payment_result or {}
+                    order_dict['is_rejected'] = (
+                        order.status == 'expired' and (not order.is_paid) and (
+                            (pr.get('status') == 'refunded') or ('refunded_at' in pr) or (pr.get('reason') == 'admin_reject')
+                        )
+                    )
+                except Exception:
+                    order_dict['is_rejected'] = False
                 orders_data.append(order_dict)
             return Response(orders_data)
         except Exception as e:

@@ -34,6 +34,7 @@ const OrderVerificationPage: React.FC = () => {
   const { selectedShop } = useAdminShop();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   const effectiveShopId = user?.role === "admin" && selectedShop ? selectedShop.id : user?.shop;
 
@@ -45,7 +46,9 @@ const OrderVerificationPage: React.FC = () => {
         return;
       }
       const { data }: { data: any } = await api.get(`/api/orders/shop/?shop_id=${effectiveShopId}`);
-      const filtered = (data.results || data).filter((order: any) => order.is_paid && !order.is_verified && order.status !== 'expired');
+      const filtered = (data.results || data)
+        .filter((order: any) => order.is_paid && !order.is_verified && order.status !== 'expired')
+        .filter((order: any) => !search || String(order.order_id).toLowerCase().includes(search.toLowerCase()));
       const transformedOrders = filtered.map((order: any) => ({
         _id: order._id,
         order_id: order.order_id,
@@ -67,6 +70,10 @@ const OrderVerificationPage: React.FC = () => {
 
   useEffect(() => {
     fetchOrders();
+    const id = setInterval(() => {
+      fetchOrders();
+    }, 10000);
+    return () => clearInterval(id);
   }, [effectiveShopId, fetchOrders]);
 
   const handleAccept = async (orderId: string) => {
@@ -93,15 +100,24 @@ const OrderVerificationPage: React.FC = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-      <div className="flex items-center justify-between gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
         <h1 className="text-xl sm:text-2xl font-bold">Order Verification</h1>
-        <button
-          onClick={fetchOrders}
-          className="px-3 py-2 text-sm rounded-md bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-60"
-          disabled={loading}
-        >
-          {loading ? 'Refreshing…' : 'Refresh'}
-        </button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <input
+            type="text"
+            placeholder="Search by Order # (e.g., 20250827-0005)"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1 sm:flex-initial px-3 py-2 border rounded-md text-sm"
+          />
+          <button
+            onClick={fetchOrders}
+            className="px-3 py-2 text-sm rounded-md bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-60"
+            disabled={loading}
+          >
+            {loading ? 'Refreshing…' : 'Refresh'}
+          </button>
+        </div>
       </div>
       {orders.length === 0 ? (
         <div className="text-center py-8 sm:py-12 px-4">

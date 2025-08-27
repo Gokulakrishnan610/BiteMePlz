@@ -15,7 +15,7 @@ interface shop {
   is_active: boolean;
   is_open: boolean;
   final_validity_time: string;
-  qrValidityMinutes: number;
+  qr_validity_minutes: number;
 }
 
 const EditShopPage: React.FC = () => {
@@ -32,7 +32,7 @@ const EditShopPage: React.FC = () => {
     is_active: true,
     is_open: true,
     final_validity_time: '18:30',
-    qrValidityMinutes: '20'
+    qr_validity_minutes: '20'
   });
   const [changePasswordDialog, setChangePasswordDialog] = useState<{
     is_open: boolean;
@@ -68,7 +68,7 @@ const EditShopPage: React.FC = () => {
           is_active: data.is_active ?? true,
           is_open: data.is_open ?? true,
           final_validity_time: validityTime,
-          qrValidityMinutes: (data.qrValidityMinutes || 20).toString()
+          qr_validity_minutes: (data.qr_validity_minutes || 20).toString()
         });
         setLoading(false);
       } catch (error) {
@@ -93,7 +93,7 @@ const EditShopPage: React.FC = () => {
       }
 
       // Validate QR validity minutes
-      const qrMinutes = parseInt(formData.qrValidityMinutes);
+      const qrMinutes = parseInt(formData.qr_validity_minutes);
       if (isNaN(qrMinutes) || qrMinutes < 1 || qrMinutes > 60) {
         throw new Error('QR validity must be between 1 and 60 minutes');
       }
@@ -117,7 +117,7 @@ const EditShopPage: React.FC = () => {
         is_active: formData.is_active,
         is_open: formData.is_open,
         final_validity_time: final_validityDate.toISOString(),
-        qrValidityMinutes: qrMinutes
+        qr_validity_minutes: qrMinutes
       };
 
       await api.patch(`/api/shops/${id}/`, payload);
@@ -323,8 +323,8 @@ const EditShopPage: React.FC = () => {
                 </label>
                 <input
                   type="number"
-                  name="qrValidityMinutes"
-                  value={formData.qrValidityMinutes}
+                  name="qr_validity_minutes"
+                  value={formData.qr_validity_minutes}
                   onChange={handleChange}
                   className="input"
                   min="1"

@@ -428,8 +428,13 @@ const OrderDetailsPage: React.FC = () => {
                       </div>
 
                       <div className="p-3 bg-gray-50 rounded-lg">
+                        <p className="text-sm text-gray-600 mb-1">Valid Until</p>
+                        <p className="font-medium text-gray-900">{formatISTTime(order.expires_at || order.qr_valid_until || null)}</p>
+                      </div>
+
+                      <div className="p-3 bg-gray-50 rounded-lg">
                         <p className="text-sm text-gray-600 mb-1">Final Validity</p>
-                        <p className="font-medium text-gray-900">{formatISTTime(order?.final_validity ?? null)}</p>
+                        <p className="font-medium text-gray-900">{formatISTTime(order.final_validity || order.shop?.final_validity_time || order.expires_at || null)}</p>
                       </div>
                     </div>
                   </CardContent>
