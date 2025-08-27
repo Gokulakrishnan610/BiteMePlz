@@ -2698,6 +2698,82 @@ class OrderViewSet(viewsets.ModelViewSet):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+    @action(detail=True, methods=['post', 'patch'])
+    def update_expiry(self, request, pk=None):
+        """Update or extend an order's expiry time.
+
+        Accepts either:
+        - add_minutes: int (positive) to extend from current expires_at
+        - new_expires_at: ISO datetime string to set absolute expiry
+
+        Constraints:
+        - Only for pending, unverified orders
+        - Cannot set beyond shop.final_validity_time if present
+        - Requires admin or shopAdmin
+        """
+        try:
+            if getattr(request.user, 'role', None) not in ['admin', 'shopAdmin']:
+                return Response({'error': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+
+            try:
+                order = self.get_object()
+            except Exception:
+                try:
+                    order = Order.objects.get(order_id=pk)
+                except Order.DoesNotExist:
+                    return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            if order.status != 'pending' or order.is_verified:
+                return Response({'error': 'Only pending, unverified orders can be updated'}, status=status.HTTP_400_BAD_REQUEST)
+
+            add_minutes = request.data.get('add_minutes')
+            new_expires_at = request.data.get('new_expires_at')
+
+            from django.utils.dateparse import parse_datetime
+            target = None
+            if add_minutes is not None:
+                try:
+                    delta = int(add_minutes)
+                except Exception:
+                    return Response({'error': 'add_minutes must be an integer'}, status=status.HTTP_400_BAD_REQUEST)
+                if delta <= 0:
+                    return Response({'error': 'add_minutes must be > 0'}, status=status.HTTP_400_BAD_REQUEST)
+                base = order.expires_at or timezone.now()
+                target = base + timedelta(minutes=delta)
+            elif new_expires_at:
+                dt = parse_datetime(str(new_expires_at))
+                if not dt:
+                    return Response({'error': 'new_expires_at must be an ISO datetime'}, status=status.HTTP_400_BAD_REQUEST)
+                target = dt
+            else:
+                return Response({'error': 'Provide add_minutes or new_expires_at'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Respect shop final validity cap
+            try:
+                shop_cap = getattr(order.shop, 'final_validity_time', None)
+                if shop_cap and target > shop_cap:
+                    target = shop_cap
+            except Exception:
+                pass
+
+            if target <= timezone.now():
+                return Response({'error': 'Expiry must be in the future'}, status=status.HTTP_400_BAD_REQUEST)
+
+            order.expires_at = target
+            order.save(update_fields=['expires_at', 'updated_at'])
+
+            # Optional: reflect in qr_valid_until when reserved/unpaid flows use it
+            try:
+                if not order.is_paid:
+                    order.qr_valid_until = target
+                    order.save(update_fields=['qr_valid_until', 'updated_at'])
+            except Exception:
+                pass
+
+            return Response(OrderSerializer(order).data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class TransactionViewSet(viewsets.ModelViewSet):
     queryset = Transaction.objects.all()
     serializer_class = TransactionSerializer

@@ -33,6 +33,7 @@ const OrderVerificationPage: React.FC = () => {
   const { user } = useAuth();
   const { selectedShop } = useAdminShop();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
@@ -47,8 +48,7 @@ const OrderVerificationPage: React.FC = () => {
       }
       const { data }: { data: any } = await api.get(`/api/orders/shop/?shop_id=${effectiveShopId}`);
       const filtered = (data.results || data)
-        .filter((order: any) => order.is_paid && !order.is_verified && order.status !== 'expired')
-        .filter((order: any) => !search || String(order.order_id).toLowerCase().includes(search.toLowerCase()));
+        .filter((order: any) => order.is_paid && !order.is_verified && order.status !== 'expired');
       const transformedOrders = filtered.map((order: any) => ({
         _id: order._id,
         order_id: order.order_id,
@@ -60,7 +60,7 @@ const OrderVerificationPage: React.FC = () => {
         created_at: order.createdAt,
         shop: { name: "Current Shop" },
       }));
-      setOrders(transformedOrders);
+      setAllOrders(transformedOrders);
       setLoading(false);
     } catch (err) {
       toast.error("Failed to fetch orders");
@@ -75,6 +75,34 @@ const OrderVerificationPage: React.FC = () => {
     }, 10000);
     return () => clearInterval(id);
   }, [effectiveShopId, fetchOrders]);
+
+  // Filter orders as user types
+  useEffect(() => {
+    const s = search.trim().toLowerCase();
+    if (!s) {
+      setOrders(allOrders);
+      return;
+    }
+    const filtered = allOrders.filter((order) => {
+      if (/^\d{4}$/.test(s)) {
+        return (
+          String(order.order_id).slice(-4) === s ||
+          String(order._id).toLowerCase().includes(s) ||
+          (order.user?.name && order.user.name.toLowerCase().includes(s)) ||
+          (order.user?.email && order.user.email.toLowerCase().includes(s)) ||
+          (order.user?.rollNo && order.user.rollNo.toLowerCase().includes(s))
+        );
+      }
+      return (
+        String(order.order_id).toLowerCase().includes(s) ||
+        String(order._id).toLowerCase().includes(s) ||
+        (order.user?.name && order.user.name.toLowerCase().includes(s)) ||
+        (order.user?.email && order.user.email.toLowerCase().includes(s)) ||
+        (order.user?.rollNo && order.user.rollNo.toLowerCase().includes(s))
+      );
+    });
+    setOrders(filtered);
+  }, [search, allOrders]);
 
   const handleAccept = async (orderId: string) => {
     try {
@@ -141,7 +169,7 @@ const OrderVerificationPage: React.FC = () => {
               <tbody>
                 {orders.map((order) => (
                   <tr key={order._id} className="border-t hover:bg-gray-50">
-                    <td className="p-3 font-medium">#{order.order_id.slice(-8)}</td>
+                    <td className="p-3 font-medium">#{order.order_id}</td>
                     <td className="p-3">
                       <div>
                         <p className="font-medium">{order.user.name}</p>
@@ -160,7 +188,7 @@ const OrderVerificationPage: React.FC = () => {
                     <td className="p-3 font-medium">₹{order.totalPrice}</td>
                     <td className="p-3 text-sm">{new Date(order.created_at).toLocaleDateString()}</td>
                     <td className="p-3">
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 items-center">
                         <button
                           className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
                           onClick={() => handleAccept(order._id)}
@@ -173,6 +201,29 @@ const OrderVerificationPage: React.FC = () => {
                         >
                           Reject
                         </button>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min={1}
+                            placeholder="+min"
+                            className="w-16 px-2 py-1 border rounded text-xs"
+                            onKeyDown={async (e) => {
+                              if (e.key === 'Enter') {
+                                const minutes = parseInt((e.target as HTMLInputElement).value)
+                                if (!isNaN(minutes) && minutes > 0) {
+                                  try {
+                                    await api.patch(`/api/orders/${order._id}/update_expiry/`, { add_minutes: minutes })
+                                    toast.success(`Extended by ${minutes} min`)
+                                    fetchOrders()
+                                  } catch (err) {
+                                    toast.error('Failed to extend expiry')
+                                  }
+                                }
+                              }
+                            }}
+                          />
+                          <span className="text-xs text-gray-500">Extend</span>
+                        </div>
                       </div>
                     </td>
                   </tr>
