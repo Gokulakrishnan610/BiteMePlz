@@ -399,6 +399,7 @@ urlpatterns = [
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('orders/<uuid:pk>/pay/', OrderViewSet.as_view({'put': 'pay'}), name='order-pay'),
+    path('orders/<uuid:pk>/verify/', OrderViewSet.as_view({'put': 'verify', 'post': 'verify'}), name='order-verify'),
     path('orders/search/', OrderViewSet.as_view({'get': 'search'}), name='order-search'),
     path('orders/<uuid:pk>/reject/', OrderViewSet.as_view({'post': 'reject'}), name='order-reject'),
     path('orders/<uuid:pk>/bill/', OrderViewSet.as_view({'get': 'bill'}), name='order-bill'),

@@ -1430,25 +1430,97 @@ class OrderViewSet(viewsets.ModelViewSet):
                     return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
 
             if order.status in ['expired', 'completed']:
-                return Response({'error': f'Cannot reject order with status {order.status}'}, status=status.HTTP_400_BAD_REQUEST)
+                # No-op: already finalized; return current state for idempotency
+                return Response(OrderSerializer(order).data, status=status.HTTP_200_OK)
 
             with transaction.atomic():
-                payment_method = (order.payment_result or {}).get('method', 'balance')
-                if payment_method == 'balance' and order.is_paid:
+                # Always refund to wallet if paid, regardless of payment method
+                if order.is_paid:
                     order.user.balance += order.total_price
                     order.user.save()
+                    # Create refund transaction with method/status for UI clarity
+                    try:
+                        payment_method = None
+                        try:
+                            pr = order.payment_result or {}
+                            payment_method = pr.get('method') or pr.get('payment_method') or 'balance'
+                        except Exception:
+                            payment_method = 'balance'
+                        Transaction.objects.create(
+                            user=order.user,
+                            shop=order.shop,
+                            order=order,
+                            amount=order.total_price,
+                            type='refund',
+                            status='success',
+                            payment_method=payment_method,
+                            description=f'Refund for rejected order {order.order_id}',
+                            metadata={'reason': 'admin_reject'}
+                        )
+                    except Exception:
+                        pass
+                    # Notify wallet balance change in real-time
+                    try:
+                        from api.tasks import send_wallet_update
+                        send_wallet_update(
+                            user_id=str(order.user.id),
+                            balance=float(order.user.balance),
+                            change=float(order.total_price),  # Positive for refund
+                            transaction_type='order_refund'
+                        )
+                    except Exception:
+                        pass
+                # Mark order as expired and unpaid after refund so it won't reappear in verification queue
+                order.status = 'expired'
+                order.is_verified = False
+                order.is_paid = False
+                # Optionally annotate payment_result to reflect refund
+                try:
+                    pr = order.payment_result or {}
+                    pr.update({'status': 'refunded', 'refunded_at': timezone.now().isoformat()})
+                    order.payment_result = pr
+                except Exception:
+                    pass
+                order.save()
+                # Always record a cancellation transaction for audit trail (amount 0 when no refund)
+                try:
                     Transaction.objects.create(
                         user=order.user,
                         shop=order.shop,
                         order=order,
-                        amount=order.total_price,
-                        type='refund',
-                        description=f'Refund for rejected order {order.order_id}',
-                        metadata={'reason': 'admin_reject'}
+                        amount=0,
+                        type='cancellation',
+                        status='success',
+                        description=f'Order {order.order_id} rejected by admin'
                     )
-                order.status = 'expired'
-                order.is_verified = False
-                order.save()
+                except Exception:
+                    pass
+            # Log the rejection in shop logs
+            try:
+                ShopLog.objects.create(
+                    shop=order.shop,
+                    action='order_rejected',
+                    performed_by=request.user,
+                    details={
+                        'order_id': order.order_id,
+                        'total_price': float(order.total_price),
+                        'rejected_at': timezone.now().isoformat(),
+                        'reason': 'admin_reject',
+                    }
+                )
+            except Exception:
+                pass
+            # Broadcast update so clients refresh order state in real-time
+            try:
+                from .websocket_utils import broadcast_order_verification
+                order_data = OrderSerializer(order).data
+                broadcast_order_verification(
+                    order_id=str(order.id),
+                    shop_id=str(order.shop.id),
+                    order_data=order_data
+                )
+            except Exception:
+                pass
             return Response(OrderSerializer(order).data)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -2129,7 +2201,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=True, methods=['put'])
+    @action(detail=True, methods=['put', 'post'])
     def verify(self, request, pk=None):
         # Try to get order by UUID first, then by order_id
         try:
@@ -2156,9 +2228,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         # --- END SHOP CONTEXT CHECK ---
 
         if order.is_verified:
-            return Response({'error': 'Order already verified'}, status=status.HTTP_400_BAD_REQUEST)
-        if order.status == 'expired':
-            return Response({'error': 'Order has expired'}, status=status.HTTP_400_BAD_REQUEST)
+            # Idempotent success
+            return Response(OrderSerializer(order).data, status=status.HTTP_200_OK)
 
         # Mark as verified
         order.is_verified = True

@@ -154,6 +154,11 @@ export default function Navbar({ className }: NavbarProps) {
                             <HoveredLink href="/profile">Parent Dashboard</HoveredLink>
                         </div>
                     )}
+                    {user && user.role === 'shopAdmin' && (
+                        <div className="py-2">
+                            <HoveredLink href="/kisok-sp-back-office/order-verification">Order Verification</HoveredLink>
+                        </div>
+                    )}
                     <div className="py-2">
                         <HoveredLink href="/profile">Profile</HoveredLink>
                     </div>

@@ -136,6 +136,20 @@ const ShopAdminLayout: React.FC = () => {
             
             {/* Scan QR removed */}
             
+            {/* Order Verification link for shop admins only */}
+            {user && !user.is_sub_admin && (
+              <Link
+                to="/kisok-sp-back-office/order-verification"
+                className={`flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100 hover:text-purple-600 transition-all duration-200 border-l-4 border-transparent hover:border-purple-600 rounded-xl ${
+                  is_active('/kisok-sp-back-office/order-verification') ? 'bg-gray-100 text-purple-600 border-purple-600' : ''
+                }`}
+                onClick={closeSidebar}
+              >
+                <Receipt size={20} className="mr-3" />
+                <span>Order Verification</span>
+              </Link>
+            )}
+            
             {/* Only show Sub-Admins link for original shop admins (not sub-admins) */}
             {user && !user.is_sub_admin && (
               <Link

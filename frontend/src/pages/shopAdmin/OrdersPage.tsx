@@ -66,7 +66,8 @@ const OrdersPage: React.FC = () => {
           user: order.user,
           items: order.order_items || [],
           totalPrice: order.total_price,
-          status: order.is_verified ? "verified" : "pending",
+          // Reflect true backend status: pending | completed | expired
+          status: order.status === 'expired' ? 'expired' : (order.is_verified ? 'verified' : 'pending'),
           payment_status: order.is_paid ? "paid" : "pending",
           created_at: order.createdAt,
           shop: { name: "Current Shop" }, // Placeholder since we're in shop context
@@ -136,6 +137,30 @@ const OrdersPage: React.FC = () => {
         return "text-gray-600 bg-gray-100"
     }
   }
+
+  // Accept order
+  // const handleAccept = async (orderId: string) => {
+  //   try {
+  //     await api.put(`/api/orders/${orderId}/verify/`)
+  //     setOrders((prev) => prev.map((order) => (order._id === orderId ? { ...order, status: "verified" } : order)))
+  //     toast.success("Order verified!")
+  //   } catch (error) {
+  //     console.error("Error verifying order:", error)
+  //     toast.error("Failed to verify order")
+  //   }
+  // }
+
+  // Reject order
+  // const handleReject = async (orderId: string) => {
+  //   try {
+  //     await api.post(`/api/orders/${orderId}/reject/`)
+  //     setOrders((prev) => prev.map((order) => (order._id === orderId ? { ...order, status: "expired" } : order)))
+  //     toast.success("Order rejected and refunded!")
+  //   } catch (error) {
+  //     console.error("Error rejecting order:", error)
+  //     toast.error("Failed to reject order")
+  //   }
+  // }
 
   const filteredOrders = selectedDate
     ? orders.filter((order) => {
@@ -274,11 +299,16 @@ const OrdersPage: React.FC = () => {
                       </span>
                       <span
                         className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          order.status === "verified" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                          order.status === "verified" ? "bg-green-100 text-green-800" : order.status === "expired" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
                         }`}
                       >
-                        {order.status === "verified" ? "Verified" : "Not Verified"}
+                        {order.status === "verified"
+                          ? "Verified"
+                          : order.status === "expired"
+                          ? "Rejected"
+                          : "Not Verified"}
                       </span>
+                      {/* Accept/Reject buttons removed */}
                     </div>
                   </td>
                   <td className="p-3 text-sm">{new Date(order.created_at).toLocaleDateString()}</td>
@@ -345,7 +375,7 @@ const OrdersPage: React.FC = () => {
               </div>
 
               <div className="border-t pt-3">
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 items-center">
                   <span
                     className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                       order.payment_status === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
@@ -355,11 +385,16 @@ const OrdersPage: React.FC = () => {
                   </span>
                   <span
                     className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      order.status === "verified" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                      order.status === "verified" ? "bg-green-100 text-green-800" : order.status === "expired" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
                     }`}
                   >
-                    {order.status === "verified" ? "Verified" : "Not Verified"}
+                    {order.status === "verified"
+                      ? "Verified"
+                      : order.status === "expired"
+                      ? "Rejected"
+                      : "Not Verified"}
                   </span>
+                  {/* Accept/Reject buttons removed */}
                 </div>
               </div>
             </div>

@@ -48,6 +48,7 @@ import ShopAdminEditProductPage from './pages/shopAdmin/EditProductPage';
 import ShopAdminOrdersPage from './pages/shopAdmin/OrdersPage';
 import ShopAdminTransactionsPage from './pages/shopAdmin/TransactionsPage';
 import SubShopAdminsPage from './pages/shopAdmin/SubShopAdminsPage';
+import OrderVerificationPage from './pages/shopAdmin/OrderVerificationPage';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -181,6 +182,7 @@ function App() {
             <Route path="products/create" element={<ShopAdminCreateProductPage />} />
             <Route path="products/edit/:id" element={<ShopAdminEditProductPage />} />
             <Route path="orders" element={<ShopAdminOrdersPage />} />
+            <Route path="order-verification" element={<OrderVerificationPage />} />
             <Route path="transactions" element={<ShopAdminTransactionsPage />} />
             <Route 
               path="sub-admins" 
