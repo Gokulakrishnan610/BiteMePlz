@@ -2,8 +2,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../api';
-import { ArrowLeft, AlertCircle, Trash2, Clock, Wallet } from 'lucide-react';
-import { toast } from 'sonner';
+import { ArrowLeft, AlertCircle, Trash2, Wallet } from 'lucide-react';
+// import { toast } from 'sonner';
 import { useWallet } from '../../context/WalletContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -43,16 +43,7 @@ interface Order {
 
 // All requests should go through the shared axios client `api` which is preconfigured
 
-function parseLocalDateTime(dateString: string | Date) {
-  if (!dateString) return null;
-  if (dateString instanceof Date) return dateString;
-  const cleanString = dateString.split('.')[0].replace('Z', '');
-  const [datePart, timePart] = cleanString.split('T');
-  if (!datePart || !timePart) return null;
-  const [year, month, day] = datePart.split('-').map(Number);
-  const [hour = 0, minute = 0, second = 0] = timePart.split(':').map(Number);
-  return new Date(year, month - 1, day, hour, minute, second);
-}
+// (removed unused parseLocalDateTime helper)
 
 const OrderDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -64,22 +55,6 @@ const OrderDetailsPage: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [billHtml, setBillHtml] = useState<string | null>(null);
   const [billOpen, setBillOpen] = useState<boolean>(false);
-  // Removed unused timeLeft state (timer display not used)
-  const [isQRExpired, setIsQRExpired] = useState(false);
-  const [qrMeta, setQrMeta] = useState<any>(null);
-  const [groupDetails, setGroupDetails] = useState<{
-    combined_qr: string;
-    total_price: string;
-    shops: Array<{
-      order_id: string;
-      shop_id: string;
-      shop_name: string;
-      is_paid: boolean;
-      is_verified: boolean;
-      total_price: string;
-      items: OrderItem[];
-    }>;
-  } | null>(null);
 
   // Realtime: connect to the order's shop group and update when verified
   const wsRef = useRef<WebSocket | null>(null)
@@ -144,36 +119,7 @@ const OrderDetailsPage: React.FC = () => {
     }
   }, [order?.shop, order?._id])
 
-  useEffect(() => {
-    const checkOrderExpiry = async () => {
-      if (
-        order?.is_paid &&
-        !order.is_verified &&
-        order.balance_amount > 0 &&
-        order.status !== 'expired'
-      ) {
-        try {
-          const expiryRes = await api.get(`/api/orders/check-expiry/${order._id}/`);
-          if (expiryRes.data.balance !== undefined) {
-            await refreshBalance();
-          } else {
-            await refreshBalance();
-          }
-          const { data } = await api.get(`/api/orders/${id}/`);
-          setOrder(data);
-          if (data.status === 'expired') {
-            // toast removed
-          }
-        } catch (error: any) {
-          if (error?.response?.status !== 404) {
-            // silent fail for background expiry check
-          }
-        }
-      }
-    };
-
-    checkOrderExpiry();
-  }, [id, order, refreshBalance]);
+  // Removed periodic expiry check in this view to reduce warnings and background load
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -187,17 +133,17 @@ const OrderDetailsPage: React.FC = () => {
         };
         setOrder(normalized);
         // QR removed: do not parse qr_code
-        setQrMeta(null);
+        // setQrMeta(null);
         // If multi-order, fetch grouped details to render all shops on this page
         try {
           const { data: gd } = await api.get(`/api/orders/${id}/group_details/`);
           if (gd && gd.shops) {
-            setGroupDetails(gd);
+            // setGroupDetails(gd);
           } else {
-            setGroupDetails(null);
+            // setGroupDetails(null);
           }
         } catch {
-          setGroupDetails(null);
+          // setGroupDetails(null);
         }
         setLoading(false);
       } catch (err) {
@@ -211,7 +157,7 @@ const OrderDetailsPage: React.FC = () => {
 
   useEffect(() => {
     // QR removed: no expiry tracking
-    setIsQRExpired(false);
+    // setIsQRExpired(false);
   }, [order]);
 
   useEffect(() => {
@@ -307,7 +253,8 @@ const OrderDetailsPage: React.FC = () => {
               <Button
                 onClick={async () => {
                   try {
-                    const { data } = await api.get(`/api/orders/${order._id}/bill/`)
+                    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+                    const { data } = await api.get(`/api/orders/${order._id}/bill/`, { params: { tz }, headers: { 'X-Timezone': tz } })
                     setBillHtml(data.html || '')
                     setBillOpen(true)
                   } catch {}

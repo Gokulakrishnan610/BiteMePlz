@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import api from "../../api"
 import { Package, AlertCircle, Trash2, ArrowLeft, Clock, CheckCircle, XCircle } from "lucide-react"
-import { toast } from 'sonner'
+// import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
@@ -380,7 +380,8 @@ const OrdersPage: React.FC = () => {
                       <Button
                         onClick={async () => {
                           try {
-                            const { data } = await api.get(`/api/orders/${order._id}/bill/`)
+                            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+                            const { data } = await api.get(`/api/orders/${order._id}/bill/`, { params: { tz }, headers: { 'X-Timezone': tz } })
                             setBillHtml(data.html || '')
                             setBillOpen(true)
                           } catch {}
