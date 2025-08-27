@@ -1553,6 +1553,27 @@ class OrderViewSet(viewsets.ModelViewSet):
                 f"<td style='padding:6px 8px;border:1px solid #e5e7eb;text-align:right'>₹{float(i.get('price'))*int(i.get('quantity'))}</td></tr>"
                 for i in (order.order_items or [])
             ])
+            # Prefer paid time if available; fall back to created time
+            display_dt = order.paid_at or order.created_at
+            try:
+                # Determine timezone preference: query param tz, header X-Timezone, env var LOCAL_TIME_ZONE,
+                # else Django settings.TIME_ZONE, else UTC
+                from django.conf import settings as django_settings
+                try:
+                    from zoneinfo import ZoneInfo
+                    tz_param = request.query_params.get('tz') or request.GET.get('tz')
+                    tz_header = request.headers.get('X-Timezone') or request.META.get('HTTP_X_TIMEZONE')
+                    tz_name = (tz_param or tz_header or os.environ.get('LOCAL_TIME_ZONE') 
+                               or getattr(django_settings, 'TIME_ZONE', 'UTC'))
+                    local_dt = display_dt.astimezone(ZoneInfo(tz_name))
+                except Exception:
+                    # Fallback to Django's timezone helper (uses settings.TIME_ZONE)
+                    local_dt = timezone.localtime(display_dt)
+            except Exception:
+                local_dt = display_dt
+
+            display_dt_str = local_dt.strftime('%Y-%m-%d %I:%M %p %Z')
+
             html = f"""
 <!doctype html>
 <html><head><meta charset='utf-8'><title>Bill {order.order_id}</title></head>
@@ -1561,7 +1582,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     <h2 style='margin:0 0 8px 0'>Bill</h2>
     <div style='font-size:14px;color:#374151'>
       <div><strong>Order ID:</strong> {order.order_id}</div>
-      <div><strong>Date:</strong> {order.created_at.strftime('%Y-%m-%d %H:%M')}</div>
+      <div><strong>Date:</strong> {display_dt_str}</div>
       <div><strong>Shop:</strong> {order.shop.name}</div>
       <div><strong>Customer:</strong> {order.user.name}</div>
     </div>
