@@ -17,7 +17,7 @@ const CreateShopPage: React.FC = () => {
     shopLocation: '',
     shopImage: '',
     final_validity_time: '18:30', // Default to 6:30 PM
-    qrValidityMinutes: '20'
+    qr_validity_minutes: '20'
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,7 +43,7 @@ const CreateShopPage: React.FC = () => {
       }
 
       // Validate QR validity minutes
-      const qrMinutes = parseInt(formData.qrValidityMinutes);
+      const qrMinutes = parseInt(formData.qr_validity_minutes);
       if (isNaN(qrMinutes) || qrMinutes < 1 || qrMinutes > 60) {
         throw new Error('QR validity must be between 1 and 60 minutes');
       }
@@ -68,7 +68,7 @@ const CreateShopPage: React.FC = () => {
         shopLocation: formData.shopLocation,
         shopImage: formData.shopImage || '',
         final_validity_time: final_validityDate.toISOString(),
-        qrValidityMinutes: qrMinutes
+        qr_validity_minutes: qrMinutes
       };
 
       await api.post('/api/users/shop_admin/', payload);
@@ -186,8 +186,8 @@ const CreateShopPage: React.FC = () => {
                 </label>
                 <input
                   type="number"
-                  name="qrValidityMinutes"
-                  value={formData.qrValidityMinutes}
+                  name="qr_validity_minutes"
+                  value={formData.qr_validity_minutes}
                   onChange={handleChange}
                   className="input"
                   min="1"

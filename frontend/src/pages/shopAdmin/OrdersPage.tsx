@@ -31,6 +31,7 @@ interface Order {
   shop: {
     name: string
   }
+  is_rejected?: boolean
 }
 
 type SortField = "date" | "total" | "status"
@@ -71,6 +72,7 @@ const OrdersPage: React.FC = () => {
         payment_status: order.is_paid ? "paid" : "pending",
         created_at: order.createdAt,
         shop: { name: "Current Shop" }, // Placeholder since we're in shop context
+        is_rejected: !!order.is_rejected,
       }))
       setOrders(transformedOrders)
       setLoading(false)
@@ -277,7 +279,7 @@ const OrdersPage: React.FC = () => {
             <tbody>
               {sortedOrders.map((order) => (
                 <tr key={order._id} className="border-t hover:bg-gray-50">
-                  <td className="p-3 font-medium">#{order.order_id.slice(-8)}</td>
+                  <td className="p-3 font-medium">#{order.order_id}</td>
                   <td className="p-3">
                     <div>
                       <p className="font-medium">{order.user.name}</p>
@@ -305,17 +307,26 @@ const OrdersPage: React.FC = () => {
                       >
                         {order.payment_status === "paid" ? "Paid" : "Pending"}
                       </span>
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          order.status === "verified" ? "bg-green-100 text-green-800" : order.status === "expired" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
-                        }`}
-                      >
-                        {order.status === "verified"
-                          ? "Verified"
-                          : order.status === "expired"
-                          ? "Rejected"
-                          : "Not Verified"}
-                      </span>
+                      {order.status === "expired" ? (
+                        <div className="flex gap-2">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            Expired
+                          </span>
+                          {order.is_rejected && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              Rejected
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            order.status === "verified" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                          }`}
+                        >
+                          {order.status === "verified" ? "Verified" : "Not Verified"}
+                        </span>
+                      )}
                       {/* Accept/Reject buttons removed */}
                     </div>
                   </td>
@@ -358,7 +369,7 @@ const OrdersPage: React.FC = () => {
             <div key={order._id} className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="font-semibold text-lg">#{order.order_id.slice(-8)}</p>
+                  <p className="font-semibold text-lg">#{order.order_id}</p>
                   <p className="text-sm text-gray-500">{new Date(order.created_at).toLocaleDateString()}</p>
                 </div>
                 <div className="text-right">
@@ -391,17 +402,26 @@ const OrdersPage: React.FC = () => {
                   >
                     {order.payment_status === "paid" ? "Paid" : "Payment Pending"}
                   </span>
-                  <span
-                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      order.status === "verified" ? "bg-green-100 text-green-800" : order.status === "expired" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
-                    }`}
-                  >
-                    {order.status === "verified"
-                      ? "Verified"
-                      : order.status === "expired"
-                      ? "Rejected"
-                      : "Not Verified"}
-                  </span>
+                  {order.status === "expired" ? (
+                    <div className="flex gap-2">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        Expired
+                      </span>
+                      {order.is_rejected && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          Rejected
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        order.status === "verified" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                      }`}
+                    >
+                      {order.status === "verified" ? "Verified" : "Not Verified"}
+                    </span>
+                  )}
                   {/* Accept/Reject buttons removed */}
                 </div>
               </div>
