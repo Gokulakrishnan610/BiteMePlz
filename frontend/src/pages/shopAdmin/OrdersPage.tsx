@@ -84,8 +84,9 @@ const OrdersPage: React.FC = () => {
   }, [effectiveShopId])
 
   useEffect(() => {
-    fetchOrders()
-  }, [effectiveShopId, fetchOrders])
+    fetchOrders();
+    // Removed auto-refresh interval as requested
+  }, [effectiveShopId, fetchOrders]);
 
   const handleSort = (field: SortField) => {
     if (field === sortField) {
@@ -210,28 +211,32 @@ const OrdersPage: React.FC = () => {
     <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
         <h1 className="text-xl sm:text-2xl font-bold">Orders</h1>
-        <div className="flex items-center gap-2 bg-black border border-purple-500 rounded-lg p-2 sm:p-3 shadow-sm w-full sm:w-auto">
-          <Calendar size={18} className="text-purple-400 flex-shrink-0" />
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => handleDateFilter(e.target.value)}
-            className="bg-black text-white border-none focus:ring-purple-500 p-0 text-sm sm:text-base flex-1 sm:flex-initial"
-          />
-          {selectedDate && (
-            <button onClick={clearDateFilter} className="text-gray-400 hover:text-white flex-shrink-0">
-              <X size={14} />
-            </button>
-          )}
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2 bg-black border border-purple-500 rounded-lg p-2 sm:p-3 shadow-sm w-full sm:w-auto">
+            <Calendar size={18} className="text-purple-400 flex-shrink-0" />
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => handleDateFilter(e.target.value)}
+              className="bg-black text-white border-none focus:ring-purple-500 p-0 text-sm sm:text-base flex-1 sm:flex-initial"
+            />
+            {selectedDate && (
+              <button onClick={clearDateFilter} className="text-gray-400 hover:text-white flex-shrink-0">
+                <X size={14} />
+              </button>
+            )}
+          </div>
           <button
             onClick={fetchOrders}
-            className="ml-2 px-3 py-1.5 text-xs sm:text-sm rounded-md bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-60"
+            className="ml-0 sm:ml-2 px-3 py-2 text-sm rounded-md bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-60 font-bold"
             disabled={loading}
+            style={{ minWidth: 110 }}
           >
             {loading ? 'Refreshing…' : 'Refresh'}
           </button>
         </div>
       </div>
+     
 
       <div className="card">
         <div className="hidden lg:block overflow-x-auto">

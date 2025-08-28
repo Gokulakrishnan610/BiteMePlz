@@ -143,6 +143,22 @@ if not DEBUG:  # Only create directories in production
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'api.User'
 
+# CSRF
+# Include all deployment and development origins that are allowed to make POST requests
+CSRF_TRUSTED_ORIGINS = [
+    "https://rec-kiosk.onrender.com",
+    "https://rec-kiosk-1.onrender.com",
+    "https://kisokrec.onrender.com",
+    "https://kioskrec.onrender.com",
+    "https://kisok-e3w0.onrender.com",
+    "https://kioskrec25.netlify.app",
+    "https://super-conkies-906020.netlify.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
 # REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
