@@ -16,7 +16,7 @@ const MainLayout: React.FC = () => {
         <main className="flex-grow">
           <Outlet />
         </main>
-        <div className={location.pathname.startsWith('/shop/') ? 'hidden md:block' : ''}>
+        <div className={location.pathname.startsWith('/shop/') || location.pathname.startsWith('/profile') ? 'hidden md:block' : ''}>
           <Footer />
         </div>
       </div>

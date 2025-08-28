@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link } from "react-router-dom"
 import { MenuIcon, X } from "lucide-react"
 import { useAuth } from "../context/AuthContext"
 
@@ -31,21 +31,9 @@ interface NavbarProps {
 export default function Navbar({ className }: NavbarProps) {
     const [active, setActive] = useState<string | null>(null)
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-    const { user, logout } = useAuth()
-    const navigate = useNavigate()
+    const { user } = useAuth()
 
-    const handleLogout = () => {
-        logout()
-        if (user?.role === 'admin') {
-          navigate('/kisok-ac-back-office/login')
-        } else if (user?.role === 'shopAdmin') {
-          navigate('/kisok-sp-back-office/login')
-        } else if (user?.role === 'parent') {
-          navigate('/parent-login')
-        } else {
-          navigate('/login')
-        }
-    }
+    // Logout now only appears on the Profile page footer
 
     return (
         <>
@@ -92,12 +80,7 @@ export default function Navbar({ className }: NavbarProps) {
                             <HoveredLink href="/profile">Profile</HoveredLink>
                             <HoveredLink href="/orders">My Orders</HoveredLink>
                             <HoveredLink href="/cart">Shopping Cart</HoveredLink>
-                            <button
-                            onClick={handleLogout}
-                            className="text-left text-red-600 hover:text-purple-600 transition-all duration-200 text-sm px-2 py-1 -mx-2 -my-1 rounded hover:bg-purple-50 hover:translate-x-1"
-                            >
-                            Logout
-                            </button>
+                            {/* Logout removed from desktop hamburger per requirements */}
                         </div>
                         </div>
                     </div>
@@ -154,11 +137,6 @@ export default function Navbar({ className }: NavbarProps) {
                             <HoveredLink href="/profile">Parent Dashboard</HoveredLink>
                         </div>
                     )}
-                    {user && user.role === 'shopAdmin' && (
-                        <div className="py-2">
-                            <HoveredLink href="/kisok-sp-back-office/order-verification">Order Verification</HoveredLink>
-                        </div>
-                    )}
                     <div className="py-2">
                         <HoveredLink href="/profile">Profile</HoveredLink>
                     </div>
@@ -169,15 +147,8 @@ export default function Navbar({ className }: NavbarProps) {
                         <HoveredLink href="/cart">Shopping Cart</HoveredLink>
                     </div>
 
-                    <div className="py-2 border-t border-gray-200 pt-4 mt-4">
-                        <button
-                        onClick={handleLogout}
-                        className="text-left text-red-600 hover:text-purple-600 transition-all duration-200 text-sm w-full px-2 py-1 -mx-2 -my-1 rounded hover:bg-purple-50 hover:translate-x-1"
-                        >
-                        Logout
-                        </button>
-                    </div>
-                    </div>
+                    {/* Logout removed from mobile hamburger per requirements */}
+                     </div>
                 </div>
                 </div>
             </div>

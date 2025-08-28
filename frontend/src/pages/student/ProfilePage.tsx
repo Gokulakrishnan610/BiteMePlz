@@ -4,25 +4,19 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import api from "../../api"
-import { User, AlertCircle, ArrowLeft, Mail, Shield, Wallet, Calendar, CreditCard, MapPin, Clock } from "lucide-react"
-// Charts
+import { User, AlertCircle, ArrowLeft, Wallet } from "lucide-react"
 import {
   ResponsiveContainer,
-  // LineChart,
-  // Line,
-  // XAxis,
-  // YAxis,
   Tooltip,
-  // CartesianGrid,
   PieChart,
   Pie,
   Cell,
   Legend,
 } from "recharts"
 import { Card, CardContent } from "../../components/ui/card"
-import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import Navbar from "../../components/Navbar"
+import { useAuth } from "../../context/AuthContext"
 import { useWallet } from "../../context/WalletContext"
 
 interface UserProfile {
@@ -30,8 +24,6 @@ interface UserProfile {
   name: string
   email: string
   role: string
-  balance?: number
-  createdAt?: string
 }
 
 // Minimal order shape for spending analytics
@@ -64,12 +56,11 @@ interface SpendingDetails {
   medianOrderValue?: number
   minOrderValue?: number
   maxOrderValue?: number
-  hourOfDay?: Array<{ hour: number; count: number; amount: number }>
-  dayOfWeek?: Array<{ day: number; count: number; amount: number }>
 }
 
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate()
+  const { logout, user } = useAuth()
   const { balance } = useWallet()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -87,11 +78,9 @@ const ProfilePage: React.FC = () => {
     medianOrderValue: 0,
     minOrderValue: 0,
     maxOrderValue: 0,
-    hourOfDay: [],
-    dayOfWeek: [],
   })
   const [paidOrders, setPaidOrders] = useState<MinimalOrderForSpending[]>([])
-  const [timeFilter, setTimeFilter] = useState<'all' | 'lastMonth'>('all')
+  const [timeFilter] = useState<'all' | 'lastMonth'>('all')
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -111,12 +100,17 @@ const ProfilePage: React.FC = () => {
     fetchProfile()
   }, [])
 
+  // Load spending analytics
   useEffect(() => {
     const fetchSpending = async () => {
       try {
-        const { data } = await api.get<MinimalOrderForSpending[]>("/api/orders/myorders")
-        // Handle paginated response
-        const orders = Array.isArray(data.results || data) ? (data.results || data) : []
+        const { data } = await api.get<any>("/api/orders/myorders")
+        const maybeResults = (data as any)?.results
+        const orders: MinimalOrderForSpending[] = Array.isArray(maybeResults)
+          ? maybeResults
+          : Array.isArray(data)
+          ? (data as MinimalOrderForSpending[])
+          : []
 
         const getPaid = (o: MinimalOrderForSpending) => Boolean(o.is_paid ?? o.isPaid)
         const getAmount = (o: MinimalOrderForSpending) => Number(o.total_price ?? o.totalPrice ?? 0)
@@ -125,12 +119,11 @@ const ProfilePage: React.FC = () => {
         const paid = orders.filter(getPaid)
         setPaidOrders(paid)
 
-        // Also compute headline summary (Total + This Month) independent of filter
-        const totalAll = paid.reduce((sum, o) => sum + getAmount(o), 0)
+        const totalAll = paid.reduce((sum: number, o: MinimalOrderForSpending) => sum + getAmount(o), 0)
         const now = new Date()
         const currentMonth = now.getMonth()
         const currentYear = now.getFullYear()
-        const thisMonthTotal = paid.reduce((sum, o) => {
+        const thisMonthTotal = paid.reduce((sum: number, o: MinimalOrderForSpending) => {
           const d = getDate(o)
           if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
             return sum + getAmount(o)
@@ -154,18 +147,14 @@ const ProfilePage: React.FC = () => {
           medianOrderValue: 0,
           minOrderValue: 0,
           maxOrderValue: 0,
-          hourOfDay: [],
-          dayOfWeek: [],
         })
       }
     }
-
     fetchSpending()
   }, [])
 
-  // Recompute analytics whenever the filter or source orders change
   useEffect(() => {
-    const computeAnalytics = (source: MinimalOrderForSpending[], range: 'all' | 'lastMonth') => {
+    const compute = (source: MinimalOrderForSpending[], range: 'all' | 'lastMonth') => {
       const getAmount = (o: MinimalOrderForSpending) => Number(o.total_price ?? o.totalPrice ?? 0)
       const getDate = (o: MinimalOrderForSpending) => new Date((o.createdAt ?? o.created_at) as string)
 
@@ -199,20 +188,13 @@ const ProfilePage: React.FC = () => {
         .reduce((sum, o) => sum + getAmount(o), 0)
 
       const byShopMap = new Map<string, number>()
-      for (const o of filtered) {
-        const shopName = o.shop?.name || o.order_items?.[0]?.shop_name || "Unknown"
-        const prev = byShopMap.get(shopName) || 0
-        byShopMap.set(shopName, prev + getAmount(o))
-      }
-      const byShop = Array.from(byShopMap.entries())
-        .map(([shop, amount]) => ({ shop, amount }))
-        .sort((a, b) => b.amount - a.amount)
-
       const itemAgg = new Map<string, { qty: number; amount: number }>()
       const values: number[] = []
       for (const o of filtered) {
         const amount = getAmount(o)
         values.push(amount)
+        const shopName = o.shop?.name || o.order_items?.[0]?.shop_name || "Unknown"
+        byShopMap.set(shopName, (byShopMap.get(shopName) || 0) + amount)
         for (const it of o.order_items || []) {
           const key = it.name || "Unknown"
           const priceNum = Number(it.price ?? 0)
@@ -221,11 +203,15 @@ const ProfilePage: React.FC = () => {
           itemAgg.set(key, { qty: prev.qty + qtyNum, amount: prev.amount + priceNum * qtyNum })
         }
       }
+      const byShop = Array.from(byShopMap.entries())
+        .map(([shop, amount]) => ({ shop, amount }))
+        .sort((a, b) => b.amount - a.amount)
       const topItems = Array.from(itemAgg.entries())
         .map(([item, v]) => ({ item, qty: v.qty, amount: v.amount }))
         .sort((a, b) => b.amount - a.amount)
         .slice(0, 5)
 
+      // Per-day for last 30 days
       const perDayMap = new Map<string, { amount: number; orders: number }>()
       const cutoff30 = new Date(now.getTime() - 30 * msInDay)
       for (const o of filtered) {
@@ -239,7 +225,6 @@ const ProfilePage: React.FC = () => {
         .map(([date, v]) => ({ date, amount: v.amount, orders: v.orders }))
         .sort((a, b) => (a.date < b.date ? 1 : -1))
 
-      // Median / min / max order value
       let medianOrderValue = 0, minOrderValue = 0, maxOrderValue = 0
       if (values.length > 0) {
         const sorted = [...values].sort((a, b) => a - b)
@@ -247,19 +232,6 @@ const ProfilePage: React.FC = () => {
         medianOrderValue = sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
         minOrderValue = sorted[0]
         maxOrderValue = sorted[sorted.length - 1]
-      }
-
-      // Hour of day and Day of week distributions
-      const hourAgg = Array.from({ length: 24 }, (_, h) => ({ hour: h, count: 0, amount: 0 }))
-      const dayAgg = Array.from({ length: 7 }, (_, d) => ({ day: d, count: 0, amount: 0 }))
-      for (const o of filtered) {
-        const d = getDate(o)
-        const h = d.getHours()
-        const wd = d.getDay()
-        hourAgg[h].count += 1
-        hourAgg[h].amount += getAmount(o)
-        dayAgg[wd].count += 1
-        dayAgg[wd].amount += getAmount(o)
       }
 
       setSpendingDetails({
@@ -274,12 +246,9 @@ const ProfilePage: React.FC = () => {
         medianOrderValue,
         minOrderValue,
         maxOrderValue,
-        hourOfDay: hourAgg,
-        dayOfWeek: dayAgg,
       })
     }
-
-    computeAnalytics(paidOrders, timeFilter)
+    compute(paidOrders, timeFilter)
   }, [paidOrders, timeFilter])
 
   const SkeletonLoader = () => (
@@ -325,108 +294,59 @@ const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col pb-24">
       <Navbar />
 
       {/* Header */}
-      <div className="bg-white shadow-sm  pt-20 md:pt-32">
-  <div className="px-4 sm:px-8 md:px-20 lg:px-52 py-5">
-    <div className="flex flex-row items-center gap-3 mb-8 flex-wrap">
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center text-purple-600 hover:text-purple-700 transition-colors"
-      >
-        <ArrowLeft size={20} className="mr-2" />
-        <span className="font-medium">Back</span>
-      </button>
-
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-500 text-sm">Manage your profile and preferences</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-          {/* Profile Section */}
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border overflow-hidden">
-            <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-8">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-3 sm:space-y-0">
-                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm mx-auto sm:mx-0">
-                  <User size={28} className="text-white" />
-                </div>
-                <div className="text-center sm:text-left">
-                  <h2 className="text-2xl font-bold text-white">{profile.name}</h2>
-                  <p className="text-purple-100">{profile.email}</p>
-                  <div className="mt-2">
-                    <Badge className="bg-white/20 text-white border-0 capitalize">{profile.role}</Badge>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl">
-                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                      <Mail size={20} className="text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Email</p>
-                      <p className="font-medium text-gray-900">{profile.email}</p>
-                    </div>
-                  </div>
-
-                  {profile.createdAt && (
-                    <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl">
-                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                        <Calendar size={20} className="text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Member since</p>
-                        <p className="font-medium text-gray-900">
-                          {new Date(profile.createdAt).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                      <Shield size={20} className="text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Account status</p>
-                      <p className="font-medium text-gray-900">Active</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                      <Mail size={20} className="text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Email verification</p>
-                      <p className="font-medium text-gray-900">Verified</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+      <div className="bg-white shadow-sm pt-20 md:pt-32">
+        <div className="px-4 sm:px-8 md:px-20 lg:px-52 py-5">
+          <div className="flex flex-row items-center gap-3 mb-8 flex-wrap">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center text-purple-600 hover:text-purple-700 transition-colors"
+            >
+              <ArrowLeft size={20} className="mr-2" />
+              <span className="font-medium">Back</span>
+            </button>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Settings</h1>
+              <p className="text-gray-500 text-sm">Manage your profile and preferences</p>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Wallet Balance Card */}
+      {/* Minimal shadcn card with Name, Email, Role */}
+      <div className="max-w-3xl mx-auto w-full px-4 py-8 flex-1">
+        <Card className="overflow-hidden">
+          <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-10 text-center">
+            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm mx-auto mb-3">
+              <User size={28} className="text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-white">{profile.name}</h2>
+          </div>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Name</p>
+                <p className="font-medium text-gray-900 break-words">{profile.name}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Email</p>
+                <p className="font-medium text-gray-900 break-words">{profile.email}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Role</p>
+                <p className="font-medium text-gray-900 capitalize">{profile.role}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Stats: Wallet + Spending Summary */}
+      <div className="max-w-7xl mx-auto px-4 py-4 w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
             <div className="p-6 text-center sm:text-left">
               <div className="flex flex-col sm:flex-row items-center sm:items-start sm:space-x-3 mb-4">
@@ -438,7 +358,6 @@ const ProfilePage: React.FC = () => {
                   <p className="text-gray-500 text-sm">Available for payments</p>
                 </div>
               </div>
-              
               <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl p-6 text-white">
                 <div className="text-center">
                   <p className="text-purple-100 text-sm mb-2">Current Balance</p>
@@ -446,7 +365,6 @@ const ProfilePage: React.FC = () => {
                   <p className="text-purple-100 text-sm mt-2">Use for quick payments</p>
                 </div>
               </div>
-              {/* Embedded Spending Summary (click to reveal month) */}
               <div className="mt-6">
                 <h4 className="text-sm font-medium text-gray-900 mb-3">Spending</h4>
                 <details className="bg-gray-50 rounded-xl group">
@@ -465,141 +383,47 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          
-
-          {/* Detailed Spending Card */}
-          <div className="bg-white rounded-2xl shadow-sm border overflow-hidden lg:col-span-3">
+          <div className="bg-white rounded-2xl shadow-sm border overflow-hidden lg:col-span-2">
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Detailed Spending</h3>
-              <div className="mb-4">
-                <label className="text-sm text-gray-600 mr-2">Time range:</label>
-                <select
-                  value={timeFilter}
-                  onChange={(e) => setTimeFilter(e.target.value as 'all' | 'lastMonth')}
-                  className="border rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="all">All time</option>
-                  <option value="lastMonth">Last month</option>
-                </select>
-              </div>
-              {/* Key stats */}
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
-                <div className="p-4 rounded-xl bg-gray-50">
-                  <p className="text-sm text-gray-500 mb-1">Orders</p>
-                  <p className="text-2xl font-bold text-gray-900">{spendingDetails.ordersCount}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-gray-50">
-                  <p className="text-sm text-gray-500 mb-1">Last 7 Days</p>
-                  <p className="text-2xl font-bold text-gray-900">₹{spendingDetails.last7Days.toFixed(2)}</p>
-                </div>
-              </div>
-
-              {/* Charts */}
-              <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-6">
-                <div className="h-64 border rounded-xl p-3">
-                  <p className="text-sm text-gray-600 mb-2">Top items share</p>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={spendingDetails.topItems}
-                        dataKey="amount"
-                        nameKey="item"
-                        outerRadius={90}
-                      >
-                        {spendingDetails.topItems.map((_, idx) => (
-                          <Cell key={`cell-${idx}`} fill={["#7c3aed", "#6366f1", "#22c55e", "#f59e0b", "#ef4444"][idx % 5]} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(v: any, _n: any, e: any) => [`₹${Number(v).toFixed(2)}`, (e && e.payload && e.payload.item) || 'Item']}
-                      />
-                      <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: 12 }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Per day (last 30 days) */}
-              <div className="mt-6">
-                <h4 className="text-md font-semibold text-gray-900 mb-2">Per day (last 30 days)</h4>
-                {spendingDetails.perDay && spendingDetails.perDay.length > 0 ? (
-                  <div className="border rounded-xl overflow-hidden">
-                    {/* Show 3 rows before scroll */}
-                    <ul className="divide-y divide-gray-100 max-h-48 sm:max-h-56 overflow-y-auto">
-                      {spendingDetails.perDay.map((d) => (
-                        <li key={d.date} className="flex items-center justify-between p-3">
-                          <div className="text-gray-700">
-                            <p className="font-medium">{new Date(d.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>
-                            <p className="text-xs text-gray-500">Orders: {d.orders}</p>
-                          </div>
-                          <span className="font-medium text-gray-900">₹{d.amount.toFixed(2)}</span>
-                        </li>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Top items share</h3>
+              <div className="h-64 border rounded-xl p-3">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={spendingDetails.topItems} dataKey="amount" nameKey="item" outerRadius={90}>
+                      {spendingDetails.topItems.map((_, idx) => (
+                        <Cell key={`cell-${idx}`} fill={["#7c3aed", "#6366f1", "#22c55e", "#f59e0b", "#ef4444"][idx % 5]} />
                       ))}
-                    </ul>
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500">No data yet</p>
-                )}
+                    </Pie>
+                    <Tooltip formatter={(v: any, _n: any, e: any) => [`₹${Number(v).toFixed(2)}`, (e && e.payload && e.payload.item) || 'Item']} />
+                    <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: 12 }} />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>
-
-          {/* Quick Actions */}
-          <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm border">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Button
-                  onClick={() => navigate("/orders", { replace: true })}
-                  variant="outline"
-                  className="h-16 border-gray-200 hover:border-purple-300 hover:bg-purple-50 text-gray-700 hover:text-purple-700 transition-all duration-200"
-                >
-                  <div className="flex items-center space-x-3 justify-start w-full">
-                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                      <Clock size={20} className="text-purple-600" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-medium">My Orders</p>
-                      <p className="text-sm text-gray-500">View order history</p>
-                    </div>
-                  </div>
-                </Button>
-                
-                <Button
-                  onClick={() => navigate("/cart")}
-                  variant="outline"
-                  className="h-16 border-gray-200 hover:border-purple-300 hover:bg-purple-50 text-gray-700 hover:text-purple-700 transition-all duration-200"
-                >
-                  <div className="flex items-center space-x-3 justify-start w-full">
-                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                      <CreditCard size={20} className="text-purple-600" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-medium">Shopping Cart</p>
-                      <p className="text-sm text-gray-500">View cart items</p>
-                    </div>
-                  </div>
-                </Button>
-
-                <Button
-                  onClick={() => navigate("/")}
-                  className="h-16 bg-purple-600 hover:bg-purple-700 text-white transition-all duration-200 sm:col-span-2"
-                >
-                  <div className="flex items-center space-x-3 justify-start w-full">
-                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                      <MapPin size={20} className="text-white" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-medium">Continue Shopping</p>
-                      <p className="text-sm text-purple-100">Browse restaurants and shops</p>
-                    </div>
-                  </div>
-                </Button>
-              </div>
-            </div>
-          </div>
-
         </div>
+      </div>
+
+      {/* Fixed bottom logout button */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-6 pt-4 bg-white/90 backdrop-blur border-t">
+        <Button
+          onClick={() => {
+            logout()
+            if (user?.role === 'admin') {
+              navigate('/kisok-ac-back-office/login', { replace: true })
+            } else if (user?.role === 'shopAdmin') {
+              navigate('/kisok-sp-back-office/login', { replace: true })
+            } else if (user?.role === 'parent') {
+              navigate('/parent-login', { replace: true })
+            } else {
+              navigate('/login', { replace: true })
+            }
+          }}
+          variant="destructive"
+          className="w-full h-12 bg-red-600 hover:bg-red-700 text-white rounded-xl"
+        >
+          Logout
+        </Button>
       </div>
     </div>
   )
