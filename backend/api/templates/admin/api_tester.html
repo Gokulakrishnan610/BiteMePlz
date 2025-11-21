@@ -286,9 +286,12 @@
                 </div>
                 <ul class="endpoint-list">
                     {% for endpoint in endpoints %}
-                    <li class="endpoint-item"
-                        onclick="selectEndpoint('{{ endpoint.method }}', '{{ endpoint.path }}', '{{ endpoint.name }}', {{ endpoint.params|safe }})">
-                        <span class="method-badge method-{{ endpoint.method }}">{{ endpoint.method }}</span>
+                    <li class="endpoint-item" onclick="selectEndpoint(
+    `{{ endpoint.method }}`,
+    `{{ endpoint.path }}`,
+    `{{ endpoint.name }}`,
+    `{{ endpoint.params|safe }}`
+)" <span class="method-badge method-{{ endpoint.method }}">{{ endpoint.method }}</span>
                         <span>{{ endpoint.path }}</span>
                     </li>
                     {% endfor %}
