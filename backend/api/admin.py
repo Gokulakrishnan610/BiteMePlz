@@ -416,6 +416,7 @@ class CustomAdminSite(admin.AdminSite):
         urls = super().get_urls()
         custom_urls = [
             path('download-db/', self.admin_view(self.download_db), name='download-db'),
+            path('api-tester/', self.admin_view(self.api_tester_view), name='api-tester'),
         ]
         return custom_urls + urls
 
@@ -427,6 +428,89 @@ class CustomAdminSite(admin.AdminSite):
             return HttpResponseForbidden('Database file not found.')
         response = FileResponse(open(db_path, 'rb'), as_attachment=True, filename='db.sqlite3')
         return response
+
+    def api_tester_view(self, request):
+        """View for the API Tester interface"""
+        if not request.user.is_superuser:
+            return HttpResponseForbidden('You are not authorized to access the API Tester.')
+        
+        from django.urls import get_resolver
+        from django.template.response import TemplateResponse
+        
+        # Helper to extract endpoints
+        endpoints = []
+        resolver = get_resolver()
+        
+        def extract_urls(urlpatterns, prefix=''):
+            for pattern in urlpatterns:
+                if hasattr(pattern, 'url_patterns'):
+                    # Include
+                    new_prefix = prefix + str(pattern.pattern)
+                    extract_urls(pattern.url_patterns, new_prefix)
+                elif hasattr(pattern, 'callback'):
+                    # View
+                    full_path = prefix + str(pattern.pattern)
+                    # Clean up path
+                    full_path = '/' + full_path.replace('^', '').replace('$', '')
+                    
+                    # Filter for API endpoints only
+                    if not full_path.startswith('/api/'):
+                        continue
+                        
+                    # Try to determine methods
+                    methods = ['GET'] # Default
+                    view_class = getattr(pattern.callback, 'view_class', None)
+                    if view_class:
+                        if hasattr(view_class, 'http_method_names'):
+                            methods = [m.upper() for m in view_class.http_method_names if m != 'options']
+                    elif hasattr(pattern.callback, 'cls'):
+                         if hasattr(pattern.callback.cls, 'http_method_names'):
+                            methods = [m.upper() for m in pattern.callback.cls.http_method_names if m != 'options']
+                    
+                    # Add an entry for each method
+                    import re
+                    # Extract parameters like <int:pk> or <pk>
+                    params = re.findall(r'<([^>]+)>', full_path)
+                    clean_params = []
+                    for p in params:
+                        # Handle types like int:pk
+                        if ':' in p:
+                            clean_params.append(p.split(':')[1])
+                        else:
+                            clean_params.append(p)
+                            
+                    for method in methods:
+                        endpoints.append({
+                            'path': full_path,
+                            'method': method,
+                            'name': pattern.name or 'unnamed',
+                            'params': clean_params
+                        })
+        
+        extract_urls(resolver.url_patterns)
+        
+        # Group endpoints by tag (first segment after /api/)
+        grouped_endpoints = {}
+        for endpoint in endpoints:
+            parts = endpoint['path'].strip('/').split('/')
+            tag = 'General'
+            if len(parts) > 1:
+                tag = parts[1].title()
+            
+            if tag not in grouped_endpoints:
+                grouped_endpoints[tag] = []
+            grouped_endpoints[tag].append(endpoint)
+            
+        # Sort groups and endpoints
+        sorted_groups = {k: sorted(v, key=lambda x: x['path']) for k, v in sorted(grouped_endpoints.items())}
+        
+        context = {
+            **self.each_context(request),
+            'title': 'API Tester',
+            'grouped_endpoints': sorted_groups,
+        }
+        
+        return TemplateResponse(request, 'admin/api_tester.html', context)
 
 # Replace the default admin site with the custom one
 admin.site = CustomAdminSite()
@@ -460,6 +544,20 @@ def custom_index(self, request, extra_context=None):
                     box-shadow:0 2px 8px rgba(37,99,235,0.08);
                     margin-top:12px;">
                     4BE Download DB (.sqlite3)
+                </a>
+                <a href="/admin/api-tester/" style="
+                    display:inline-block;
+                    padding:12px 32px;
+                    background:#447e9b;
+                    color:#fff;
+                    font-size:1.1em;
+                    font-weight:600;
+                    border-radius:8px;
+                    text-decoration:none;
+                    box-shadow:0 2px 8px rgba(68,126,155,0.08);
+                    margin-top:12px;
+                    margin-left: 12px;">
+                    API Tester
                 </a>
             </div>'''
         )
