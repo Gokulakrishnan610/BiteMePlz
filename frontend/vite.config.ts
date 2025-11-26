@@ -133,7 +133,7 @@ export default defineConfig({
     }),
   ],
   optimizeDeps: {
-    exclude: ['lucide-react'],
+    exclude: [],
   },
   server: {
     proxy: {

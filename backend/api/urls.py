@@ -33,10 +33,24 @@ class RegisterView(APIView):
         try:
             from .models import User
             from .serializers import UserRegistrationSerializer
+            from django.db import IntegrityError
             import random
+            
+            print(f"DEBUG: Registration request data: {request.data}")
+            
+            # Check if user already exists
+            email = request.data.get('email', '').strip().lower()
+            roll_no = request.data.get('roll_no', '').strip()
+            
+            if User.objects.filter(email=email).exists():
+                return Response({'message': 'User with this email already exists'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if User.objects.filter(roll_no=roll_no).exists():
+                return Response({'message': 'User with this roll number already exists'}, status=status.HTTP_400_BAD_REQUEST)
             
             serializer = UserRegistrationSerializer(data=request.data)
             if serializer.is_valid():
+                print(f"DEBUG: Serializer validated successfully")
                 # Create user but don't save yet
                 user_data = serializer.validated_data.copy()
                 user_data.pop('confirm_password')
@@ -60,17 +74,28 @@ class RegisterView(APIView):
                 from .utils import send_otp_email
                 email_sent = send_otp_email(user.email, otp, user.name)
                 
-                if email_sent:
-                    return Response({
-                        'message': 'User registered. Please verify with OTP sent to your email',
-                        'userId': str(user.id)
-                    }, status=status.HTTP_201_CREATED)
-                else:
-                    return Response({'error': 'Failed to send OTP email. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                # For development: print OTP to console if email fails
+                if not email_sent:
+                    print(f"⚠️  EMAIL FAILED - OTP for {user.email}: {otp}")
+                    print(f"⚠️  User ID: {user.id}")
+                
+                return Response({
+                    'message': 'User registered. Please verify with OTP sent to your email' if email_sent else 'User registered. Check server console for OTP (email service unavailable)',
+                    'userId': str(user.id)
+                }, status=status.HTTP_201_CREATED)
             else:
+                print(f"DEBUG: Serializer validation failed: {serializer.errors}")
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             
+        except IntegrityError as e:
+            print(f"DEBUG: IntegrityError in registration: {str(e)}")
+            if 'email' in str(e):
+                return Response({'message': 'User with this email already exists'}, status=status.HTTP_400_BAD_REQUEST)
+            elif 'roll_no' in str(e):
+                return Response({'message': 'User with this roll number already exists'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Registration failed due to duplicate data'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+            print(f"DEBUG: Exception in registration: {str(e)}")
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class VerifyOTPView(APIView):
