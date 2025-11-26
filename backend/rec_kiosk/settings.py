@@ -234,9 +234,9 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 # Email - Hardcoded for Brevo SMTP
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp-relay.brevo.com'
-EMAIL_PORT = 465
-EMAIL_USE_TLS = False
-EMAIL_USE_SSL = True
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
 EMAIL_HOST_USER = '9c8b3b001@smtp-brevo.com'
 EMAIL_HOST_PASSWORD = '8qD0Uwm1RGpTBOJt'
 DEFAULT_FROM_EMAIL = 'asivasabariganesan@gmail.com'
