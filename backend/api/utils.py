@@ -117,7 +117,10 @@ def send_otp_email(email, otp, user_name):
     )
     
     try:
-        send_mail(
+        print(f"📧 Sending OTP email from {settings.DEFAULT_FROM_EMAIL} to {email}")
+        print(f"📧 Subject: {subject}")
+        print(f"📧 OTP: {otp}")
+        result = send_mail(
             subject=subject,
             message=strip_tags(plain_message),
             from_email=settings.DEFAULT_FROM_EMAIL,
@@ -125,9 +128,13 @@ def send_otp_email(email, otp, user_name):
             html_message=html_message,
             fail_silently=False,
         )
+        print(f"📧 send_mail() returned: {result} (1 = success)")
+        print(f"✅ Email accepted by SMTP server for {email}")
         return True
     except Exception as e:
-        print(f"Error sending email: {e}")
+        print(f"❌ Error sending email: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def send_resend_otp_email(email, otp, user_name):
