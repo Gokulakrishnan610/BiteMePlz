@@ -76,14 +76,19 @@ class RegisterView(APIView):
                 
                 def send_email_async():
                     try:
+                        print(f"📧 Attempting to send email to {user.email}...")
                         email_sent = send_otp_email(user.email, otp, user.name)
-                        if not email_sent:
-                            print(f"⚠️  EMAIL FAILED - OTP for {user.email}: {otp}")
+                        if email_sent:
+                            print(f"✅ EMAIL SENT SUCCESSFULLY to {user.email}")
+                        else:
+                            print(f"❌ EMAIL FAILED - OTP for {user.email}: {otp}")
                             print(f"⚠️  User ID: {user.id}")
                     except Exception as e:
-                        print(f"⚠️  EMAIL ERROR - OTP for {user.email}: {otp}")
+                        print(f"❌ EMAIL ERROR - OTP for {user.email}: {otp}")
                         print(f"⚠️  User ID: {user.id}")
                         print(f"⚠️  Error: {e}")
+                        import traceback
+                        traceback.print_exc()
                 
                 # Start email sending in background thread
                 Thread(target=send_email_async, daemon=True).start()
@@ -203,10 +208,17 @@ class ResendOTPView(APIView):
             
             def send_email_async():
                 try:
-                    send_resend_otp_email(user.email, otp, user.name)
+                    print(f"📧 Attempting to resend email to {user.email}...")
+                    email_sent = send_resend_otp_email(user.email, otp, user.name)
+                    if email_sent:
+                        print(f"✅ EMAIL SENT SUCCESSFULLY to {user.email}")
+                    else:
+                        print(f"❌ EMAIL FAILED - OTP for {user.email}: {otp}")
                 except Exception as e:
-                    print(f"⚠️  EMAIL ERROR - OTP for {user.email}: {otp}")
+                    print(f"❌ EMAIL ERROR - OTP for {user.email}: {otp}")
                     print(f"⚠️  Error: {e}")
+                    import traceback
+                    traceback.print_exc()
             
             Thread(target=send_email_async, daemon=True).start()
             
@@ -257,10 +269,17 @@ class ResendOTPByEmailView(APIView):
             
             def send_email_async():
                 try:
-                    send_resend_otp_email(user.email, otp, user.name)
+                    print(f"📧 Attempting to send email to {user.email}...")
+                    email_sent = send_resend_otp_email(user.email, otp, user.name)
+                    if email_sent:
+                        print(f"✅ EMAIL SENT SUCCESSFULLY to {user.email}")
+                    else:
+                        print(f"❌ EMAIL FAILED - OTP for {user.email}: {otp}")
                 except Exception as e:
-                    print(f"⚠️  EMAIL ERROR - OTP for {user.email}: {otp}")
+                    print(f"❌ EMAIL ERROR - OTP for {user.email}: {otp}")
                     print(f"⚠️  Error: {e}")
+                    import traceback
+                    traceback.print_exc()
             
             Thread(target=send_email_async, daemon=True).start()
             print(f"✅ OTP for {user.email}: {otp}")
@@ -302,10 +321,17 @@ class ForgotPasswordRequestView(APIView):
             
             def send_email_async():
                 try:
-                    send_resend_otp_email(user.email, otp, user.name)
+                    print(f"📧 Attempting to send password reset email to {user.email}...")
+                    email_sent = send_resend_otp_email(user.email, otp, user.name)
+                    if email_sent:
+                        print(f"✅ EMAIL SENT SUCCESSFULLY to {user.email}")
+                    else:
+                        print(f"❌ EMAIL FAILED - Password Reset OTP for {user.email}: {otp}")
                 except Exception as e:
-                    print(f"⚠️  EMAIL ERROR - Password Reset OTP for {user.email}: {otp}")
+                    print(f"❌ EMAIL ERROR - Password Reset OTP for {user.email}: {otp}")
                     print(f"⚠️  Error: {e}")
+                    import traceback
+                    traceback.print_exc()
             
             Thread(target=send_email_async, daemon=True).start()
             print(f"✅ Password Reset OTP for {user.email}: {otp}")
@@ -413,10 +439,17 @@ class ResendResetOTPView(APIView):
             
             def send_email_async():
                 try:
-                    send_resend_otp_email(user.email, otp, user.name)
+                    print(f"📧 Attempting to resend password reset email to {user.email}...")
+                    email_sent = send_resend_otp_email(user.email, otp, user.name)
+                    if email_sent:
+                        print(f"✅ EMAIL SENT SUCCESSFULLY to {user.email}")
+                    else:
+                        print(f"❌ EMAIL FAILED - Resend Password Reset OTP for {user.email}: {otp}")
                 except Exception as e:
-                    print(f"⚠️  EMAIL ERROR - Resend Password Reset OTP for {user.email}: {otp}")
+                    print(f"❌ EMAIL ERROR - Resend Password Reset OTP for {user.email}: {otp}")
                     print(f"⚠️  Error: {e}")
+                    import traceback
+                    traceback.print_exc()
             
             Thread(target=send_email_async, daemon=True).start()
             print(f"✅ Resend Password Reset OTP for {user.email}: {otp}")
