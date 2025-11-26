@@ -150,6 +150,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://rec-kiosk-1.onrender.com",
     "https://kisokrec.onrender.com",
     "https://kioskrec25.netlify.app",
+    "https://kisok.ghasa.xyz",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:8000",
@@ -188,6 +189,7 @@ CORS_ALLOW_HEADERS = [
 CORS_ALLOWED_ORIGINS = [
     "https://kioskrec25.netlify.app",
     "https://super-conkies-906020.netlify.app",
+    "https://kisok.ghasa.xyz",
     "http://localhost:5173",
     "http://localhost:3000",
     "http://127.0.0.1:5173",
