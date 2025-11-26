@@ -70,17 +70,30 @@ class RegisterView(APIView):
                 user.otp = otp_data
                 user.save()
                 
-                # Send OTP email
+                # Send OTP email asynchronously to avoid blocking
+                from threading import Thread
                 from .utils import send_otp_email
-                email_sent = send_otp_email(user.email, otp, user.name)
                 
-                # For development: print OTP to console if email fails
-                if not email_sent:
-                    print(f"⚠️  EMAIL FAILED - OTP for {user.email}: {otp}")
-                    print(f"⚠️  User ID: {user.id}")
+                def send_email_async():
+                    try:
+                        email_sent = send_otp_email(user.email, otp, user.name)
+                        if not email_sent:
+                            print(f"⚠️  EMAIL FAILED - OTP for {user.email}: {otp}")
+                            print(f"⚠️  User ID: {user.id}")
+                    except Exception as e:
+                        print(f"⚠️  EMAIL ERROR - OTP for {user.email}: {otp}")
+                        print(f"⚠️  User ID: {user.id}")
+                        print(f"⚠️  Error: {e}")
+                
+                # Start email sending in background thread
+                Thread(target=send_email_async, daemon=True).start()
+                
+                # Print OTP to console for development
+                print(f"✅ OTP for {user.email}: {otp}")
+                print(f"✅ User ID: {user.id}")
                 
                 return Response({
-                    'message': 'User registered. Please verify with OTP sent to your email' if email_sent else 'User registered. Check server console for OTP (email service unavailable)',
+                    'message': 'User registered. Please verify with OTP sent to your email',
                     'userId': str(user.id)
                 }, status=status.HTTP_201_CREATED)
             else:
@@ -184,18 +197,25 @@ class ResendOTPView(APIView):
             user.otp = otp_data
             user.save()
             
-            # Send new OTP email
+            # Send new OTP email asynchronously
+            from threading import Thread
             from .utils import send_resend_otp_email
-            email_sent = send_resend_otp_email(user.email, otp, user.name)
             
-            if email_sent:
-                return Response({
-                    'message': 'New OTP sent to your email'
-                }, status=status.HTTP_200_OK)
-            else:
-                return Response({
-                    'error': 'Failed to send OTP email. Please try again.'
-                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            def send_email_async():
+                try:
+                    send_resend_otp_email(user.email, otp, user.name)
+                except Exception as e:
+                    print(f"⚠️  EMAIL ERROR - OTP for {user.email}: {otp}")
+                    print(f"⚠️  Error: {e}")
+            
+            Thread(target=send_email_async, daemon=True).start()
+            
+            # Print OTP to console for development
+            print(f"✅ RESEND OTP for {user.email}: {otp}")
+            
+            return Response({
+                'message': 'New OTP sent to your email'
+            }, status=status.HTTP_200_OK)
             
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -231,11 +251,19 @@ class ResendOTPByEmailView(APIView):
             user.otp = otp_data
             user.save()
             
-            # Send OTP email
+            # Send OTP email asynchronously
+            from threading import Thread
             from .utils import send_resend_otp_email
-            email_sent = send_resend_otp_email(user.email, otp, user.name)
-            if not email_sent:
-                return Response({'error': 'Failed to send OTP email. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            def send_email_async():
+                try:
+                    send_resend_otp_email(user.email, otp, user.name)
+                except Exception as e:
+                    print(f"⚠️  EMAIL ERROR - OTP for {user.email}: {otp}")
+                    print(f"⚠️  Error: {e}")
+            
+            Thread(target=send_email_async, daemon=True).start()
+            print(f"✅ OTP for {user.email}: {otp}")
             
             return Response({'message': 'New OTP sent to your email', 'userId': str(user.id)}, status=status.HTTP_200_OK)
         except Exception as e:
@@ -268,10 +296,19 @@ class ForgotPasswordRequestView(APIView):
             user.password_reset_otp = otp_data
             user.save()
 
+            # Send OTP email asynchronously
+            from threading import Thread
             from .utils import send_resend_otp_email
-            email_sent = send_resend_otp_email(user.email, otp, user.name)
-            if not email_sent:
-                return Response({'error': 'Failed to send OTP email. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            def send_email_async():
+                try:
+                    send_resend_otp_email(user.email, otp, user.name)
+                except Exception as e:
+                    print(f"⚠️  EMAIL ERROR - Password Reset OTP for {user.email}: {otp}")
+                    print(f"⚠️  Error: {e}")
+            
+            Thread(target=send_email_async, daemon=True).start()
+            print(f"✅ Password Reset OTP for {user.email}: {otp}")
 
             return Response({'message': 'OTP sent', 'userId': str(user.id)}, status=status.HTTP_200_OK)
         except Exception as e:
@@ -370,10 +407,20 @@ class ResendResetOTPView(APIView):
             user.password_reset_otp = otp_data
             user.save()
 
+            # Send OTP email asynchronously
+            from threading import Thread
             from .utils import send_resend_otp_email
-            email_sent = send_resend_otp_email(user.email, otp, user.name)
-            if not email_sent:
-                return Response({'error': 'Failed to send OTP email. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            def send_email_async():
+                try:
+                    send_resend_otp_email(user.email, otp, user.name)
+                except Exception as e:
+                    print(f"⚠️  EMAIL ERROR - Resend Password Reset OTP for {user.email}: {otp}")
+                    print(f"⚠️  Error: {e}")
+            
+            Thread(target=send_email_async, daemon=True).start()
+            print(f"✅ Resend Password Reset OTP for {user.email}: {otp}")
+            
             return Response({'message': 'New OTP sent'}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
