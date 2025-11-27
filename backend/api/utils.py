@@ -124,7 +124,11 @@ def send_otp_email(email, otp, user_name):
         # Try Brevo API first (works on Render free tier)
         try:
             import requests
-            brevo_api_key = 'xkeysib-c8b3b001e9f8a4d7c2b5e6f3a1d8c9b2e5f7a3d6c1b4e8f2a5d9c3b7e1f4a8d2'
+            # Get Brevo API key from settings or use hardcoded value
+            brevo_api_key = getattr(settings, 'BREVO_API_KEY', None)
+            
+            if not brevo_api_key:
+                raise Exception("Brevo API key not configured")
             
             response = requests.post(
                 'https://api.brevo.com/v3/smtp/email',

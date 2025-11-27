@@ -236,16 +236,18 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
 
-# ✅ Correct SMTP username (your Brevo login email)
-EMAIL_HOST_USER = 'asivasabariganesan@gmail.com'
+# ✅ Correct SMTP username (your Brevo SMTP login - check Brevo dashboard)
+EMAIL_HOST_USER = '9c8b3b001@smtp-brevo.com'
 
 # ✅ Correct SMTP password (your Brevo SMTP Key — generate in SMTP & API → SMTP)
-EMAIL_HOST_PASSWORD = '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'
-
+EMAIL_HOST_PASSWORD = '8qD0Uwm1RGpTBOJt'
 # Must match your Brevo verified sender
 DEFAULT_FROM_EMAIL = 'asivasabariganesan@gmail.com'
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
+# Brevo API Key (for HTTP API - works on Render free tier)
+# Get your API key from: https://app.brevo.com/settings/keys/api
+BREVO_API_KEY = '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'
 
 # Log email configuration
 print("=" * 60)

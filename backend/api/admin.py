@@ -26,7 +26,37 @@ class CustomUserAdmin(UserAdmin):
         ('REC Kiosk Info', {'fields': ('name', 'roll_no', 'role', 'shop', 'is_verified', 'otp', 'password_reset_otp', 'password_reset_token', 'balance')}),
     )
     
-    actions = ['view_password_reset_info']
+    actions = ['view_password_reset_info', 'send_test_email']
+    
+    def send_test_email(self, request, queryset):
+        """Send a test OTP email to selected users"""
+        from .utils import send_otp_email
+        import random
+        
+        success_count = 0
+        fail_count = 0
+        
+        for user in queryset:
+            try:
+                otp = str(random.randint(100000, 999999))
+                email_sent = send_otp_email(user.email, otp, user.name)
+                
+                if email_sent:
+                    success_count += 1
+                    self.message_user(request, f"✅ Test email sent to {user.email} (OTP: {otp})", messages.SUCCESS)
+                else:
+                    fail_count += 1
+                    self.message_user(request, f"❌ Failed to send email to {user.email}", messages.ERROR)
+            except Exception as e:
+                fail_count += 1
+                self.message_user(request, f"❌ Error sending to {user.email}: {str(e)}", messages.ERROR)
+        
+        if success_count > 0:
+            self.message_user(request, f"Sent {success_count} test email(s) successfully", messages.SUCCESS)
+        if fail_count > 0:
+            self.message_user(request, f"Failed to send {fail_count} email(s)", messages.WARNING)
+    
+    send_test_email.short_description = "📧 Send test OTP email to selected users"
     
     def view_password_reset_info(self, request, queryset):
         """View password reset information for selected users"""

@@ -458,6 +458,44 @@ class ResendResetOTPView(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class TestEmailView(APIView):
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        """Test endpoint to manually trigger an email"""
+        try:
+            from .utils import send_otp_email
+            
+            email = request.data.get('email')
+            if not email:
+                return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Generate test OTP
+            import random
+            otp = str(random.randint(100000, 999999))
+            
+            print(f"🧪 TEST EMAIL: Sending to {email}")
+            print(f"🧪 TEST OTP: {otp}")
+            
+            # Send test email
+            email_sent = send_otp_email(email, otp, "Test User")
+            
+            if email_sent:
+                return Response({
+                    'message': 'Test email sent successfully',
+                    'email': email,
+                    'otp': otp
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    'error': 'Failed to send test email',
+                    'email': email,
+                    'otp': otp
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class LoginView(APIView):
     permission_classes = [AllowAny]
     
@@ -496,6 +534,7 @@ urlpatterns = [
     path('users/resend-otp/', ResendOTPView.as_view(), name='resend-otp'),
     path('users/resend-otp-by-email/', ResendOTPByEmailView.as_view(), name='resend-otp-by-email'),
     path('users/login/', LoginView.as_view(), name='login'),
+    path('test-email/', TestEmailView.as_view(), name='test-email'),
     # Forgot password endpoints
     path('users/forgot-password/', ForgotPasswordRequestView.as_view(), name='forgot-password'),
     path('users/verify-reset-otp', VerifyResetOTPView.as_view(), name='verify-reset-otp'),
