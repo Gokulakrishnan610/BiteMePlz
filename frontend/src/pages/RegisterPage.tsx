@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { UserPlus, Eye, EyeOff, Zap, Mail, Lock, User, CreditCard } from 'lucide-react';
+import { UserPlus, Eye, EyeOff, Zap, Mail, Lock, User, CreditCard, AlertCircle } from 'lucide-react';
+import { useSiteConfig } from '../context/SiteConfigContext';
 import api from '../api';
 import { toast } from 'sonner';
 
@@ -13,6 +14,7 @@ const RegisterPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const { config, loading: configLoading } = useSiteConfig();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -86,6 +88,12 @@ const RegisterPage: React.FC = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check if registration is enabled
+    if (config && !config.registration_enabled) {
+      toast.error('Registration is currently disabled. Please try again later.');
+      return;
+    }
+
     if (!validateForm()) {
       return;
     }
@@ -171,6 +179,14 @@ const RegisterPage: React.FC = () => {
     }
   };
 
+  if (configLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
@@ -186,6 +202,18 @@ const RegisterPage: React.FC = () => {
               />
             </div>
           </div>
+
+          {config && !config.registration_enabled && step === 'register' && (
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-3">
+              <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={20} />
+              <div>
+                <p className="text-sm font-medium text-yellow-800">Registration Temporarily Disabled</p>
+                <p className="text-xs text-yellow-700 mt-1">
+                  New registrations are currently disabled. Please try again later or contact support.
+                </p>
+              </div>
+            </div>
+          )}
 
           {step === 'register' ? (
             <form onSubmit={handleRegister} className="space-y-6">
@@ -302,7 +330,7 @@ const RegisterPage: React.FC = () => {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (config && !config.registration_enabled)}
                 className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (

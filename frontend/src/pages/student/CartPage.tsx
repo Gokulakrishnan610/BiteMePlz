@@ -21,8 +21,9 @@ import {
 } from "lucide-react"
 import { useCart } from "../../context/CartContext"
 import { useAuth } from "../../context/AuthContext"
+import { useSiteConfig } from "../../context/SiteConfigContext"
 import api from "../../api"
-// import { toast } from 'sonner'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
@@ -64,6 +65,7 @@ const CartPage: React.FC = () => {
 
   const { user } = useAuth()
   const { balance, refreshBalance } = useWallet()
+  const { config } = useSiteConfig()
   const navigate = useNavigate()
   const [paymentInitiated, setPaymentInitiated] = useState(false)
   const [timeLeft, setTimeLeft] = useState(180) // 3 minutes in seconds
@@ -341,6 +343,11 @@ const CartPage: React.FC = () => {
   }
 
   const handleCheckout = () => {
+    // Check if ordering is enabled
+    if (config && !config.ordering_enabled) {
+      toast.error('Ordering is currently disabled. Please try again later.');
+      return;
+    }
     setShowDisclaimer(true)
   }
 
@@ -625,10 +632,20 @@ const CartPage: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Ordering Disabled Warning */}
+                  {config && !config.ordering_enabled && (
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
+                      <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={18} />
+                      <p className="text-sm text-yellow-800">
+                        Ordering is currently disabled. Please try again later.
+                      </p>
+                    </div>
+                  )}
+
                   {/* Checkout Button */}
                   <Button
                     onClick={handleCheckout}
-                    disabled={paymentInitiated || isLoading}
+                    disabled={paymentInitiated || isLoading || (config && !config.ordering_enabled)}
                     className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 text-lg"
                   >
                     {isLoading ? (

@@ -58,3 +58,6 @@ staticfiles/
 *.sln
 *.sw?
 backend/db.sqlite3
+
+# Kiro
+.kiro/

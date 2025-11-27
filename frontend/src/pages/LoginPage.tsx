@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { LogIn, Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { LogIn, Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useSiteConfig } from '../context/SiteConfigContext';
 import api from '../api';
 import { toast } from 'sonner';
 import LoadingScreen from '../components/LoadingScreen';
@@ -15,6 +16,7 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
+  const { config, loading: configLoading } = useSiteConfig();
 
   const getExpectedRole = () => {
     if (location.pathname.startsWith('/kisok-ac-back-office/login')) return 'admin';
@@ -24,6 +26,13 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check if login is enabled
+    if (config && !config.login_enabled) {
+      toast.error('Login is currently disabled. Please try again later.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -72,6 +81,14 @@ const LoginPage: React.FC = () => {
     return <LoadingScreen onComplete={handleAnimationComplete} />;
   }
 
+  if (configLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
@@ -86,6 +103,18 @@ const LoginPage: React.FC = () => {
               />
             </div>
           </div>
+
+          {config && !config.login_enabled && (
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-3">
+              <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={20} />
+              <div>
+                <p className="text-sm font-medium text-yellow-800">Login Temporarily Disabled</p>
+                <p className="text-xs text-yellow-700 mt-1">
+                  Login functionality is currently disabled. Please try again later or contact support.
+                </p>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
@@ -132,7 +161,7 @@ const LoginPage: React.FC = () => {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (config && !config.login_enabled)}
               className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (

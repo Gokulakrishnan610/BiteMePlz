@@ -34,7 +34,16 @@ class RegisterView(APIView):
             from .models import User
             from .serializers import UserRegistrationSerializer
             from django.db import IntegrityError
+            from startup.models import SiteConfiguration
             import random
+            
+            # Check if registration is enabled
+            config = SiteConfiguration.get_config()
+            if not config.registration_enabled:
+                return Response(
+                    {"error": "Registration is currently disabled. Please try again later."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
             
             print(f"DEBUG: Registration request data: {request.data}")
             
@@ -510,6 +519,15 @@ class LoginView(APIView):
         try:
             from .serializers import UserLoginSerializer
             from rest_framework_simplejwt.tokens import RefreshToken
+            from startup.models import SiteConfiguration
+            
+            # Check if login is enabled
+            config = SiteConfiguration.get_config()
+            if not config.login_enabled:
+                return Response(
+                    {"error": "Login is currently disabled. Please try again later."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
             
             serializer = UserLoginSerializer(data=request.data)
             if serializer.is_valid():

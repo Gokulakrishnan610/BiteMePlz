@@ -151,6 +151,15 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
     def login(self, request):
+        # Check if login is enabled
+        from startup.models import SiteConfiguration
+        config = SiteConfiguration.get_config()
+        if not config.login_enabled:
+            return Response(
+                {"error": "Login is currently disabled. Please try again later."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
         serializer = UserLoginSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data['user']
@@ -1729,6 +1738,15 @@ class OrderViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         """Create a single shop order"""
         try:
+            # Check if ordering is enabled
+            from startup.models import SiteConfiguration
+            config = SiteConfiguration.get_config()
+            if not config.ordering_enabled:
+                return Response(
+                    {"error": "Ordering is currently disabled. Please try again later."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
             serializer = self.get_serializer(data=request.data, context={'request': request})
             serializer.is_valid(raise_exception=True)
             try:

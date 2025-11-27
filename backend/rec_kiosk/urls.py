@@ -21,6 +21,7 @@ def cors_preflight(request):
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
+    path('api/startup/', include('startup.urls')),
     path('cors-preflight/', cors_preflight, name='cors_preflight'),
 ]
 

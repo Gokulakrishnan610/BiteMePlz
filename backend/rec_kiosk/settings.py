@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_extensions',
     'api',
+    'startup.apps.StartupConfig',
     'django_celery_beat',
 ]
 
@@ -244,18 +245,7 @@ SERVER_EMAIL = config('SERVER_EMAIL', default=DEFAULT_FROM_EMAIL)
 # Brevo API Key (for HTTP API - works on Render free tier)
 BREVO_API_KEY = config('BREVO_API_KEY', default=None)
 
-# Log email configuration
-print("=" * 60)
-print("📧 EMAIL CONFIGURATION:")
-print(f"   Backend: {EMAIL_BACKEND}")
-print(f"   Host: {EMAIL_HOST}")
-print(f"   Port: {EMAIL_PORT}")
-print(f"   Use TLS: {EMAIL_USE_TLS}")
-print(f"   Use SSL: {EMAIL_USE_SSL}")
-print(f"   User: {EMAIL_HOST_USER}")
-print(f"   Password: {'*' * len(EMAIL_HOST_PASSWORD) if EMAIL_HOST_PASSWORD else '(not set)'}")
-print(f"   From Email: {DEFAULT_FROM_EMAIL}")
-print("=" * 60)
+
 
 # Razorpay
 RAZORPAY_KEY_ID = config('RAZORPAY_KEY_ID', default='')
