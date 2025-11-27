@@ -230,17 +230,22 @@ SIMPLE_JWT = {
 # File upload
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
-
-# Email - Hardcoded for Brevo SMTP
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp-relay.brevo.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
-EMAIL_HOST_USER = '9c8b3b001@smtp-brevo.com'
-EMAIL_HOST_PASSWORD = '8qD0Uwm1RGpTBOJt'
+
+# ✅ Correct SMTP username (your Brevo login email)
+EMAIL_HOST_USER = 'asivasabariganesan@gmail.com'
+
+# ✅ Correct SMTP password (your Brevo SMTP Key — generate in SMTP & API → SMTP)
+EMAIL_HOST_PASSWORD = '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'
+
+# Must match your Brevo verified sender
 DEFAULT_FROM_EMAIL = 'asivasabariganesan@gmail.com'
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
 
 # Log email configuration
 print("=" * 60)
