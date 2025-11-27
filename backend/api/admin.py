@@ -14,10 +14,19 @@ from django.utils.crypto import get_random_string
 
 
 class CustomUserAdmin(UserAdmin):
-    list_display = ('name', 'email', 'roll_no', 'role', 'is_verified', 'balance', 'created_at')
+    list_display = ('name', 'email', 'roll_no', 'role', 'is_verified', 'otp_status', 'balance', 'created_at')
     list_filter = ('role', 'is_verified', 'created_at')
     search_fields = ('name', 'email', 'roll_no')
     ordering = ('-created_at',)
+    
+    def otp_status(self, obj):
+        """Show if OTP email was sent"""
+        if obj.otp_email_sent:
+            return format_html('<span style="color: green;">✅ Sent</span>')
+        else:
+            return format_html('<span style="color: red;">❌ Not Sent</span>')
+    
+    otp_status.short_description = 'Email Sent'
     
     fieldsets = UserAdmin.fieldsets + (
         ('REC Kiosk Info', {'fields': ('name', 'roll_no', 'role', 'shop', 'is_verified', 'otp', 'password_reset_otp', 'password_reset_token', 'balance')}),
@@ -33,6 +42,7 @@ class CustomUserAdmin(UserAdmin):
         from .utils import send_otp_email
         import random
         
+        results = []
         success_count = 0
         fail_count = 0
         
@@ -43,18 +53,26 @@ class CustomUserAdmin(UserAdmin):
                 
                 if email_sent:
                     success_count += 1
-                    self.message_user(request, f"✅ Test email sent to {user.email} (OTP: {otp})", messages.SUCCESS)
+                    results.append(f"✅ {user.name} ({user.email}) - OTP: {otp}")
                 else:
                     fail_count += 1
-                    self.message_user(request, f"❌ Failed to send email to {user.email}", messages.ERROR)
+                    results.append(f"❌ {user.name} ({user.email}) - Failed to send")
             except Exception as e:
                 fail_count += 1
-                self.message_user(request, f"❌ Error sending to {user.email}: {str(e)}", messages.ERROR)
+                results.append(f"❌ {user.name} ({user.email}) - Error: {str(e)}")
         
+        # Show detailed results
+        for result in results:
+            if "✅" in result:
+                self.message_user(request, result, messages.SUCCESS)
+            else:
+                self.message_user(request, result, messages.ERROR)
+        
+        # Show summary
         if success_count > 0:
-            self.message_user(request, f"Sent {success_count} test email(s) successfully", messages.SUCCESS)
+            self.message_user(request, f"✅ Successfully sent {success_count} email(s)", messages.SUCCESS)
         if fail_count > 0:
-            self.message_user(request, f"Failed to send {fail_count} email(s)", messages.WARNING)
+            self.message_user(request, f"❌ Failed to send {fail_count} email(s)", messages.ERROR)
     
     send_test_email.short_description = "📧 Send test OTP email to selected users"
     

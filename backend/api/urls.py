@@ -68,6 +68,7 @@ class RegisterView(APIView):
                 # Create user with OTP
                 user = User.objects.create_user(**user_data)
                 user.otp = otp_data
+                user.otp_email_sent = False  # Will be updated after email is sent
                 user.save()
                 
                 # Send OTP email asynchronously to avoid blocking
@@ -80,13 +81,19 @@ class RegisterView(APIView):
                         email_sent = send_otp_email(user.email, otp, user.name)
                         if email_sent:
                             print(f"✅ EMAIL SENT SUCCESSFULLY to {user.email}")
+                            user.otp_email_sent = True
+                            user.save()
                         else:
                             print(f"❌ EMAIL FAILED - OTP for {user.email}: {otp}")
                             print(f"⚠️  User ID: {user.id}")
+                            user.otp_email_sent = False
+                            user.save()
                     except Exception as e:
                         print(f"❌ EMAIL ERROR - OTP for {user.email}: {otp}")
                         print(f"⚠️  User ID: {user.id}")
                         print(f"⚠️  Error: {e}")
+                        user.otp_email_sent = False
+                        user.save()
                         import traceback
                         traceback.print_exc()
                 

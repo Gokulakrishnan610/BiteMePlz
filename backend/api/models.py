@@ -25,6 +25,7 @@ class User(AbstractUser):
     shop = models.ForeignKey('Shop', on_delete=models.SET_NULL, null=True, blank=True)
     is_verified = models.BooleanField(default=False)
     otp = models.JSONField(null=True, blank=True)
+    otp_email_sent = models.BooleanField(default=False)  # Track if OTP email was sent
     password_reset_otp = models.JSONField(null=True, blank=True)
     password_reset_token = models.JSONField(null=True, blank=True)
     balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
