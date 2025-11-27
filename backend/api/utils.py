@@ -120,17 +120,50 @@ def send_otp_email(email, otp, user_name):
         print(f"📧 Sending OTP email from {settings.DEFAULT_FROM_EMAIL} to {email}")
         print(f"📧 Subject: {subject}")
         print(f"📧 OTP: {otp}")
-        result = send_mail(
-            subject=subject,
-            message=strip_tags(plain_message),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            html_message=html_message,
-            fail_silently=False,
-        )
-        print(f"📧 send_mail() returned: {result} (1 = success)")
-        print(f"✅ Email accepted by SMTP server for {email}")
-        return True
+        
+        # Try Brevo API first (works on Render free tier)
+        try:
+            import requests
+            brevo_api_key = 'xkeysib-c8b3b001e9f8a4d7c2b5e6f3a1d8c9b2e5f7a3d6c1b4e8f2a5d9c3b7e1f4a8d2'
+            
+            response = requests.post(
+                'https://api.brevo.com/v3/smtp/email',
+                headers={
+                    'api-key': brevo_api_key,
+                    'Content-Type': 'application/json'
+                },
+                json={
+                    'sender': {'email': settings.DEFAULT_FROM_EMAIL, 'name': 'Campus Kiosk'},
+                    'to': [{'email': email}],
+                    'subject': subject,
+                    'htmlContent': html_message
+                },
+                timeout=10
+            )
+            
+            if response.status_code == 201:
+                print(f"✅ Email sent via Brevo API to {email}")
+                return True
+            else:
+                print(f"⚠️  Brevo API returned {response.status_code}: {response.text}")
+                raise Exception(f"Brevo API failed: {response.status_code}")
+                
+        except Exception as api_error:
+            print(f"⚠️  Brevo API failed: {api_error}, falling back to SMTP...")
+            
+            # Fallback to SMTP (for local development)
+            result = send_mail(
+                subject=subject,
+                message=strip_tags(plain_message),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+            print(f"📧 send_mail() returned: {result} (1 = success)")
+            print(f"✅ Email sent via SMTP to {email}")
+            return True
+            
     except Exception as e:
         print(f"❌ Error sending email: {e}")
         import traceback
