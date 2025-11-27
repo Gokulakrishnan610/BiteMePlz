@@ -1747,6 +1747,15 @@ class OrderViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_403_FORBIDDEN
                 )
             
+            # Check year and department restrictions for students
+            user = request.user
+            if user.is_authenticated and user.role == 'student':
+                if not config.is_ordering_allowed(year=user.year, department=user.department):
+                    return Response(
+                        {"error": "Ordering is currently restricted for your year or department. Please contact administration."},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+            
             serializer = self.get_serializer(data=request.data, context={'request': request})
             serializer.is_valid(raise_exception=True)
             try:

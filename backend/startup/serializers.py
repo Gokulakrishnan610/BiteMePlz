@@ -38,6 +38,12 @@ class SiteConfigurationSerializer(serializers.ModelSerializer):
             'login_enabled',
             'registration_enabled',
             'ordering_enabled',
+            'restricted_years_login',
+            'restricted_years_registration',
+            'restricted_years_ordering',
+            'restricted_departments_login',
+            'restricted_departments_registration',
+            'restricted_departments_ordering',
             'created_at',
             'updated_at'
         ]

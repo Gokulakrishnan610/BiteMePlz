@@ -45,6 +45,15 @@ class RegisterView(APIView):
                     status=status.HTTP_403_FORBIDDEN
                 )
             
+            # Check year and department restrictions
+            year = request.data.get('year')
+            department = request.data.get('department')
+            if not config.is_registration_allowed(year=year, department=department):
+                return Response(
+                    {"error": "Registration is currently restricted for your year or department. Please contact administration."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
             print(f"DEBUG: Registration request data: {request.data}")
             
             # Check if user already exists
@@ -536,6 +545,14 @@ class LoginView(APIView):
                 # Check if user is verified
                 if not user.is_verified:
                     return Response({'error': 'Please verify your email first'}, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Check year and department restrictions for students
+                if user.role == 'student':
+                    if not config.is_login_allowed(year=user.year, department=user.department):
+                        return Response(
+                            {"error": "Login is currently restricted for your year or department. Please contact administration."},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
                 
                 refresh = RefreshToken.for_user(user)
                 return Response({

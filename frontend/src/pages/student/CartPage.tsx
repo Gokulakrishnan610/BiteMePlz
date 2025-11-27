@@ -65,7 +65,7 @@ const CartPage: React.FC = () => {
 
   const { user } = useAuth()
   const { balance, refreshBalance } = useWallet()
-  const { config } = useSiteConfig()
+  const { config, isOrderingAllowed } = useSiteConfig()
   const navigate = useNavigate()
   const [paymentInitiated, setPaymentInitiated] = useState(false)
   const [timeLeft, setTimeLeft] = useState(180) // 3 minutes in seconds
@@ -348,6 +348,13 @@ const CartPage: React.FC = () => {
       toast.error('Ordering is currently disabled. Please try again later.');
       return;
     }
+    
+    // Check year and department restrictions
+    if (!isOrderingAllowed(user?.year, user?.department)) {
+      toast.error('Ordering is currently restricted for your year or department. Please contact administration.');
+      return;
+    }
+    
     setShowDisclaimer(true)
   }
 
@@ -633,11 +640,13 @@ const CartPage: React.FC = () => {
                   </div>
 
                   {/* Ordering Disabled Warning */}
-                  {config && !config.ordering_enabled && (
+                  {config && (!config.ordering_enabled || !isOrderingAllowed(user?.year, user?.department)) && (
                     <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
                       <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={18} />
                       <p className="text-sm text-yellow-800">
-                        Ordering is currently disabled. Please try again later.
+                        {!config.ordering_enabled 
+                          ? 'Ordering is currently disabled. Please try again later.'
+                          : 'Ordering is currently restricted for your year or department. Please contact administration.'}
                       </p>
                     </div>
                   )}
@@ -645,7 +654,7 @@ const CartPage: React.FC = () => {
                   {/* Checkout Button */}
                   <Button
                     onClick={handleCheckout}
-                    disabled={paymentInitiated || isLoading || (config && !config.ordering_enabled)}
+                    disabled={paymentInitiated || isLoading || (config && (!config.ordering_enabled || !isOrderingAllowed(user?.year, user?.department)))}
                     className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 text-lg"
                   >
                     {isLoading ? (

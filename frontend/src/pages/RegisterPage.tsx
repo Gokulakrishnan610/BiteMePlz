@@ -30,7 +30,7 @@ const RegisterPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
-  const { config, loading: configLoading } = useSiteConfig();
+  const { config, loading: configLoading, isRegistrationAllowed } = useSiteConfig();
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
@@ -118,7 +118,7 @@ const RegisterPage: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
     
@@ -142,6 +142,12 @@ const RegisterPage: React.FC = () => {
     // Check if registration is enabled
     if (config && !config.registration_enabled) {
       toast.error('Registration is currently disabled. Please try again later.');
+      return;
+    }
+
+    // Check year and department restrictions
+    if (!isRegistrationAllowed(formData.year, formData.department)) {
+      toast.error('Registration is currently restricted for your year or department. Please contact administration.');
       return;
     }
 

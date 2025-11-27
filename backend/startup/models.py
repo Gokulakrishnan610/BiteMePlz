@@ -51,6 +51,41 @@ class SiteConfiguration(models.Model):
     login_enabled = models.BooleanField(default=True, help_text="Allow users to login")
     registration_enabled = models.BooleanField(default=True, help_text="Allow new user registration")
     ordering_enabled = models.BooleanField(default=True, help_text="Allow users to place orders")
+    
+    # Year-wise restrictions (JSON field storing list of year codes)
+    restricted_years_login = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of year codes that are restricted from login (e.g., ['1', '2'])"
+    )
+    restricted_years_registration = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of year codes that are restricted from registration (e.g., ['1', '2'])"
+    )
+    restricted_years_ordering = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of year codes that are restricted from ordering (e.g., ['1', '2'])"
+    )
+    
+    # Department-wise restrictions (JSON field storing list of department codes)
+    restricted_departments_login = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of department codes that are restricted from login (e.g., ['CSE', 'ECE'])"
+    )
+    restricted_departments_registration = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of department codes that are restricted from registration (e.g., ['CSE', 'ECE'])"
+    )
+    restricted_departments_ordering = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of department codes that are restricted from ordering (e.g., ['CSE', 'ECE'])"
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -70,6 +105,36 @@ class SiteConfiguration(models.Model):
         """
         config, created = cls.objects.get_or_create(pk=cls.objects.first().pk if cls.objects.exists() else uuid.uuid4())
         return config
+
+    def is_login_allowed(self, year=None, department=None):
+        """Check if login is allowed for given year and department"""
+        if not self.login_enabled:
+            return False
+        if year and year in self.restricted_years_login:
+            return False
+        if department and department in self.restricted_departments_login:
+            return False
+        return True
+    
+    def is_registration_allowed(self, year=None, department=None):
+        """Check if registration is allowed for given year and department"""
+        if not self.registration_enabled:
+            return False
+        if year and year in self.restricted_years_registration:
+            return False
+        if department and department in self.restricted_departments_registration:
+            return False
+        return True
+    
+    def is_ordering_allowed(self, year=None, department=None):
+        """Check if ordering is allowed for given year and department"""
+        if not self.ordering_enabled:
+            return False
+        if year and year in self.restricted_years_ordering:
+            return False
+        if department and department in self.restricted_departments_ordering:
+            return False
+        return True
 
     def save(self, *args, **kwargs):
         """

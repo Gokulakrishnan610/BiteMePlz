@@ -31,9 +31,17 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
     readonly_fields = ('id', 'created_at', 'updated_at')
     
     fieldsets = (
-        ('Access Restrictions', {
+        ('Global Access Restrictions', {
             'fields': ('login_enabled', 'registration_enabled', 'ordering_enabled'),
             'description': 'Control site-wide access to login, registration, and ordering functionality.'
+        }),
+        ('Year-wise Restrictions', {
+            'fields': ('restricted_years_login', 'restricted_years_registration', 'restricted_years_ordering'),
+            'description': 'Restrict specific academic years from login, registration, or ordering. Enter year codes as a JSON list (e.g., ["1", "2"]).'
+        }),
+        ('Department-wise Restrictions', {
+            'fields': ('restricted_departments_login', 'restricted_departments_registration', 'restricted_departments_ordering'),
+            'description': 'Restrict specific departments from login, registration, or ordering. Enter department codes as a JSON list (e.g., ["CSE", "ECE"]).'
         }),
         ('Metadata', {
             'fields': ('id', 'created_at', 'updated_at'),
