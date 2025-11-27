@@ -543,6 +543,8 @@ class LoginView(APIView):
                     'name': user.name,
                     'email': user.email,
                     'role': user.role,
+                    'year': user.year,
+                    'department': user.department,
                     'shop': str(user.shop.id) if user.shop else None,
                     'balance': float(user.balance),
                     'is_sub_admin': bool(getattr(user, 'is_sub_admin', False)),

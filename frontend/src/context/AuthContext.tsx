@@ -6,6 +6,8 @@ interface User {
   name: string;
   email: string;
   role: 'student' | 'shopAdmin' | 'admin' | 'parent';
+  year?: string;
+  department?: string;
   shop?: string;
   balance?: number;
   is_sub_admin?: boolean;
@@ -105,6 +107,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         name: data.name,
         email: data.email,
         role: data.role,
+        year: data.year,
+        department: data.department,
         shop: data.shop,
         balance: data.balance,
         is_sub_admin: data.is_sub_admin,
@@ -172,6 +176,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         name: data.name,
         email: data.email,
         role: data.role,
+        year: data.year,
+        department: data.department,
         shop: data.shop,
         balance: data.balance,
         is_sub_admin: data.is_sub_admin,

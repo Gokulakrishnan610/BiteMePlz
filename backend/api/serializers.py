@@ -24,7 +24,7 @@ class UserSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['id', 'name', 'roll_no', 'email', 'role', 'shop', 'is_verified', 'balance', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'roll_no', 'email', 'role', 'year', 'department', 'shop', 'is_verified', 'balance', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
@@ -32,10 +32,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
     role = serializers.CharField(required=False, default='student')
+    year = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    department = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = User
-        fields = ['name', 'roll_no', 'email', 'password', 'confirm_password', 'role']
+        fields = ['name', 'roll_no', 'email', 'password', 'confirm_password', 'role', 'year', 'department']
 
     def validate(self, attrs):
         if attrs['password'] != attrs['confirm_password']:

@@ -19,6 +19,8 @@ const RegisterPage: React.FC = () => {
     name: '',
     email: '',
     rollNo: '',
+    year: '',
+    department: '',
     password: '',
     confirmPassword: '',
     otp: ''
@@ -47,6 +49,16 @@ const RegisterPage: React.FC = () => {
       newErrors.rollNo = 'Roll number is required';
     } else if (formData.rollNo.trim().length < 3) {
       newErrors.rollNo = 'Roll number must be at least 3 characters';
+    }
+
+    // Year validation
+    if (!formData.year) {
+      newErrors.year = 'Year is required';
+    }
+
+    // Department validation
+    if (!formData.department) {
+      newErrors.department = 'Department is required';
     }
 
     // Password validation
@@ -105,6 +117,8 @@ const RegisterPage: React.FC = () => {
         name: formData.name.trim(),
         email: formData.email.trim().toLowerCase(),
         roll_no: formData.rollNo.trim(),
+        year: formData.year,
+        department: formData.department,
         password: formData.password,
         confirm_password: formData.confirmPassword
       });
@@ -251,6 +265,54 @@ const RegisterPage: React.FC = () => {
                   required
                 />
                 {errors.rollNo && <p className="text-sm text-red-600">{errors.rollNo}</p>}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="year" className="block text-sm font-medium text-gray-700">
+                    Year
+                  </label>
+                  <select
+                    id="year"
+                    name="year"
+                    value={formData.year}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${errors.year ? 'border-red-400' : 'border-gray-300'}`}
+                    required
+                  >
+                    <option value="">Select Year</option>
+                    <option value="1">First Year</option>
+                    <option value="2">Second Year</option>
+                    <option value="3">Third Year</option>
+                    <option value="4">Fourth Year</option>
+                  </select>
+                  {errors.year && <p className="text-sm text-red-600">{errors.year}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="department" className="block text-sm font-medium text-gray-700">
+                    Department
+                  </label>
+                  <select
+                    id="department"
+                    name="department"
+                    value={formData.department}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${errors.department ? 'border-red-400' : 'border-gray-300'}`}
+                    required
+                  >
+                    <option value="">Select Dept</option>
+                    <option value="CSE">CSE</option>
+                    <option value="ECE">ECE</option>
+                    <option value="EEE">EEE</option>
+                    <option value="MECH">Mechanical</option>
+                    <option value="CIVIL">Civil</option>
+                    <option value="IT">IT</option>
+                    <option value="AIDS">AI & DS</option>
+                    <option value="CSBS">CS & BS</option>
+                  </select>
+                  {errors.department && <p className="text-sm text-red-600">{errors.department}</p>}
+                </div>
               </div>
 
               <div className="space-y-2">

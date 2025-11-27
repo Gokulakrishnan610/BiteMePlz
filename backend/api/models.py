@@ -22,6 +22,34 @@ class User(AbstractUser):
         ],
         default='student'
     )
+    year = models.CharField(
+        max_length=20,
+        choices=[
+            ('1', 'First Year'),
+            ('2', 'Second Year'),
+            ('3', 'Third Year'),
+            ('4', 'Fourth Year'),
+        ],
+        null=True,
+        blank=True,
+        help_text='Academic year (for students)'
+    )
+    department = models.CharField(
+        max_length=100,
+        choices=[
+            ('CSE', 'Computer Science and Engineering'),
+            ('ECE', 'Electronics and Communication Engineering'),
+            ('EEE', 'Electrical and Electronics Engineering'),
+            ('MECH', 'Mechanical Engineering'),
+            ('CIVIL', 'Civil Engineering'),
+            ('IT', 'Information Technology'),
+            ('AIDS', 'Artificial Intelligence and Data Science'),
+            ('CSBS', 'Computer Science and Business Systems'),
+        ],
+        null=True,
+        blank=True,
+        help_text='Department (for students)'
+    )
     shop = models.ForeignKey('Shop', on_delete=models.SET_NULL, null=True, blank=True)
     is_verified = models.BooleanField(default=False)
     otp = models.JSONField(null=True, blank=True)
@@ -53,6 +81,8 @@ class User(AbstractUser):
             'roll_no': self.roll_no,
             'email': self.email,
             'role': self.role,
+            'year': self.year,
+            'department': self.department,
             'shop': str(self.shop.id) if self.shop else None,
             'is_verified': self.is_verified,
             'balance': float(self.balance),

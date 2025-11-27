@@ -29,7 +29,7 @@ class CustomUserAdmin(UserAdmin):
     otp_status.short_description = 'Email Sent'
     
     fieldsets = UserAdmin.fieldsets + (
-        ('REC Kiosk Info', {'fields': ('name', 'roll_no', 'role', 'shop', 'is_verified', 'otp', 'password_reset_otp', 'password_reset_token', 'balance')}),
+        ('REC Kiosk Info', {'fields': ('name', 'roll_no', 'role', 'shop', 'year','department','is_verified', 'otp', 'password_reset_otp', 'password_reset_token', 'balance')}),
     )
     add_fieldsets = UserAdmin.add_fieldsets + (
         ('REC Kiosk Info', {'fields': ('name', 'roll_no', 'role', 'shop', 'is_verified', 'otp', 'password_reset_otp', 'password_reset_token', 'balance')}),
