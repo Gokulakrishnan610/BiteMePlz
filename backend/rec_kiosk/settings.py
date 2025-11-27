@@ -230,24 +230,19 @@ SIMPLE_JWT = {
 # File upload
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp-relay.brevo.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
-
-# ✅ Correct SMTP username (your Brevo SMTP login - check Brevo dashboard)
-EMAIL_HOST_USER = '9c8b3b001@smtp-brevo.com'
-
-# ✅ Correct SMTP password (your Brevo SMTP Key — generate in SMTP & API → SMTP)
-EMAIL_HOST_PASSWORD = '8qD0Uwm1RGpTBOJt'
-# Must match your Brevo verified sender
-DEFAULT_FROM_EMAIL = 'asivasabariganesan@gmail.com'
-SERVER_EMAIL = DEFAULT_FROM_EMAIL
+# Email Configuration - Read from .env
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = config('EMAIL_HOST', default='smtp-relay.brevo.com')
+EMAIL_PORT = config('EMAIL_PORT', cast=int, default=587)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool, default=True)
+EMAIL_USE_SSL = config('EMAIL_USE_SSL', cast=bool, default=False)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='asivasabariganesan@gmail.com')
+SERVER_EMAIL = config('SERVER_EMAIL', default=DEFAULT_FROM_EMAIL)
 
 # Brevo API Key (for HTTP API - works on Render free tier)
-# Get your API key from: https://app.brevo.com/settings/keys/api
-BREVO_API_KEY = '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'
+BREVO_API_KEY = config('BREVO_API_KEY', default=None)
 
 # Log email configuration
 print("=" * 60)
