@@ -24,31 +24,15 @@ class User(AbstractUser):
     )
     year = models.CharField(
         max_length=20,
-        choices=[
-            ('1', 'First Year'),
-            ('2', 'Second Year'),
-            ('3', 'Third Year'),
-            ('4', 'Fourth Year'),
-        ],
         null=True,
         blank=True,
-        help_text='Academic year (for students)'
+        help_text='Academic year code (for students)'
     )
     department = models.CharField(
         max_length=100,
-        choices=[
-            ('CSE', 'Computer Science and Engineering'),
-            ('ECE', 'Electronics and Communication Engineering'),
-            ('EEE', 'Electrical and Electronics Engineering'),
-            ('MECH', 'Mechanical Engineering'),
-            ('CIVIL', 'Civil Engineering'),
-            ('IT', 'Information Technology'),
-            ('AIDS', 'Artificial Intelligence and Data Science'),
-            ('CSBS', 'Computer Science and Business Systems'),
-        ],
         null=True,
         blank=True,
-        help_text='Department (for students)'
+        help_text='Department code (for students)'
     )
     shop = models.ForeignKey('Shop', on_delete=models.SET_NULL, null=True, blank=True)
     is_verified = models.BooleanField(default=False)

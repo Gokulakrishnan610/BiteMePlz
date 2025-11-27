@@ -14,7 +14,7 @@ from django.utils.crypto import get_random_string
 
 
 class CustomUserAdmin(UserAdmin):
-    list_display = ('name', 'email', 'roll_no', 'role', 'is_verified', 'otp_status', 'balance', 'created_at')
+    list_display = ('name', 'email', 'roll_no', 'role', 'is_verified', 'otp_status','year','department', 'balance', 'created_at')
     list_filter = ('role', 'is_verified', 'created_at')
     search_fields = ('name', 'email', 'roll_no')
     ordering = ('-created_at',)

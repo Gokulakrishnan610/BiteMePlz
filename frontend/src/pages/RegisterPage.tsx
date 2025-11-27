@@ -1,10 +1,26 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus, Eye, EyeOff, Zap, Mail, Lock, User, CreditCard, AlertCircle } from 'lucide-react';
 import { useSiteConfig } from '../context/SiteConfigContext';
 import api from '../api';
 import { toast } from 'sonner';
+
+interface AcademicYear {
+  id: string;
+  code: string;
+  name: string;
+  is_active: boolean;
+  order: number;
+}
+
+interface Department {
+  id: string;
+  code: string;
+  name: string;
+  is_active: boolean;
+  order: number;
+}
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -15,6 +31,9 @@ const RegisterPage: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const { config, loading: configLoading } = useSiteConfig();
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -25,6 +44,26 @@ const RegisterPage: React.FC = () => {
     confirmPassword: '',
     otp: ''
   });
+
+  // Fetch academic years and departments on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [yearsResponse, deptsResponse] = await Promise.all([
+          api.get('/api/startup/academic-years/'),
+          api.get('/api/startup/departments/')
+        ]);
+        setAcademicYears(yearsResponse.data);
+        setDepartments(deptsResponse.data);
+      } catch (error) {
+        console.error('Failed to fetch years/departments:', error);
+        toast.error('Failed to load registration options');
+      } finally {
+        setDataLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
@@ -193,7 +232,7 @@ const RegisterPage: React.FC = () => {
     }
   };
 
-  if (configLoading) {
+  if (configLoading || dataLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
@@ -279,12 +318,14 @@ const RegisterPage: React.FC = () => {
                     onChange={handleChange}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${errors.year ? 'border-red-400' : 'border-gray-300'}`}
                     required
+                    disabled={dataLoading}
                   >
                     <option value="">Select Year</option>
-                    <option value="1">First Year</option>
-                    <option value="2">Second Year</option>
-                    <option value="3">Third Year</option>
-                    <option value="4">Fourth Year</option>
+                    {academicYears.map((year) => (
+                      <option key={year.id} value={year.code}>
+                        {year.name}
+                      </option>
+                    ))}
                   </select>
                   {errors.year && <p className="text-sm text-red-600">{errors.year}</p>}
                 </div>
@@ -300,16 +341,14 @@ const RegisterPage: React.FC = () => {
                     onChange={handleChange}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${errors.department ? 'border-red-400' : 'border-gray-300'}`}
                     required
+                    disabled={dataLoading}
                   >
                     <option value="">Select Dept</option>
-                    <option value="CSE">CSE</option>
-                    <option value="ECE">ECE</option>
-                    <option value="EEE">EEE</option>
-                    <option value="MECH">Mechanical</option>
-                    <option value="CIVIL">Civil</option>
-                    <option value="IT">IT</option>
-                    <option value="AIDS">AI & DS</option>
-                    <option value="CSBS">CS & BS</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.code}>
+                        {dept.code}
+                      </option>
+                    ))}
                   </select>
                   {errors.department && <p className="text-sm text-red-600">{errors.department}</p>}
                 </div>

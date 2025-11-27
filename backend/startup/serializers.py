@@ -1,5 +1,25 @@
 from rest_framework import serializers
-from .models import SiteConfiguration
+from .models import SiteConfiguration, AcademicYear, Department
+
+
+class AcademicYearSerializer(serializers.ModelSerializer):
+    """Serializer for AcademicYear model"""
+    id = serializers.UUIDField(read_only=True)
+    
+    class Meta:
+        model = AcademicYear
+        fields = ['id', 'code', 'name', 'is_active', 'order', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class DepartmentSerializer(serializers.ModelSerializer):
+    """Serializer for Department model"""
+    id = serializers.UUIDField(read_only=True)
+    
+    class Meta:
+        model = Department
+        fields = ['id', 'code', 'name', 'is_active', 'order', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class SiteConfigurationSerializer(serializers.ModelSerializer):

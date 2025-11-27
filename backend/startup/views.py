@@ -2,8 +2,46 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, AllowAny
-from .models import SiteConfiguration
-from .serializers import SiteConfigurationSerializer
+from .models import SiteConfiguration, AcademicYear, Department
+from .serializers import SiteConfigurationSerializer, AcademicYearSerializer, DepartmentSerializer
+
+
+class AcademicYearsView(APIView):
+    """
+    API view for retrieving active academic years.
+    Public access - used for registration form.
+    """
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        """
+        Retrieve all active academic years.
+        
+        Returns:
+            200 OK: List of active academic years
+        """
+        years = AcademicYear.objects.filter(is_active=True).order_by('order', 'code')
+        serializer = AcademicYearSerializer(years, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class DepartmentsView(APIView):
+    """
+    API view for retrieving active departments.
+    Public access - used for registration form.
+    """
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        """
+        Retrieve all active departments.
+        
+        Returns:
+            200 OK: List of active departments
+        """
+        departments = Department.objects.filter(is_active=True).order_by('order', 'code')
+        serializer = DepartmentSerializer(departments, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class SiteConfigurationView(APIView):

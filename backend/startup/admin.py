@@ -1,8 +1,25 @@
 from django.contrib import admin
-from .models import SiteConfiguration
+from .models import SiteConfiguration, AcademicYear, Department
 
 
-@admin.register(SiteConfiguration)
+class AcademicYearAdmin(admin.ModelAdmin):
+    """Admin interface for Academic Years"""
+    list_display = ('code', 'name', 'is_active', 'order')
+    list_editable = ('is_active', 'order')
+    list_filter = ('is_active',)
+    search_fields = ('code', 'name')
+    ordering = ('order', 'code')
+
+
+class DepartmentAdmin(admin.ModelAdmin):
+    """Admin interface for Departments"""
+    list_display = ('code', 'name', 'is_active', 'order')
+    list_editable = ('is_active', 'order')
+    list_filter = ('is_active',)
+    search_fields = ('code', 'name')
+    ordering = ('order', 'code')
+
+
 class SiteConfigurationAdmin(admin.ModelAdmin):
     """
     Admin interface for SiteConfiguration model.
@@ -38,5 +55,7 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
         return False
 
 
-# Explicitly register the model (fallback in case decorator doesn't work)
+# Explicitly register all models
+admin.site.register(AcademicYear, AcademicYearAdmin)
+admin.site.register(Department, DepartmentAdmin)
 admin.site.register(SiteConfiguration, SiteConfigurationAdmin)
