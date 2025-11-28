@@ -11,7 +11,7 @@ from .managers import CustomUserManager
 class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
-    roll_no = models.CharField(max_length=255, unique=True)
+    roll_no = models.CharField(max_length=255, unique=True, null=True, blank=True)
     email = models.EmailField(unique=True)
     role = models.CharField(
         max_length=50,
@@ -19,6 +19,7 @@ class User(AbstractUser):
             ('admin', 'Admin'),
             ('shopAdmin', 'Shop Admin'),
             ('student', 'Student'),
+            ('staff', 'Staff'),
         ],
         default='student'
     )
@@ -34,6 +35,7 @@ class User(AbstractUser):
         blank=True,
         help_text='Department code (for students)'
     )
+    staff_code = models.CharField(max_length=255, unique=True, null=True, blank=True)
     shop = models.ForeignKey('Shop', on_delete=models.SET_NULL, null=True, blank=True)
     is_verified = models.BooleanField(default=False)
     otp = models.JSONField(null=True, blank=True)
@@ -49,7 +51,7 @@ class User(AbstractUser):
     objects = CustomUserManager()
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username', 'name', 'roll_no']
+    REQUIRED_FIELDS = ['username', 'name']
 
     class Meta:
         db_table = 'users'
@@ -63,6 +65,7 @@ class User(AbstractUser):
             'id': str(self.id),
             'name': self.name,
             'roll_no': self.roll_no,
+            'staff_code': self.staff_code,
             'email': self.email,
             'role': self.role,
             'year': self.year,

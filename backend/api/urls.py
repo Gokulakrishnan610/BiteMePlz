@@ -58,13 +58,20 @@ class RegisterView(APIView):
             
             # Check if user already exists
             email = request.data.get('email', '').strip().lower()
-            roll_no = request.data.get('roll_no', '').strip()
+            role = request.data.get('role', 'student')
             
             if User.objects.filter(email=email).exists():
                 return Response({'message': 'User with this email already exists'}, status=status.HTTP_400_BAD_REQUEST)
             
-            if User.objects.filter(roll_no=roll_no).exists():
-                return Response({'message': 'User with this roll number already exists'}, status=status.HTTP_400_BAD_REQUEST)
+            # Role-specific duplicate checking
+            if role == 'student':
+                roll_no = request.data.get('roll_no', '').strip()
+                if roll_no and User.objects.filter(roll_no=roll_no).exists():
+                    return Response({'message': 'User with this roll number already exists'}, status=status.HTTP_400_BAD_REQUEST)
+            elif role == 'staff':
+                staff_code = request.data.get('staff_code', '').strip()
+                if staff_code and User.objects.filter(staff_code=staff_code).exists():
+                    return Response({'message': 'User with this staff code already exists'}, status=status.HTTP_400_BAD_REQUEST)
             
             serializer = UserRegistrationSerializer(data=request.data)
             if serializer.is_valid():
@@ -136,6 +143,8 @@ class RegisterView(APIView):
                 return Response({'message': 'User with this email already exists'}, status=status.HTTP_400_BAD_REQUEST)
             elif 'roll_no' in str(e):
                 return Response({'message': 'User with this roll number already exists'}, status=status.HTTP_400_BAD_REQUEST)
+            elif 'staff_code' in str(e):
+                return Response({'message': 'User with this staff code already exists'}, status=status.HTTP_400_BAD_REQUEST)
             return Response({'error': 'Registration failed due to duplicate data'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             print(f"DEBUG: Exception in registration: {str(e)}")

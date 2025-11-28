@@ -28,6 +28,7 @@ interface Order {
   qr_code?: string
   qr_valid_until?: string
   payment_result?: any
+  final_validity?: string
   // Optional fields from API we may receive; kept optional to avoid breaking existing UI
   id?: string
   shop?: { id?: string; _id?: string; name?: string } | string
@@ -315,6 +316,18 @@ const OrdersPage: React.FC = () => {
                           minute: "2-digit",
                         })}
                       </p>
+                      {order.final_validity && (
+                        <p className="text-white/80 text-sm flex items-center mt-1">
+                          <Clock size={14} className="mr-1" />
+                          Valid till: {new Date(order.final_validity).toLocaleDateString("en-IN", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      )}
                     </div>
                     <div className="text-right">
                       <p className="text-white font-bold text-xl">₹{order.total_price}</p>

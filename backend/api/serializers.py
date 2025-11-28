@@ -32,16 +32,47 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
     role = serializers.CharField(required=False, default='student')
+    
+    # Student fields - all optional
+    roll_no = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     year = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     department = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    
+    # Staff field - optional
+    staff_code = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = User
-        fields = ['name', 'roll_no', 'email', 'password', 'confirm_password', 'role', 'year', 'department']
+        fields = ['name', 'roll_no', 'staff_code', 'email', 'password', 'confirm_password', 'role', 'year', 'department']
 
     def validate(self, attrs):
+        # Password matching validation
         if attrs['password'] != attrs['confirm_password']:
             raise serializers.ValidationError("Passwords don't match")
+        
+        role = attrs.get('role', 'student')
+        
+        # Role-specific validation
+        if role == 'student':
+            # Require student-specific fields
+            if not attrs.get('roll_no'):
+                raise serializers.ValidationError("Roll number is required for students")
+            if not attrs.get('year'):
+                raise serializers.ValidationError("Year is required for students")
+            if not attrs.get('department'):
+                raise serializers.ValidationError("Department is required for students")
+            # Clear staff fields
+            attrs['staff_code'] = None
+            
+        elif role == 'staff':
+            # Require staff-specific field
+            if not attrs.get('staff_code'):
+                raise serializers.ValidationError("Staff code is required for staff")
+            # Clear student fields
+            attrs['roll_no'] = None
+            attrs['year'] = None
+            attrs['department'] = None
+        
         return attrs
 
     def create(self, validated_data):

@@ -14,10 +14,28 @@ from django.utils.crypto import get_random_string
 
 
 class CustomUserAdmin(UserAdmin):
-    list_display = ('name', 'email', 'roll_no', 'role', 'is_verified', 'otp_status','year','department', 'balance', 'created_at')
-    list_filter = ('role', 'is_verified', 'created_at')
-    search_fields = ('name', 'email', 'roll_no')
+    list_display = ('name', 'email', 'role', 'get_identifier', 'is_verified', 'otp_status', 'get_year_dept', 'balance', 'created_at')
+    list_filter = ('role', 'is_verified', 'created_at', 'year', 'department')
+    search_fields = ('name', 'email', 'roll_no', 'staff_code')
     ordering = ('-created_at',)
+    
+    def get_identifier(self, obj):
+        """Display roll_no for students or staff_code for staff"""
+        if obj.role == 'student':
+            return obj.roll_no or '-'
+        elif obj.role == 'staff':
+            return obj.staff_code or '-'
+        return '-'
+    get_identifier.short_description = 'Roll No / Staff Code'
+    
+    def get_year_dept(self, obj):
+        """Display year and department for students only"""
+        if obj.role == 'student':
+            year_display = obj.year or '-'
+            dept_display = obj.department or '-'
+            return f"{year_display} / {dept_display}"
+        return '-'
+    get_year_dept.short_description = 'Year / Dept'
     
     def otp_status(self, obj):
         """Show if OTP email was sent"""
@@ -29,10 +47,14 @@ class CustomUserAdmin(UserAdmin):
     otp_status.short_description = 'Email Sent'
     
     fieldsets = UserAdmin.fieldsets + (
-        ('REC Kiosk Info', {'fields': ('name', 'roll_no', 'role', 'shop', 'year','department','is_verified', 'otp', 'password_reset_otp', 'password_reset_token', 'balance')}),
+        ('REC Kiosk Info', {'fields': ('name', 'role', 'shop', 'is_verified', 'otp', 'password_reset_otp', 'password_reset_token', 'balance')}),
+        ('Student Info', {'fields': ('roll_no', 'year', 'department'), 'classes': ('collapse',)}),
+        ('Staff Info', {'fields': ('staff_code',), 'classes': ('collapse',)}),
     )
     add_fieldsets = UserAdmin.add_fieldsets + (
-        ('REC Kiosk Info', {'fields': ('name', 'roll_no', 'role', 'shop', 'is_verified', 'otp', 'password_reset_otp', 'password_reset_token', 'balance')}),
+        ('REC Kiosk Info', {'fields': ('name', 'role', 'shop', 'is_verified', 'otp', 'password_reset_otp', 'password_reset_token', 'balance')}),
+        ('Student Info', {'fields': ('roll_no', 'year', 'department')}),
+        ('Staff Info', {'fields': ('staff_code',)}),
     )
     
     actions = ['view_password_reset_info', 'send_test_email']

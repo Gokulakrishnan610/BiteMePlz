@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { UserPlus, Eye, EyeOff, Zap, Mail, Lock, User, CreditCard, AlertCircle } from 'lucide-react';
+import { UserPlus, Eye, EyeOff, Zap, Mail, Lock, User, CreditCard, AlertCircle, GraduationCap, Briefcase } from 'lucide-react';
 import { useSiteConfig } from '../context/SiteConfigContext';
 import api from '../api';
 import { toast } from 'sonner';
@@ -34,10 +34,12 @@ const RegisterPage: React.FC = () => {
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [selectedRole, setSelectedRole] = useState<'student' | 'staff'>('student');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     rollNo: '',
+    staffCode: '',
     year: '',
     department: '',
     password: '',
@@ -68,14 +70,14 @@ const RegisterPage: React.FC = () => {
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
 
-    // Name validation
+    // Name validation (common for both roles)
     if (!formData.name.trim()) {
       newErrors.name = 'Name is required';
     } else if (formData.name.trim().length < 2) {
       newErrors.name = 'Name must be at least 2 characters';
     }
 
-    // Email validation
+    // Email validation (common for both roles)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
@@ -83,31 +85,45 @@ const RegisterPage: React.FC = () => {
       newErrors.email = 'Please enter a valid email address';
     }
 
-    // Roll number validation
-    if (!formData.rollNo.trim()) {
-      newErrors.rollNo = 'Roll number is required';
-    } else if (formData.rollNo.trim().length < 3) {
-      newErrors.rollNo = 'Roll number must be at least 3 characters';
+    // Role-specific validation
+    if (selectedRole === 'student') {
+      // Student role validation
+      
+      // Roll number validation
+      if (!formData.rollNo.trim()) {
+        newErrors.rollNo = 'Roll number is required';
+      } else if (formData.rollNo.trim().length < 3) {
+        newErrors.rollNo = 'Roll number must be at least 3 characters';
+      }
+
+      // Year validation
+      if (!formData.year) {
+        newErrors.year = 'Year is required';
+      }
+
+      // Department validation
+      if (!formData.department) {
+        newErrors.department = 'Department is required';
+      }
+    } else if (selectedRole === 'staff') {
+      // Staff role validation
+      
+      // Staff code validation
+      if (!formData.staffCode.trim()) {
+        newErrors.staffCode = 'Staff code is required';
+      } else if (formData.staffCode.trim().length < 3) {
+        newErrors.staffCode = 'Staff code must be at least 3 characters';
+      }
     }
 
-    // Year validation
-    if (!formData.year) {
-      newErrors.year = 'Year is required';
-    }
-
-    // Department validation
-    if (!formData.department) {
-      newErrors.department = 'Department is required';
-    }
-
-    // Password validation
+    // Password validation (common for both roles)
     if (!formData.password) {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 6) {
       newErrors.password = 'Password must be at least 6 characters';
     }
 
-    // Confirm password validation
+    // Confirm password validation (common for both roles)
     if (!formData.confirmPassword) {
       newErrors.confirmPassword = 'Please confirm your password';
     } else if (formData.password !== formData.confirmPassword) {
@@ -136,6 +152,30 @@ const RegisterPage: React.FC = () => {
     setShowConfirmPassword(!showConfirmPassword);
   };
 
+  const handleRoleChange = (role: 'student' | 'staff') => {
+    setSelectedRole(role);
+    
+    // Clear role-specific fields when switching
+    if (role === 'student') {
+      setFormData({
+        ...formData,
+        staffCode: '',
+        // Preserve common fields: name, email, password, confirmPassword
+      });
+    } else {
+      setFormData({
+        ...formData,
+        rollNo: '',
+        year: '',
+        department: '',
+        // Preserve common fields: name, email, password, confirmPassword
+      });
+    }
+    
+    // Clear any errors when switching roles
+    setErrors({});
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -145,8 +185,8 @@ const RegisterPage: React.FC = () => {
       return;
     }
 
-    // Check year and department restrictions
-    if (!isRegistrationAllowed(formData.year, formData.department)) {
+    // Check year and department restrictions (only for students)
+    if (selectedRole === 'student' && !isRegistrationAllowed(formData.year, formData.department)) {
       toast.error('Registration is currently restricted for your year or department. Please contact administration.');
       return;
     }
@@ -158,15 +198,25 @@ const RegisterPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const { data } = await api.post('/api/users/register/', {
+      // Build request payload based on role
+      let requestPayload: any = {
         name: formData.name.trim(),
         email: formData.email.trim().toLowerCase(),
-        roll_no: formData.rollNo.trim(),
-        year: formData.year,
-        department: formData.department,
         password: formData.password,
-        confirm_password: formData.confirmPassword
-      });
+        confirm_password: formData.confirmPassword,
+        role: selectedRole
+      };
+
+      // Add role-specific fields
+      if (selectedRole === 'student') {
+        requestPayload.roll_no = formData.rollNo.trim();
+        requestPayload.year = formData.year;
+        requestPayload.department = formData.department;
+      } else if (selectedRole === 'staff') {
+        requestPayload.staff_code = formData.staffCode.trim();
+      }
+
+      const { data } = await api.post('/api/users/register/', requestPayload);
 
       setUserId(data.userId);
       setStep('verify');
@@ -175,12 +225,14 @@ const RegisterPage: React.FC = () => {
       const errorMessage = error.response?.data?.message || 'Registration failed';
       toast.error(errorMessage);
       
-      // Handle specific errors
+      // Handle role-specific error responses
       if (error.response?.status === 400 && errorMessage.includes('already exists')) {
         if (errorMessage.includes('email')) {
           setErrors({ email: 'An account with this email already exists' });
         } else if (errorMessage.includes('roll')) {
           setErrors({ rollNo: 'An account with this roll number already exists' });
+        } else if (errorMessage.includes('staff code')) {
+          setErrors({ staffCode: 'An account with this staff code already exists' });
         }
       }
     } finally {
@@ -262,6 +314,38 @@ const RegisterPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Role Selection */}
+          {step === 'register' && (
+            <div className="mb-6">
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleRoleChange('student')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 transition-all duration-200 ${
+                    selectedRole === 'student'
+                      ? 'border-purple-600 bg-purple-50 text-purple-700'
+                      : 'border-gray-300 bg-white text-gray-600 hover:border-purple-300 hover:bg-purple-25'
+                  }`}
+                >
+                  <GraduationCap size={20} />
+                  <span className="font-medium">Student</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRoleChange('staff')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 transition-all duration-200 ${
+                    selectedRole === 'staff'
+                      ? 'border-purple-600 bg-purple-50 text-purple-700'
+                      : 'border-gray-300 bg-white text-gray-600 hover:border-purple-300 hover:bg-purple-25'
+                  }`}
+                >
+                  <Briefcase size={20} />
+                  <span className="font-medium">Staff</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {config && !config.registration_enabled && step === 'register' && (
             <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-3">
               <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={20} />
@@ -294,71 +378,97 @@ const RegisterPage: React.FC = () => {
                 {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
               </div>
 
-              <div className="space-y-2">
-                <label htmlFor="rollNo" className="block text-sm font-medium text-gray-700">
-                  <CreditCard size={16} className="inline mr-2" />
-                  Roll Number
-                </label>
-                <input
-                  type="text"
-                  id="rollNo"
-                  name="rollNo"
-                  value={formData.rollNo}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${errors.rollNo ? 'border-red-400' : 'border-gray-300'}`}
-                  placeholder="Enter your roll number"
-                  required
-                />
-                {errors.rollNo && <p className="text-sm text-red-600">{errors.rollNo}</p>}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              {/* Staff-specific fields */}
+              {selectedRole === 'staff' && (
                 <div className="space-y-2">
-                  <label htmlFor="year" className="block text-sm font-medium text-gray-700">
-                    Year
+                  <label htmlFor="staffCode" className="block text-sm font-medium text-gray-700">
+                    <CreditCard size={16} className="inline mr-2" />
+                    Staff Code
                   </label>
-                  <select
-                    id="year"
-                    name="year"
-                    value={formData.year}
+                  <input
+                    type="text"
+                    id="staffCode"
+                    name="staffCode"
+                    value={formData.staffCode}
                     onChange={handleChange}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${errors.year ? 'border-red-400' : 'border-gray-300'}`}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${errors.staffCode ? 'border-red-400' : 'border-gray-300'}`}
+                    placeholder="Enter your staff code"
                     required
-                    disabled={dataLoading}
-                  >
-                    <option value="">Select Year</option>
-                    {academicYears.map((year) => (
-                      <option key={year.id} value={year.code}>
-                        {year.name}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.year && <p className="text-sm text-red-600">{errors.year}</p>}
+                  />
+                  {errors.staffCode && <p className="text-sm text-red-600">{errors.staffCode}</p>}
                 </div>
+              )}
 
-                <div className="space-y-2">
-                  <label htmlFor="department" className="block text-sm font-medium text-gray-700">
-                    Department
-                  </label>
-                  <select
-                    id="department"
-                    name="department"
-                    value={formData.department}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${errors.department ? 'border-red-400' : 'border-gray-300'}`}
-                    required
-                    disabled={dataLoading}
-                  >
-                    <option value="">Select Dept</option>
-                    {departments.map((dept) => (
-                      <option key={dept.id} value={dept.code}>
-                        {dept.code}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.department && <p className="text-sm text-red-600">{errors.department}</p>}
-                </div>
-              </div>
+              {/* Student-specific fields */}
+              {selectedRole === 'student' && (
+                <>
+                  <div className="space-y-2">
+                    <label htmlFor="rollNo" className="block text-sm font-medium text-gray-700">
+                      <CreditCard size={16} className="inline mr-2" />
+                      Roll Number
+                    </label>
+                    <input
+                      type="text"
+                      id="rollNo"
+                      name="rollNo"
+                      value={formData.rollNo}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${errors.rollNo ? 'border-red-400' : 'border-gray-300'}`}
+                      placeholder="Enter your roll number"
+                      required
+                    />
+                    {errors.rollNo && <p className="text-sm text-red-600">{errors.rollNo}</p>}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label htmlFor="year" className="block text-sm font-medium text-gray-700">
+                        Year
+                      </label>
+                      <select
+                        id="year"
+                        name="year"
+                        value={formData.year}
+                        onChange={handleChange}
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${errors.year ? 'border-red-400' : 'border-gray-300'}`}
+                        required
+                        disabled={dataLoading}
+                      >
+                        <option value="">Select Year</option>
+                        {academicYears.map((year) => (
+                          <option key={year.id} value={year.code}>
+                            {year.name}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.year && <p className="text-sm text-red-600">{errors.year}</p>}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="department" className="block text-sm font-medium text-gray-700">
+                        Department
+                      </label>
+                      <select
+                        id="department"
+                        name="department"
+                        value={formData.department}
+                        onChange={handleChange}
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${errors.department ? 'border-red-400' : 'border-gray-300'}`}
+                        required
+                        disabled={dataLoading}
+                      >
+                        <option value="">Select Dept</option>
+                        {departments.map((dept) => (
+                          <option key={dept.id} value={dept.code}>
+                            {dept.code}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.department && <p className="text-sm text-red-600">{errors.department}</p>}
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div className="space-y-2">
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700">
