@@ -127,7 +127,7 @@ const CartPage: React.FC = () => {
   const handleBalancePayment = async () => {
     if (balance < getTotalPrice()) {
       const shortfall = getTotalPrice() - balance;
-      // toast.error(`Insufficient balance. You need ₹${shortfall} more.`);
+      toast.error(`Insufficient balance. You need ₹${shortfall.toFixed(2)} more.`);
       return;
     }
     // Filter out invalid cart items
@@ -139,7 +139,7 @@ const CartPage: React.FC = () => {
       }
     );
     if (validCartItems.length !== cartItems.length) {
-      // toast.error("Some cart items are invalid and will not be ordered. Please review your cart.");
+      toast.error("Some cart items are invalid. Please review your cart.");
       return;
     }
     const shopIds = getShopIds();
@@ -154,21 +154,20 @@ const CartPage: React.FC = () => {
                 quantity: item.quantity,
                 shop_id: typeof item.shop_id === 'object' && item.shop_id !== null ? item.shop_id.id : item.shop_id,
                 shop_name: item.shop_name,
+                price: item.price,
               })),
               shop_id: shopIds[0],
               total_price: getTotalPrice(),
               paymentMethod: "balance",
             };
 
-    // debug removed
       const orderResponse = await api.post(endpoint, requestData);
       clearCart();
-      // toast removed
+      toast.success("Order placed successfully!");
       try { await refreshBalance(); } catch {}
-      navigate(`/order/${orderResponse.data.order._id}`, { replace: true });
+      navigate(`/order/${orderResponse.data.order.id}`, { replace: true });
     } catch (error: any) {
-      // silent catch, user sees toast
-      // toast.error(error.response?.data?.message || error.message || "Payment failed");
+      toast.error(error.response?.data?.error || error.message || "Payment failed");
       setPaymentInitiated(false);
     } finally {
       setIsLoading(false);
@@ -177,8 +176,7 @@ const CartPage: React.FC = () => {
 
   const initiateRazorpayPayment = async () => {
     const shopIds = getShopIds();
-    // debug removed
-    // toast("Razorpay payment initiated");
+    
     // Filter out invalid cart items
     const validCartItems = cartItems.filter(
       (item) => {
@@ -188,10 +186,10 @@ const CartPage: React.FC = () => {
       }
     );
     if (validCartItems.length !== cartItems.length) {
-      // toast.error("Some cart items are invalid and will not be ordered. Please review your cart.");
-      // debug removed
+      toast.error("Some cart items are invalid. Please review your cart.");
       return;
     }
+    
     // Before payment, check for missing product_id/shop_id
     const hasInvalidCartItems = cartItems.some(
       (item: any) =>
@@ -199,76 +197,68 @@ const CartPage: React.FC = () => {
         !(typeof item.shop_id === 'object' && item.shop_id !== null ? item.shop_id.id : item.shop_id)
     );
     if (hasInvalidCartItems) {
-      // toast.error('Your cart contains items with missing product or shop IDs. Please remove them and try again.');
-      // debug removed
+      toast.error('Your cart contains items with missing product or shop IDs. Please remove them and try again.');
       return;
     }
+    
     try {
       setIsLoading(true);
       setPaymentInitiated(true);
-      // debug removed
+      
       const endpoint = "/api/orders/";
-      // Always map validCartItems to required fields and ensure image is not blank
-      // debug removed
       const mappedOrderItems = validCartItems.map((item) => ({
         product_id: typeof item.product_id === 'object' && item.product_id !== null ? item.product_id.id : item.product_id,
         quantity: item.quantity,
         shop_id: typeof item.shop_id === 'object' && item.shop_id !== null ? item.shop_id.id : item.shop_id,
         shop_name: item.shop_name,
         price: item.price,
-        image: item.image && item.image.trim() !== "" ? item.image : "https://via.placeholder.com/150", // fallback image
+        image: item.image && item.image.trim() !== "" ? item.image : "https://via.placeholder.com/150",
       }));
-      // debug removed
+      
       const requestData = {
         order_items: mappedOrderItems,
         shop_id: shopIds[0],
         total_price: getTotalPrice(),
         paymentMethod: "razorpay",
       };
-      // debug removed
-      const orderResponse = await api.post(endpoint, requestData);
-
-      // Handle different response structures for single vs multi-shop orders
-      const orderId = orderResponse.data.order._id;
-      setCurrentorder_id(orderId);
+      
+      // Create Razorpay order (no DB order created yet)
+      const razorpayResponse = await api.post(endpoint, requestData);
+      const razorpayOrderId = razorpayResponse.data.razorpay_order_id;
+      
+      setCurrentorder_id(razorpayOrderId);
       startPaymentTimer();
+      
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_RVKFS8WX756Anx',
         name: "Campus Kiosk",
         description: "Payment for your order",
-        order_id: orderResponse.data.razorpay_order_id,
+        order_id: razorpayOrderId,
         handler: async (response: any) => {
-          // debug removed
           try {
             if (timer) {
               clearInterval(timer);
             }
 
-            // Debug authentication
             const token = localStorage.getItem('token');
-            
-            // Check if user is logged in
             if (!token || !user) {
-              // toast.error("Authentication required. Please log in again.");
+              toast.error("Authentication required. Please log in again.");
               return;
             }
 
-            // debug removed
-            await api.put(`/api/orders/${orderId}/pay/`, {
-              payment_method: 'razorpay',
+            // Verify payment and create order
+            const verifyResponse = await api.post('/api/orders/verify-razorpay-payment/', {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_signature: response.razorpay_signature,
             });
             
-            // debug removed
             clearCart();
-            // toast removed
+            toast.success("Order placed successfully!");
             try { await refreshBalance(); } catch {}
-            navigate(`/order/${orderId}`, { replace: true });
+            navigate(`/order/${verifyResponse.data.order.id}`, { replace: true });
           } catch (error: any) {
-            // silent catch, user sees toast
-            // toast.error(error.response?.data?.message || "Payment verification failed");
+            toast.error(error.response?.data?.error || "Payment verification failed");
           } finally {
             setPaymentInitiated(false);
             setCurrentorder_id(null);
@@ -276,7 +266,6 @@ const CartPage: React.FC = () => {
         },
         modal: {
           ondismiss: async () => {
-            // debug removed
             if (timer) {
               clearInterval(timer);
             }
@@ -284,8 +273,10 @@ const CartPage: React.FC = () => {
 
             if (currentorder_id) {
               try {
-                await api.put(`/api/orders/${currentorder_id}/cancel/`);
-                // toast.error("Payment cancelled");
+                await api.post('/api/orders/cancel-razorpay/', {
+                  razorpay_order_id: currentorder_id
+                });
+                toast.info("Payment cancelled");
               } catch (error) {
                 // silent catch
               }
@@ -302,18 +293,16 @@ const CartPage: React.FC = () => {
         },
       };
 
-      // debug removed
       const loaded = await loadRazorpayScript();
       if (!loaded) {
-        // toast.error("Failed to load Razorpay SDK. Please try again.");
+        toast.error("Failed to load Razorpay SDK. Please try again.");
         setPaymentInitiated(false);
         setCurrentorder_id(null);
         return;
       }
-      // debug removed
+      
       const razorpay = new window.Razorpay(options);
       razorpay.open();
-      // toast removed
 
       setTimeout(
         () => {
@@ -321,9 +310,11 @@ const CartPage: React.FC = () => {
             razorpay.close();
             if (currentorder_id) {
               api
-                .put(`/api/orders/${currentorder_id}/cancel/`)
+                .post('/api/orders/cancel-razorpay/', {
+                  razorpay_order_id: currentorder_id
+                })
                 .then(() => {
-                  // toast.error("Payment time expired");
+                  toast.error("Payment time expired");
                   setPaymentInitiated(false);
                   setCurrentorder_id(null);
                 })
@@ -336,7 +327,7 @@ const CartPage: React.FC = () => {
     } catch (error: any) {
       setPaymentInitiated(false);
       setCurrentorder_id(null);
-      // toast.error(error.response?.data?.message || error.message || "Payment failed");
+      toast.error(error.response?.data?.error || error.message || "Payment failed");
     } finally {
       setIsLoading(false);
     }

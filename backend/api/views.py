@@ -27,6 +27,14 @@ import time
 from django.db.models import Count, Avg, Sum
 from rest_framework.decorators import api_view
 
+# Check if channels is available for WebSocket support
+try:
+    from channels.layers import get_channel_layer
+    from asgiref.sync import async_to_sync
+    _channels_available = True
+except ImportError:
+    _channels_available = False
+
 # Custom media serving view for production
 from django.http import FileResponse, Http404, JsonResponse
 from django.conf import settings
@@ -1365,30 +1373,346 @@ class OrderViewSet(viewsets.ModelViewSet):
             user = User.objects.create_user(email=email, password=None, roll_no=roll_no, **defaults)
         return user
 
-    def perform_create(self, serializer):
-        # Determine acting user: real authenticated user or parent guest
-        if getattr(self.request.user, 'is_authenticated', False):
-            acting_user = self.request.user
+    def create(self, request, *args, **kwargs):
+        """
+        Create order with payment - orders are only created after successful payment.
+        For balance payment: deduct balance, create order, deduct stock.
+        For Razorpay: create Razorpay order, return order_id for frontend to process payment.
+        """
+        # Determine acting user
+        if getattr(request.user, 'is_authenticated', False):
+            acting_user = request.user
         else:
             # Require parent session id to proceed
-            if not getattr(self.request, 'auth', None):
-                raise PermissionError('Unauthorized')
+            if not getattr(request, 'auth', None):
+                return Response({'error': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
             acting_user = self._get_or_create_parent_guest_user()
-        # Ensure order saved with acting_user
-        order = serializer.save(user=acting_user)
         
-        # Log the order creation
-        ShopLog.objects.create(
-            shop=order.shop,
-            action='order_created',
-            performed_by=acting_user if acting_user.role != 'student' else None,
-            details={
-                'order_id': order.order_id,
-                'total_price': float(order.total_price),
-                'payment_method': getattr(self.request, 'payment_method', 'unknown'),
-                'items_count': order.items.count(),
-                'customer_name': acting_user.name if acting_user.role != 'student' else 'Student'
-            }
+        payment_method = request.data.get('paymentMethod', 'balance')
+        
+        # For Razorpay, create Razorpay order and store pending order data
+        if payment_method == 'razorpay':
+            return self._create_razorpay_order(request, acting_user)
+        
+        # For balance payment, process payment and create order immediately
+        elif payment_method == 'balance':
+            return self._create_balance_order(request, acting_user)
+        
+        else:
+            return Response({'error': 'Invalid payment method'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    def _create_balance_order(self, request, acting_user):
+        """Create order with balance payment - payment processed first, then order created."""
+        from django.core.cache import cache
+        
+        order_items_data = request.data.get('order_items', [])
+        shop_id = request.data.get('shop_id')
+        total_price = Decimal(str(request.data.get('total_price', 0)))
+        
+        if not order_items_data:
+            return Response({'error': 'Order items are required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate and calculate total
+        validated_items, calculated_total, shop = self._validate_order_items(order_items_data, shop_id)
+        
+        if abs(calculated_total - total_price) > Decimal('0.01'):
+            return Response({'error': f'Price mismatch. Expected: {calculated_total}, Got: {total_price}'}, 
+                          status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check balance
+        if acting_user.balance < total_price:
+            return Response({'error': 'Insufficient balance'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Process payment and create order in a single transaction
+        with transaction.atomic():
+            # 1. Deduct balance first
+            acting_user.balance -= total_price
+            acting_user.save()
+            
+            # 2. Create order with is_paid=True
+            order = self._create_order_with_stock_deduction(
+                acting_user, shop, validated_items, total_price,
+                payment_method='balance',
+                is_paid=True
+            )
+            
+            # 3. Create transaction record
+            Transaction.objects.create(
+                user=acting_user,
+                shop=shop,
+                order=order,
+                amount=total_price,
+                type='payment',
+                payment_method='balance',
+                status='success',
+                description=f'Balance payment for order {order.order_id}'
+            )
+            
+            # 4. Log order creation
+            ShopLog.objects.create(
+                shop=shop,
+                action='order_created',
+                performed_by=acting_user if acting_user.role != 'student' else None,
+                details={
+                    'order_id': order.order_id,
+                    'total_price': float(total_price),
+                    'payment_method': 'balance',
+                    'items_count': len(validated_items),
+                    'customer_name': acting_user.name
+                }
+            )
+            
+            # 5. Send wallet update
+            try:
+                from api.tasks import send_wallet_update
+                send_wallet_update(
+                    user_id=str(acting_user.id),
+                    balance=float(acting_user.balance),
+                    change=-float(total_price),
+                    transaction_type='order_payment'
+                )
+            except Exception:
+                pass
+        
+        serializer = self.get_serializer(order)
+        return Response({'order': serializer.data}, status=status.HTTP_201_CREATED)
+    
+    def _create_razorpay_order(self, request, acting_user):
+        """Create Razorpay order and store pending order in database with pending status."""
+        import razorpay
+        from django.conf import settings
+        
+        order_items_data = request.data.get('order_items', [])
+        shop_id = request.data.get('shop_id')
+        total_price = Decimal(str(request.data.get('total_price', 0)))
+        
+        if not order_items_data:
+            return Response({'error': 'Order items are required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate and calculate total
+        validated_items, calculated_total, shop = self._validate_order_items(order_items_data, shop_id)
+        
+        if abs(calculated_total - total_price) > Decimal('0.01'):
+            return Response({'error': f'Price mismatch. Expected: {calculated_total}, Got: {total_price}'}, 
+                          status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create Razorpay order
+        try:
+            client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+            razorpay_order = client.order.create({
+                'amount': int(total_price * 100),  # Amount in paise
+                'currency': 'INR',
+                'payment_capture': 1
+            })
+            
+            razorpay_order_id = razorpay_order['id']
+            
+            # Create pending order in database (no stock deduction yet)
+            # Generate order_id
+            try:
+                today = timezone.now().date()
+                last_today = Order.objects.filter(created_at__date=today).order_by('-created_at').first()
+                next_token = 1
+                if last_today and last_today.order_id:
+                    import re
+                    m = re.search(r"(\d{8})-(\d{3,})", str(last_today.order_id))
+                    if m:
+                        try:
+                            next_token = int(m.group(2)) + 1
+                        except Exception:
+                            next_token = 1
+                order_id = f"{today.strftime('%Y%m%d')}-{next_token:04d}"
+            except Exception:
+                order_id = f"{timezone.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:4].upper()}"
+            
+            # Calculate expiry
+            qr_expiry = timezone.now() + timedelta(minutes=shop.qr_validity_minutes)
+            if shop.final_validity_time and qr_expiry > shop.final_validity_time:
+                expires_at = shop.final_validity_time
+            else:
+                expires_at = qr_expiry
+            
+            # Prepare order items without stock deduction
+            processed_items = []
+            for item_data in validated_items:
+                product_id = item_data.get('product_id')
+                quantity = item_data.get('quantity')
+                product = Product.objects.get(id=product_id)
+                
+                incoming_price = item_data.get('price')
+                unit_price = Decimal(str(incoming_price)) if incoming_price is not None else product.price
+                
+                processed_items.append({
+                    'product_id': str(product.id),
+                    'name': product.name,
+                    'image': product.image,
+                    'is_bought': False,
+                    'price': str(unit_price),
+                    'quantity': quantity,
+                    'shop_id': str(shop.id),
+                    'shop_name': shop.name,
+                })
+            
+            # Create pending order (is_paid=False, status='pending')
+            pending_order = Order.objects.create(
+                order_id=order_id,
+                user=acting_user,
+                shop=shop,
+                order_items=processed_items,
+                total_price=total_price,
+                is_paid=False,
+                payment_result={'method': 'razorpay', 'razorpay_order_id': razorpay_order_id, 'status': 'pending'},
+                expires_at=expires_at,
+                status='pending'
+            )
+            
+            return Response({
+                'razorpay_order_id': razorpay_order_id,
+                'amount': int(total_price * 100),
+                'currency': 'INR',
+                'pending_order_id': str(pending_order.id)
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({'error': f'Failed to create Razorpay order: {str(e)}'}, 
+                          status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def _validate_order_items(self, order_items_data, shop_id):
+        """Validate order items and calculate total price."""
+        from .serializers import OrderItemSerializer
+        
+        # Validate order items
+        order_item_serializer = OrderItemSerializer(data=order_items_data, many=True)
+        order_item_serializer.is_valid(raise_exception=True)
+        validated_items = order_item_serializer.validated_data
+        
+        # Determine shop
+        if not shop_id and validated_items:
+            first_product_id = validated_items[0].get('product_id')
+            if first_product_id:
+                try:
+                    first_product = Product.objects.get(id=first_product_id)
+                    shop_id = first_product.shop.id
+                except Product.DoesNotExist:
+                    raise serializers.ValidationError(f"Product with ID {first_product_id} does not exist.")
+        
+        if not shop_id:
+            raise serializers.ValidationError("Shop ID is required.")
+        
+        try:
+            shop = Shop.objects.get(id=shop_id)
+        except Shop.DoesNotExist:
+            raise serializers.ValidationError(f"Shop with ID {shop_id} does not exist.")
+        
+        # Validate products and calculate total
+        calculated_total = Decimal('0.0')
+        for item_data in validated_items:
+            product_id = item_data.get('product_id')
+            quantity = item_data.get('quantity')
+            
+            try:
+                product = Product.objects.get(id=product_id)
+            except Product.DoesNotExist:
+                raise serializers.ValidationError(f"Product with ID {product_id} does not exist.")
+            
+            if str(product.shop.id) != str(shop_id):
+                raise serializers.ValidationError(f"Product {product.name} does not belong to shop {shop.name}.")
+            
+            # Check stock availability
+            if product.stock_mode == 'stock' and product.stock < quantity:
+                raise serializers.ValidationError(f"Not enough stock for {product.name}. Available: {product.stock}")
+            
+            # Calculate price
+            incoming_price = item_data.get('price')
+            unit_price = Decimal(str(incoming_price)) if incoming_price is not None else product.price
+            calculated_total += unit_price * quantity
+        
+        return validated_items, calculated_total, shop
+    
+    def _create_order_with_stock_deduction(self, user, shop, validated_items, total_price, payment_method, is_paid):
+        """Create order and deduct stock atomically."""
+        from django.db.models import F
+        import uuid
+        
+        # Generate order_id
+        try:
+            today = timezone.now().date()
+            last_today = Order.objects.filter(created_at__date=today).order_by('-created_at').first()
+            next_token = 1
+            if last_today and last_today.order_id:
+                import re
+                m = re.search(r"(\d{8})-(\d{3,})", str(last_today.order_id))
+                if m:
+                    try:
+                        next_token = int(m.group(2)) + 1
+                    except Exception:
+                        next_token = 1
+            order_id = f"{today.strftime('%Y%m%d')}-{next_token:04d}"
+        except Exception:
+            order_id = f"{timezone.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:4].upper()}"
+        
+        # Calculate expiry
+        qr_expiry = timezone.now() + timedelta(minutes=shop.qr_validity_minutes)
+        if shop.final_validity_time and qr_expiry > shop.final_validity_time:
+            expires_at = shop.final_validity_time
+        else:
+            expires_at = qr_expiry
+        
+        # Process order items and deduct stock
+        processed_items = []
+        for item_data in validated_items:
+            product_id = item_data.get('product_id')
+            quantity = item_data.get('quantity')
+            
+            # Lock product row
+            product = Product.objects.select_for_update().get(id=product_id)
+            
+            # Deduct stock for regular stock products
+            if product.stock_mode == 'stock':
+                updated = Product.objects.filter(id=product.id, stock__gte=quantity).update(stock=F('stock') - quantity)
+                if updated != 1:
+                    raise serializers.ValidationError(f"Not enough stock for {product.name}.")
+            
+            # Prepare order item
+            incoming_price = item_data.get('price')
+            unit_price = Decimal(str(incoming_price)) if incoming_price is not None else product.price
+            
+            processed_items.append({
+                'product_id': str(product.id),
+                'name': product.name,
+                'image': product.image,
+                'is_bought': False,
+                'price': str(unit_price),
+                'quantity': quantity,
+                'shop_id': str(shop.id),
+                'shop_name': shop.name,
+            })
+            
+            # Broadcast stock update
+            if _channels_available:
+                try:
+                    from .websocket_utils import broadcast_stock_update
+                    product.refresh_from_db()
+                    broadcast_stock_update(
+                        product_id=str(product.id),
+                        stock=int(product.stock),
+                        shop_id=str(shop.id)
+                    )
+                except Exception:
+                    pass
+        
+        # Create order
+        order = Order.objects.create(
+            order_id=order_id,
+            user=user,
+            shop=shop,
+            order_items=processed_items,
+            total_price=total_price,
+            is_paid=is_paid,
+            paid_at=timezone.now() if is_paid else None,
+            payment_result={'method': payment_method, 'status': 'success'} if is_paid else None,
+            expires_at=expires_at,
+            status='pending'
         )
         
         return order
@@ -2457,176 +2781,157 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         return Response(OrderSerializer(order).data)
 
-    @action(detail=True, methods=['put'])
-    def pay(self, request, pk=None):
-        print(f"[DEBUG] Pay method called for order ID: {pk}")
-        print(f"[DEBUG] Request data: {request.data}")
-        print(f"[DEBUG] Request headers: {request.headers}")
-        print(f"[DEBUG] User authenticated: {request.user.is_authenticated}")
-        print(f"[DEBUG] User: {request.user}")
+    @action(detail=False, methods=['post'], url_path='verify-razorpay-payment')
+    def verify_razorpay_payment(self, request):
+        """
+        Verify Razorpay payment and update pending order to paid.
+        This endpoint is called after successful Razorpay payment.
+        """
+        import razorpay
+        from django.conf import settings
+        from django.db.models import F
         
         # Check authentication
         if not request.user.is_authenticated:
-            print("[DEBUG] User not authenticated!")
-            return Response({'error': 'Authentication credentials were not provided'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
         
-        order = self.get_object()
-        print(f"[DEBUG] Found order: {order.order_id}, is_paid: {order.is_paid}")
+        razorpay_payment_id = request.data.get('razorpay_payment_id')
+        razorpay_order_id = request.data.get('razorpay_order_id')
+        razorpay_signature = request.data.get('razorpay_signature')
         
-        if order.is_paid:
-            return Response({'error': 'Order already paid'}, status=status.HTTP_400_BAD_REQUEST)
+        if not all([razorpay_payment_id, razorpay_order_id, razorpay_signature]):
+            return Response({'error': 'Missing Razorpay payment details'}, status=status.HTTP_400_BAD_REQUEST)
         
-        payment_method = request.data.get('payment_method', 'balance')
-        # If Razorpay identifiers are present, force razorpay flow regardless of provided/default method
-        if request.data.get('razorpay_payment_id') or request.data.get('razorpay_order_id'):
-            payment_method = 'razorpay'
-        
-        with transaction.atomic():
-            if payment_method == 'balance':
-                if order.user.balance < order.total_price:
-                    return Response({'error': 'Insufficient balance'}, status=status.HTTP_400_BAD_REQUEST)
-                
-                # Deduct from balance
-                order.user.balance -= order.total_price
-                order.user.save()
-                
-                # Mark as paid
-                order.is_paid = True
-                order.paid_at = timezone.now()
-                order.payment_result = {'method': 'balance', 'status': 'success'}
-                order.save()
-                
-                # Create transaction
-                Transaction.objects.create(
-                    user=order.user,
-                    shop=order.shop,
-                    order=order,
-                    amount=order.total_price,
-                    type='payment',
-                    payment_method='balance',
-                    description=f'Payment for order {order.order_id}'
-                )
-                
-                # Send WebSocket update for wallet balance change
-                from api.tasks import send_wallet_update
-                send_wallet_update(
-                    user_id=str(order.user.id),
-                    balance=float(order.user.balance),
-                    change=-float(order.total_price),  # Negative for deduction
-                    transaction_type='order_payment'
-                )
-            elif payment_method == 'razorpay' or request.data.get('razorpay_payment_id'):
-                # Verify Razorpay payment
-                razorpay_payment_id = request.data.get('razorpay_payment_id')
-                razorpay_order_id = request.data.get('razorpay_order_id')
-                razorpay_signature = request.data.get('razorpay_signature')
-                
-                print(f"[DEBUG] Razorpay payment verification - Payment ID: {razorpay_payment_id}, Order ID: {razorpay_order_id}")
-                print(f"[DEBUG] Signature length: {len(razorpay_signature) if razorpay_signature else 0}")
-                
-                if not all([razorpay_payment_id, razorpay_order_id, razorpay_signature]):
-                    missing_fields = []
-                    if not razorpay_payment_id:
-                        missing_fields.append('razorpay_payment_id')
-                    if not razorpay_order_id:
-                        missing_fields.append('razorpay_order_id')
-                    if not razorpay_signature:
-                        missing_fields.append('razorpay_signature')
-                    
-                    print(f"[DEBUG] Missing fields: {missing_fields}")
-                    return Response({'error': f'Missing Razorpay payment details: {missing_fields}'}, status=status.HTTP_400_BAD_REQUEST)
-                
-                # Import Razorpay if needed
-                import razorpay
-                from django.conf import settings
-                
-                # Initialize Razorpay client
-                client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-                
-                # Verify signature
-                try:
-                    params_dict = {
-                        'razorpay_order_id': razorpay_order_id,
-                        'razorpay_payment_id': razorpay_payment_id,
-                        'razorpay_signature': razorpay_signature
-                    }
-                    
-                    print(f"[DEBUG] Verifying signature with params: {params_dict}")
-                    print(f"[DEBUG] Using Razorpay keys - Key ID: {settings.RAZORPAY_KEY_ID}")
-                    
-                    client.utility.verify_payment_signature(params_dict)
-                    print(f"[DEBUG] Signature verification successful")
-                    
-                    # Mark as paid
-                    order.is_paid = True
-                    order.paid_at = timezone.now()
-                    order.payment_result = {
-                        'method': 'razorpay',
-                        'status': 'success',
-                        'razorpay_payment_id': razorpay_payment_id,
-                        'razorpay_order_id': razorpay_order_id,
-                        'razorpay_signature': razorpay_signature
-                    }
-                    order.save()
-                    
-                    # Also mark sibling orders (multi-shop) with same razorpay_order_id as paid
-                    siblings = Order.objects.filter(payment_result__razorpay_order_id=razorpay_order_id, is_paid=False)
-                    for s in siblings:
-                        s.is_paid = True
-                        s.paid_at = timezone.now()
-                        s.payment_result = {
-                            'method': 'razorpay',
-                            'status': 'success',
-                            'razorpay_payment_id': razorpay_payment_id,
-                            'razorpay_order_id': razorpay_order_id,
-                            'razorpay_signature': razorpay_signature
-                        }
-                        s.save()
-                        Transaction.objects.create(
-                            user=s.user,
-                            shop=s.shop,
-                            order=s,
-                            amount=s.total_price,
-                            type='payment',
-                            payment_method='razorpay',
-                            description=f'Razorpay payment for order {s.order_id}'
-                        )
-                    
-                    # Create transaction
-                    Transaction.objects.create(
-                        user=order.user,
-                        shop=order.shop,
-                        order=order,
-                        amount=order.total_price,
-                        type='payment',
-                        payment_method='razorpay',
-                        description=f'Razorpay payment for order {order.order_id}'
-                    )
-                    
-                    print(f"[DEBUG] Payment processed successfully for order {order.order_id}")
-                    
-                    return Response({
-                        'message': 'Payment successful',
-                        'order': convert_uuids_to_str_recursive(self.get_serializer(order).data)
-                    }, status=status.HTTP_200_OK)
-                    
-                except razorpay.errors.SignatureVerificationError as e:
-                    print(f"[DEBUG] Signature verification failed: {str(e)}")
-                    return Response({'error': f'Payment signature verification failed: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
-                except razorpay.errors.BadRequestError as e:
-                    print(f"[DEBUG] Razorpay bad request error: {str(e)}")
-                    return Response({'error': f'Invalid payment data: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
-                except razorpay.errors.ServerError as e:
-                    print(f"[DEBUG] Razorpay server error: {str(e)}")
-                    return Response({'error': f'Razorpay server error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                except Exception as e:
-                    print(f"[DEBUG] Unexpected error during payment verification: {str(e)}")
-                    import traceback
-                    traceback.print_exc()
-                    return Response({'error': f'Payment verification failed: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+        # Verify signature
+        try:
+            client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+            params_dict = {
+                'razorpay_order_id': razorpay_order_id,
+                'razorpay_payment_id': razorpay_payment_id,
+                'razorpay_signature': razorpay_signature
+            }
+            client.utility.verify_payment_signature(params_dict)
             
-            return Response(OrderSerializer(order).data)
+        except Exception as e:
+            return Response({'error': f'Payment verification failed: {str(e)}'}, 
+                          status=status.HTTP_400_BAD_REQUEST)
+        
+        # Find pending order by razorpay_order_id
+        try:
+            pending_order = Order.objects.get(
+                payment_result__razorpay_order_id=razorpay_order_id,
+                is_paid=False,
+                user=request.user
+            )
+        except Order.DoesNotExist:
+            return Response({'error': 'Order not found. Please contact support if payment was deducted.'}, 
+                          status=status.HTTP_404_NOT_FOUND)
+        except Order.MultipleObjectsReturned:
+            # Get the most recent one
+            pending_order = Order.objects.filter(
+                payment_result__razorpay_order_id=razorpay_order_id,
+                is_paid=False,
+                user=request.user
+            ).order_by('-created_at').first()
+        
+        # Update order and deduct stock
+        try:
+            with transaction.atomic():
+                # Deduct stock for each item
+                for item in pending_order.order_items:
+                    product_id = item.get('product_id')
+                    quantity = item.get('quantity')
+                    
+                    # Lock product row
+                    product = Product.objects.select_for_update().get(id=product_id)
+                    
+                    # Deduct stock for regular stock products
+                    if product.stock_mode == 'stock':
+                        updated = Product.objects.filter(id=product.id, stock__gte=quantity).update(stock=F('stock') - quantity)
+                        if updated != 1:
+                            raise serializers.ValidationError(f"Not enough stock for {product.name}. Please contact support.")
+                    
+                    # Broadcast stock update
+                    if _channels_available:
+                        try:
+                            from .websocket_utils import broadcast_stock_update
+                            product.refresh_from_db()
+                            broadcast_stock_update(
+                                product_id=str(product.id),
+                                stock=int(product.stock),
+                                shop_id=str(pending_order.shop.id)
+                            )
+                        except Exception:
+                            pass
+                
+                # Update order to paid
+                pending_order.is_paid = True
+                pending_order.paid_at = timezone.now()
+                pending_order.payment_result = {
+                    'method': 'razorpay',
+                    'status': 'success',
+                    'razorpay_payment_id': razorpay_payment_id,
+                    'razorpay_order_id': razorpay_order_id,
+                    'razorpay_signature': razorpay_signature
+                }
+                pending_order.save()
+                
+                # Create transaction record
+                Transaction.objects.create(
+                    user=request.user,
+                    shop=pending_order.shop,
+                    order=pending_order,
+                    amount=pending_order.total_price,
+                    type='payment',
+                    payment_method='razorpay',
+                    status='success',
+                    description=f'Razorpay payment for order {pending_order.order_id}'
+                )
+                
+                # Log order payment
+                ShopLog.objects.create(
+                    shop=pending_order.shop,
+                    action='order_created',
+                    performed_by=request.user if request.user.role != 'student' else None,
+                    details={
+                        'order_id': pending_order.order_id,
+                        'total_price': float(pending_order.total_price),
+                        'payment_method': 'razorpay',
+                        'items_count': len(pending_order.order_items),
+                        'customer_name': request.user.name
+                    }
+                )
+                
+                serializer = self.get_serializer(pending_order)
+                return Response({
+                    'message': 'Payment successful',
+                    'order': serializer.data
+                }, status=status.HTTP_200_OK)
+                
+        except Exception as e:
+            return Response({'error': f'Failed to process payment: {str(e)}'}, 
+                          status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=False, methods=['post'], url_path='cancel-razorpay')
+    def cancel_razorpay_order(self, request):
+        """Cancel a pending Razorpay order (before payment completion)."""
+        razorpay_order_id = request.data.get('razorpay_order_id')
+        
+        if not razorpay_order_id:
+            return Response({'error': 'Razorpay order ID required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Find and delete pending order
+        try:
+            pending_order = Order.objects.get(
+                payment_result__razorpay_order_id=razorpay_order_id,
+                is_paid=False
+            )
+            pending_order.delete()
+        except Order.DoesNotExist:
+            pass  # Already deleted or doesn't exist
+        
+        return Response({'message': 'Order cancelled successfully'}, status=status.HTTP_200_OK)
+    
     @action(detail=True, methods=['put'])
     def cancel(self, request, pk=None):
         """Cancel an order and restock items when unpaid"""

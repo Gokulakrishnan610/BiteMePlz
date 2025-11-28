@@ -265,3 +265,34 @@ def send_wallet_update(user_id: str, balance: float, change: float = 0, transact
         )
     except Exception as e:
         print(f"Error sending wallet update: {e}")
+
+@sha
+red_task(name='api.tasks.cleanup_pending_razorpay_orders')
+def cleanup_pending_razorpay_orders():
+    """
+    Clean up pending Razorpay orders that are older than 10 minutes.
+    These are orders created but payment was never completed.
+    """
+    from datetime import timedelta
+    
+    cutoff_time = timezone.now() - timedelta(minutes=10)
+    
+    # Find pending orders older than 10 minutes
+    pending_orders = Order.objects.filter(
+        is_paid=False,
+        payment_result__method='razorpay',
+        created_at__lt=cutoff_time
+    )
+    
+    deleted_count = 0
+    for order in pending_orders:
+        try:
+            order.delete()
+            deleted_count += 1
+        except Exception as e:
+            print(f"Error deleting pending order {order.order_id}: {e}")
+    
+    if deleted_count > 0:
+        print(f"Cleaned up {deleted_count} pending Razorpay orders")
+    
+    return deleted_count

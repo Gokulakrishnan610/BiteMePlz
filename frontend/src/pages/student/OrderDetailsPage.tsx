@@ -182,6 +182,29 @@ const OrderDetailsPage: React.FC = () => {
     }
   };
 
+  const handleCancelPending = async () => {
+    if (!order || !window.confirm('Are you sure you want to cancel this pending order? This action cannot be undone.')) {
+      return;
+    }
+    try {
+      setDeleting(true);
+      // For pending Razorpay orders, use the cancel endpoint
+      if (order.payment_result?.method === 'razorpay' && order.payment_result?.razorpay_order_id) {
+        await api.post('/api/orders/cancel-razorpay/', {
+          razorpay_order_id: order.payment_result.razorpay_order_id
+        });
+      } else {
+        // For other pending orders, just delete
+        await api.delete(`/api/orders/${(order._id || order.id)}/`);
+      }
+      // toast removed
+      navigate('/orders', { replace: true });
+    } catch (error: any) {
+      // toast removed
+      setDeleting(false);
+    }
+  };
+
   // Removed unused formatTime helper
 
   const formatISTTime = (date: Date | string | null) => {
@@ -191,6 +214,7 @@ const OrderDetailsPage: React.FC = () => {
   };
 
   const canDelete = order?.is_verified || order?.status === 'expired';
+  const isPending = !order?.is_paid && order?.status === 'pending';
 
   // UPDATED LOADING STATE
   if (loading) {
@@ -243,27 +267,35 @@ const OrderDetailsPage: React.FC = () => {
               <ArrowLeft size={20} className="mr-2" />
               <span className="font-medium">Back to Orders</span>
             </button>
-            {canDelete && (
-              <Button onClick={handleDelete} disabled={deleting} variant="destructive" className="flex items-center">
-                <Trash2 size={20} className="mr-2" />
-                {deleting ? 'Deleting...' : 'Delete Order'}
-              </Button>
-            )}
-            {order.is_paid && (
-              <Button
-                onClick={async () => {
-                  try {
-                    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
-                    const { data } = await api.get(`/api/orders/${order._id}/bill/`, { params: { tz }, headers: { 'X-Timezone': tz } })
-                    setBillHtml(data.html || '')
-                    setBillOpen(true)
-                  } catch {}
-                }}
-                className="ml-2 bg-purple-600 hover:bg-purple-700 text-white"
-              >
-                Bill
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {isPending && (
+                <Button onClick={handleCancelPending} disabled={deleting} variant="destructive" className="flex items-center">
+                  <Trash2 size={20} className="mr-2" />
+                  {deleting ? 'Cancelling...' : 'Cancel Order'}
+                </Button>
+              )}
+              {canDelete && !isPending && (
+                <Button onClick={handleDelete} disabled={deleting} variant="destructive" className="flex items-center">
+                  <Trash2 size={20} className="mr-2" />
+                  {deleting ? 'Deleting...' : 'Delete Order'}
+                </Button>
+              )}
+              {order.is_paid && (
+                <Button
+                  onClick={async () => {
+                    try {
+                      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+                      const { data } = await api.get(`/api/orders/${order._id}/bill/`, { params: { tz }, headers: { 'X-Timezone': tz } })
+                      setBillHtml(data.html || '')
+                      setBillOpen(true)
+                    } catch {}
+                  }}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  Bill
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -330,6 +362,23 @@ const OrderDetailsPage: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Pending Order Warning */}
+              {isPending && (
+                <div className="bg-orange-50 border-l-4 border-orange-500 text-orange-800 p-4 rounded">
+                  <div className="flex items-start">
+                    <AlertCircle className="mr-3 mt-0.5 flex-shrink-0" size={20} />
+                    <div>
+                      <strong className="font-semibold">Payment Pending</strong>
+                      <p className="mt-1 text-sm">
+                        This order is awaiting payment completion. If you did not complete the payment or the payment failed, 
+                        you can cancel this order using the "Cancel Order" button above. The order will be automatically 
+                        removed after 10 minutes if payment is not completed.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Order Items (Grouped if multi-order) */}
               {

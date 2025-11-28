@@ -165,6 +165,27 @@ const OrdersPage: React.FC = () => {
     }
   }
 
+  const handleCancelPending = async (order: any) => {
+    if (!window.confirm("Are you sure you want to cancel this pending order?")) {
+      return
+    }
+    try {
+      // For pending Razorpay orders, use the cancel endpoint
+      if (order.payment_result?.method === 'razorpay' && order.payment_result?.razorpay_order_id) {
+        await api.post('/api/orders/cancel-razorpay/', {
+          razorpay_order_id: order.payment_result.razorpay_order_id
+        });
+      } else {
+        // For other pending orders, just delete
+        await api.delete(`/api/orders/${order._id}/`);
+      }
+      // toast removed
+      setOrders(orders.filter((o) => o._id !== order._id))
+    } catch (error: any) {
+      // toast removed
+    }
+  }
+
   const getStatusBadge = (status: string, isVerified: boolean, isPaid?: boolean) => {
     switch (status) {
       case "completed":
@@ -345,6 +366,21 @@ const OrdersPage: React.FC = () => {
                 </CardHeader>
 
                 <CardContent className="p-6">
+                  {/* Pending Payment Warning */}
+                  {!order.is_paid && order.status === "pending" && (
+                    <div className="bg-orange-50 border-l-4 border-orange-500 text-orange-800 p-3 rounded mb-4 text-sm">
+                      <div className="flex items-start">
+                        <AlertCircle className="mr-2 mt-0.5 flex-shrink-0" size={16} />
+                        <div>
+                          <strong className="font-semibold">Payment Pending</strong>
+                          <p className="mt-0.5">
+                            This order is awaiting payment. Cancel it if payment was not completed.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Order Items */}
                   <div className="space-y-4 mb-6">
                     <h3 className="font-semibold text-gray-900 mb-3">Order Items</h3>
@@ -417,6 +453,17 @@ const OrdersPage: React.FC = () => {
                           Order Completed
                         </Button>
                       </div>
+                    )}
+
+                    {!order.is_paid && order.status === "pending" && (
+                      <Button
+                        onClick={() => handleCancelPending(order)}
+                        variant="outline"
+                        className="border-orange-200 text-orange-600 hover:bg-orange-50 bg-transparent"
+                      >
+                        <Trash2 size={16} className="mr-2" />
+                        Cancel Order
+                      </Button>
                     )}
 
                     {order.status === "expired" && (
