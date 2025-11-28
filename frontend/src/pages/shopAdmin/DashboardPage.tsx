@@ -286,7 +286,14 @@ const DashboardPage: React.FC = () => {
           >
             <ArrowLeft size={20} className="text-gray-700 dark:text-gray-300" />
           </button>
-          <h1 className="text-2xl font-bold">Shop Admin Dashboard</h1>
+          <div>
+            <h1 className="text-2xl font-bold">Shop Admin Dashboard</h1>
+            {shop && (
+              <p className="text-sm text-[var(--secondary-text)] mt-1">
+                {shop.name} • {shop.location}
+              </p>
+            )}
+          </div>
         </div>
         <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
           {/* Final Validity Time Control */}
