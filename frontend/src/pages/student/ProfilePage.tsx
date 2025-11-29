@@ -90,6 +90,13 @@ const ProfilePage: React.FC = () => {
         const [_, { data }] = await Promise.all([timeoutPromise, profilePromise])
         setProfile(data)
         setLoading(false)
+        
+        // Log view profile for students/staff
+        if (['student', 'staff'].includes(data.role)) {
+          import('../../utils/studentLogger').then(({ logViewProfile }) => {
+            logViewProfile()
+          })
+        }
       } catch (err) {
         console.error("Failed to load profile:", err)
         setError("Failed to load profile")

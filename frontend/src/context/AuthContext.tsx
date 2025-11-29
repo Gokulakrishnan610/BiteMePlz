@@ -198,6 +198,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
+    // Log student/staff logout before clearing data
+    if (user?.role && ['student', 'staff'].includes(user.role)) {
+      import('../utils/studentLogger').then(({ logLogout }) => {
+        logLogout();
+      });
+    }
+    
     // Clear cart when logging out
     if (cartResetCallback) {
       cartResetCallback();

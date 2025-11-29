@@ -313,4 +313,47 @@ class StudentAnalytics(models.Model):
         verbose_name_plural = 'Student Analytics'
 
     def __str__(self):
-        return f"Analytics - {self.user.name}" 
+        return f"Analytics - {self.user.name}"
+
+
+class StudentLog(models.Model):
+    ACTION_CHOICES = [
+        ('login', 'Login'),
+        ('logout', 'Logout'),
+        ('view_shops', 'View Shops'),
+        ('view_products', 'View Products'),
+        ('add_to_cart', 'Add to Cart'),
+        ('remove_from_cart', 'Remove from Cart'),
+        ('place_order', 'Place Order'),
+        ('view_order', 'View Order'),
+        ('cancel_order', 'Cancel Order'),
+        ('add_balance', 'Add Balance'),
+        ('view_profile', 'View Profile'),
+        ('update_profile', 'Update Profile'),
+        ('view_transactions', 'View Transactions'),
+        ('other', 'Other'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='student_logs')
+    action = models.CharField(max_length=100, choices=ACTION_CHOICES)
+    description = models.TextField(blank=True, null=True)
+    shop = models.ForeignKey(Shop, on_delete=models.SET_NULL, null=True, blank=True, related_name='student_logs')
+    order = models.ForeignKey(Order, on_delete=models.SET_NULL, null=True, blank=True, related_name='student_logs')
+    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True, related_name='student_logs')
+    metadata = models.JSONField(null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'student_logs'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['-created_at']),
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['action', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.name} - {self.action} - {self.created_at}" 

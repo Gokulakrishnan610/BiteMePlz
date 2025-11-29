@@ -37,6 +37,7 @@ import AnalyticsPage from './pages/admin/AnalyticsPage';
 import FinancialReportsPage from './pages/admin/FinancialReportsPage';
 import ShopLogsPage from './pages/shopAdmin/ShopLogsPage';
 import StudentAnalyticsPage from './pages/shopAdmin/StudentAnalyticsPage';
+import StudentLogsPage from './pages/admin/StudentLogsPage';
 import MaintenancePage from './pages/admin/MaintenancePage';
 
 // shop Admin Pages
@@ -149,6 +150,7 @@ function App() {
                         
             <Route path="shop-logs" element={<ShopLogsPage />} />
             <Route path="student-analytics" element={<StudentAnalyticsPage />} />
+            <Route path="student-logs" element={<StudentLogsPage />} />
             
             {/* Admin Shop Admin Routes */}
             <Route path="shop-admin" element={<ShopAdminDashboardPage />} />

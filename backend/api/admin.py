@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, Shop, Product, Order, Transaction, ShopLog, StudentAnalytics
+from .models import User, Shop, Product, Order, Transaction, ShopLog, StudentAnalytics, StudentLog
 from django.urls import path
 from django.http import FileResponse, HttpResponseForbidden
 from django.conf import settings
@@ -474,7 +474,21 @@ class StudentAnalyticsAdmin(admin.ModelAdmin):
     list_filter = ('created_at',)
     search_fields = ('user__name', 'shop__name')
     ordering = ('-created_at',)
-    readonly_fields = ('created_at', 'updated_at') 
+    readonly_fields = ('created_at', 'updated_at')
+
+
+class StudentLogAdmin(admin.ModelAdmin):
+    list_display = ('user', 'action', 'shop', 'description_short', 'created_at')
+    list_filter = ('action', 'created_at', 'shop')
+    search_fields = ('user__name', 'user__roll_no', 'user__email', 'description', 'action')
+    ordering = ('-created_at',)
+    readonly_fields = ('created_at', 'ip_address', 'user_agent')
+    
+    def description_short(self, obj):
+        if obj.description:
+            return obj.description[:50] + '...' if len(obj.description) > 50 else obj.description
+        return '-'
+    description_short.short_description = 'Description' 
 
 
 class CustomAdminSite(admin.AdminSite):
@@ -593,6 +607,7 @@ admin.site.register(Order, OrderAdmin)
 admin.site.register(Transaction, TransactionAdmin)
 admin.site.register(ShopLog, ShopLogAdmin)
 admin.site.register(StudentAnalytics, StudentAnalyticsAdmin)
+admin.site.register(StudentLog, StudentLogAdmin)
 
 # Add a link to the download page on the admin index
 def custom_index(self, request, extra_context=None):

@@ -146,6 +146,17 @@ const OrderDetailsPage: React.FC = () => {
           // setGroupDetails(null);
         }
         setLoading(false);
+        
+        // Log view order for students/staff
+        const userStr = localStorage.getItem('user')
+        if (userStr) {
+          const user = JSON.parse(userStr)
+          if (['student', 'staff'].includes(user.role) && normalized.order_id) {
+            import('../../utils/studentLogger').then(({ logViewOrder }) => {
+              logViewOrder(normalized._id, normalized.order_id!, normalized.shop?.name)
+            })
+          }
+        }
       } catch (err) {
         setError('Failed to load order details');
         setLoading(false);

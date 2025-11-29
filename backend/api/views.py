@@ -13,7 +13,7 @@ from django.db.models import Q
 from django.core.files.storage import default_storage
 from django.core.serializers.json import DjangoJSONEncoder
 import json
-from .models import User, Shop, Product, Order, Transaction, ShopLog, StudentAnalytics
+from .models import User, Shop, Product, Order, Transaction, ShopLog, StudentAnalytics, StudentLog
 from .serializers import (
     UserSerializer, UserRegistrationSerializer, UserLoginSerializer,
     ShopSerializer, ProductSerializer, OrderSerializer, TransactionSerializer,
@@ -1462,6 +1462,19 @@ class OrderViewSet(viewsets.ModelViewSet):
                 }
             )
             
+            # Log student/staff activity
+            if acting_user.role in ['student', 'staff']:
+                from .student_logger import log_student_activity
+                log_student_activity(
+                    user=acting_user,
+                    action='place_order',
+                    description=f'Placed order #{order.order_id} for ₹{total_price}',
+                    shop=shop,
+                    order=order,
+                    metadata={'payment_method': 'balance', 'total_price': float(total_price)},
+                    request=request
+                )
+            
             # 5. Send wallet update
             try:
                 from api.tasks import send_wallet_update
@@ -2902,6 +2915,19 @@ class OrderViewSet(viewsets.ModelViewSet):
                     }
                 )
                 
+                # Log student/staff activity
+                if request.user.role in ['student', 'staff']:
+                    from .student_logger import log_student_activity
+                    log_student_activity(
+                        user=request.user,
+                        action='place_order',
+                        description=f'Placed order #{pending_order.order_id} for ₹{pending_order.total_price}',
+                        shop=pending_order.shop,
+                        order=pending_order,
+                        metadata={'payment_method': 'razorpay', 'total_price': float(pending_order.total_price)},
+                        request=request
+                    )
+                
                 serializer = self.get_serializer(pending_order)
                 return Response({
                     'message': 'Payment successful',
@@ -3521,3 +3547,221 @@ def test_wallet_update(request):
         'transaction_type': transaction_type,
         'timestamp': timezone.now().isoformat()
     })
+
+
+
+class StudentLogViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing student activity logs
+    """
+    queryset = StudentLog.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        """Filter logs based on user role"""
+        user = self.request.user
+        queryset = StudentLog.objects.select_related('user', 'shop', 'order', 'product').all()
+        
+        # Admin can see all logs
+        if user.role == 'admin':
+            return queryset
+        
+        # Shop admin can see logs related to their shop
+        if user.role == 'shopAdmin':
+            shop_id = user.shop_id
+            if shop_id:
+                return queryset.filter(shop_id=shop_id)
+            return queryset.none()
+        
+        # Students and staff can only see their own logs
+        if user.role in ['student', 'staff']:
+            return queryset.filter(user=user)
+        
+        return queryset.none()
+    
+    def create(self, request):
+        """Create a new student/staff activity log"""
+        try:
+            user = request.user
+            
+            # Only allow students and staff to create logs
+            if user.role not in ['student', 'staff']:
+                return Response(
+                    {'error': 'Only students and staff can create activity logs'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Get data from request
+            action = request.data.get('action')
+            description = request.data.get('description')
+            shop_id = request.data.get('shop_id')
+            order_id = request.data.get('order_id')
+            product_id = request.data.get('product_id')
+            metadata = request.data.get('metadata', {})
+            
+            # Validate action
+            valid_actions = [choice[0] for choice in StudentLog.ACTION_CHOICES]
+            if action not in valid_actions:
+                return Response(
+                    {'error': f'Invalid action. Must be one of: {", ".join(valid_actions)}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Get related objects
+            shop = None
+            if shop_id:
+                try:
+                    shop = Shop.objects.get(id=shop_id)
+                except Shop.DoesNotExist:
+                    pass
+            
+            order = None
+            if order_id:
+                try:
+                    order = Order.objects.get(id=order_id)
+                except Order.DoesNotExist:
+                    pass
+            
+            product = None
+            if product_id:
+                try:
+                    product = Product.objects.get(id=product_id)
+                except Product.DoesNotExist:
+                    pass
+            
+            # Get IP address and user agent
+            ip_address = None
+            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                ip_address = x_forwarded_for.split(',')[0]
+            else:
+                ip_address = request.META.get('REMOTE_ADDR')
+            
+            user_agent = request.META.get('HTTP_USER_AGENT', '')
+            
+            # Create log
+            log = StudentLog.objects.create(
+                user=user,
+                action=action,
+                description=description,
+                shop=shop,
+                order=order,
+                product=product,
+                metadata=metadata,
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+            
+            return Response({
+                'success': True,
+                'log_id': str(log.id),
+                'message': 'Activity logged successfully'
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            print(f"[ERROR] Failed to create student log: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {'error': 'Failed to create log', 'detail': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def list(self, request):
+        """List student logs with filtering and pagination"""
+        try:
+            user = request.user
+            
+            # Get query parameters
+            user_id = request.query_params.get('user_id')
+            action = request.query_params.get('action')
+            shop_id = request.query_params.get('shop_id')
+            start_date = request.query_params.get('start_date')
+            end_date = request.query_params.get('end_date')
+            search = request.query_params.get('search', '')
+            page = int(request.query_params.get('page', 1))
+            limit = int(request.query_params.get('limit', 50))
+            
+            # Start with base queryset
+            queryset = self.get_queryset()
+            
+            # Apply filters
+            if user_id and user.role in ['admin', 'shopAdmin']:
+                queryset = queryset.filter(user_id=user_id)
+            
+            if action:
+                queryset = queryset.filter(action=action)
+            
+            if shop_id:
+                queryset = queryset.filter(shop_id=shop_id)
+            
+            if start_date:
+                queryset = queryset.filter(created_at__date__gte=start_date)
+            
+            if end_date:
+                queryset = queryset.filter(created_at__date__lte=end_date)
+            
+            if search:
+                queryset = queryset.filter(
+                    Q(user__name__icontains=search) |
+                    Q(user__roll_no__icontains=search) |
+                    Q(description__icontains=search) |
+                    Q(action__icontains=search)
+                )
+            
+            # Order by creation date (newest first)
+            queryset = queryset.order_by('-created_at')
+            
+            # Get total count
+            total = queryset.count()
+            
+            # Pagination
+            start_idx = (page - 1) * limit
+            end_idx = start_idx + limit
+            logs = queryset[start_idx:end_idx]
+            
+            # Serialize data
+            results = []
+            for log in logs:
+                results.append({
+                    '_id': str(log.id),
+                    'user': {
+                        '_id': str(log.user.id),
+                        'name': log.user.name,
+                        'email': log.user.email,
+                        'rollNo': log.user.roll_no,
+                    },
+                    'action': log.action,
+                    'description': log.description,
+                    'shop': {
+                        '_id': str(log.shop.id),
+                        'name': log.shop.name,
+                    } if log.shop else None,
+                    'order': {
+                        '_id': str(log.order.id),
+                        'order_id': log.order.order_id,
+                    } if log.order else None,
+                    'product': {
+                        '_id': str(log.product.id),
+                        'name': log.product.name,
+                    } if log.product else None,
+                    'metadata': log.metadata,
+                    'ip_address': log.ip_address,
+                    'user_agent': log.user_agent,
+                    'created_at': log.created_at.isoformat(),
+                })
+            
+            return Response({
+                'results': results,
+                'total': total,
+                'currentPage': page,
+                'totalPages': (total + limit - 1) // limit,
+                'hasNext': end_idx < total,
+                'hasPrev': page > 1,
+            })
+            
+        except Exception as e:
+            print(f"[ERROR] Failed to fetch student logs: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

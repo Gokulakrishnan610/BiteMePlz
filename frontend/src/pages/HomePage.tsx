@@ -181,6 +181,17 @@ const HomePage: React.FC = () => {
       try {
         await Promise.all([fetchShops(controller.signal), fetchAvailableCategories(controller.signal)])
         setLoading(false)
+        
+        // Log view shops for students/staff
+        const userStr = localStorage.getItem('user')
+        if (userStr) {
+          const user = JSON.parse(userStr)
+          if (['student', 'staff'].includes(user.role)) {
+            import('../utils/studentLogger').then(({ logViewShops }) => {
+              logViewShops()
+            })
+          }
+        }
       } catch (err) {
         if ((err as any)?.name !== "CanceledError" && (err as any)?.code !== "ERR_CANCELED") {
           setError("Failed to load data")

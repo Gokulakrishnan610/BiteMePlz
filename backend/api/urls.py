@@ -12,7 +12,7 @@ from rest_framework_simplejwt.views import (
 )
 from .views import (
     UserViewSet, ShopViewSet, ProductViewSet, OrderViewSet,
-    TransactionViewSet, ShopLogViewSet, StudentAnalyticsViewSet, FileUploadViewSet,
+    TransactionViewSet, ShopLogViewSet, StudentAnalyticsViewSet, StudentLogViewSet, FileUploadViewSet,
     test_websocket, test_wallet_update
 )
 
@@ -24,6 +24,7 @@ router.register(r'orders', OrderViewSet)
 router.register(r'transactions', TransactionViewSet)
 router.register(r'shop-logs', ShopLogViewSet)
 router.register(r'student-analytics', StudentAnalyticsViewSet)
+router.register(r'student-logs', StudentLogViewSet, basename='student-logs')
 router.register(r'upload', FileUploadViewSet, basename='upload')
 
 class RegisterView(APIView):
@@ -564,6 +565,17 @@ class LoginView(APIView):
                         )
                 
                 refresh = RefreshToken.for_user(user)
+                
+                # Log student/staff login
+                if user.role in ['student', 'staff']:
+                    from .student_logger import log_student_activity
+                    log_student_activity(
+                        user=user,
+                        action='login',
+                        description=f'{user.name} logged in',
+                        request=request
+                    )
+                
                 return Response({
                     '_id': str(user.id),
                     'name': user.name,

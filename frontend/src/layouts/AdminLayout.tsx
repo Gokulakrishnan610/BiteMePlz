@@ -142,6 +142,7 @@ const AdminLayout: React.FC = () => {
                 </h3>
                 <div className="space-y-2">
                   <SidebarLink to="/kisok-ac-back-office/shop-logs" icon={FileText} active={isPathActive('/kisok-ac-back-office/shop-logs')} closeSidebar={closeSidebar} label="shop Logs" />
+                  <SidebarLink to="/kisok-ac-back-office/student-logs" icon={Users} active={isPathActive('/kisok-ac-back-office/student-logs')} closeSidebar={closeSidebar} label="Student Logs" />
                 </div>
               </div>
             </>

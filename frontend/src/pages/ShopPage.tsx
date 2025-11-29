@@ -317,6 +317,13 @@ const ShopPage: React.FC = () => {
         
         setProducts(processedProducts)
         setLoading(false)
+        
+        // Log view products for students/staff
+        if (shopResponse.data && user?.role && ['student', 'staff'].includes(user.role)) {
+          import('../utils/studentLogger').then(({ logViewProducts }) => {
+            logViewProducts(shopResponse.data.id, shopResponse.data.name)
+          })
+        }
       } catch (err) {
         if ((err as any)?.name !== "CanceledError") {
         setError("Failed to load shop data")
@@ -415,6 +422,13 @@ const ShopPage: React.FC = () => {
       // Update quantity in global cart
       const newQuantity = product.stock_mode === 'live_stock' ? existingGlobalItem.quantity + 1 : Math.min(existingGlobalItem.quantity + 1, product.stock)
       updateQuantity(product.id, shop.id, newQuantity)
+      
+      // Log add to cart for students/staff
+      if (user?.role && ['student', 'staff'].includes(user.role)) {
+        import('../utils/studentLogger').then(({ logAddToCart }) => {
+          logAddToCart(product.id, product.name, shop.id, 1)
+        })
+      }
     } else {
       // Add new item to global cart
       addToCart({
@@ -429,10 +443,19 @@ const ShopPage: React.FC = () => {
         shop_id: shop.id,
         shop_name: shop.name,
       })
+      
+      // Log add to cart for students/staff
+      if (user?.role && ['student', 'staff'].includes(user.role)) {
+        import('../utils/studentLogger').then(({ logAddToCart }) => {
+          logAddToCart(product.id, product.name, shop.id, 1)
+        })
+      }
     }
   }
 
   const handleRemoveFromLocalCart = (productId: string) => {
+    const existing = localCart.find((item) => item.productId === productId)
+    
     setLocalCart((prev) => {
       const existing = prev.find((item) => item.productId === productId)
       if (existing && existing.quantity > 1) {
@@ -457,6 +480,13 @@ const ShopPage: React.FC = () => {
         } else {
           // Remove from global cart
           removeFromCart(productId, id)
+          
+          // Log remove from cart for students/staff (only when fully removed)
+          if (user?.role && ['student', 'staff'].includes(user.role) && existing) {
+            import('../utils/studentLogger').then(({ logRemoveFromCart }) => {
+              logRemoveFromCart(productId, existing.product.name, id)
+            })
+          }
         }
       }
     }
