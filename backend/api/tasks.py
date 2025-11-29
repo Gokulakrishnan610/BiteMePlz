@@ -266,8 +266,7 @@ def send_wallet_update(user_id: str, balance: float, change: float = 0, transact
     except Exception as e:
         print(f"Error sending wallet update: {e}")
 
-@sha
-red_task(name='api.tasks.cleanup_pending_razorpay_orders')
+@shared_task(name='api.tasks.cleanup_pending_razorpay_orders')
 def cleanup_pending_razorpay_orders():
     """
     Clean up pending Razorpay orders that are older than 10 minutes.

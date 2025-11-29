@@ -1764,8 +1764,19 @@ class OrderViewSet(viewsets.ModelViewSet):
     def reject(self, request, pk=None):
         """Reject an order and refund wallet if paid by balance."""
         try:
-            if getattr(request.user, 'role', None) not in ['admin', 'shopAdmin']:
-                return Response({'error': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+            user = request.user
+            
+            # Check user role
+            user_role = getattr(user, 'role', None)
+            print(f"[DEBUG] Reject order - User: {getattr(user, 'email', 'unknown')}, Role: {user_role}")
+            
+            # Allow admin, shopAdmin, and sub-admins
+            if user_role not in ['admin', 'shopAdmin']:
+                print(f"[ERROR] User role '{user_role}' not authorized to reject orders")
+                return Response({
+                    'error': 'Forbidden - Only admins and shop admins can reject orders',
+                    'user_role': user_role
+                }, status=status.HTTP_403_FORBIDDEN)
 
             try:
                 order = self.get_object()
@@ -1774,6 +1785,17 @@ class OrderViewSet(viewsets.ModelViewSet):
                     order = Order.objects.get(order_id=pk)
                 except Order.DoesNotExist:
                     return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            # Shop context check - ensure shop admin can only reject orders from their shop
+            if user_role == 'shopAdmin':
+                user_shop_id = str(user.shop.id) if hasattr(user, 'shop') and user.shop else None
+                order_shop_id = str(order.shop.id)
+                
+                if user_shop_id != order_shop_id:
+                    print(f"[ERROR] Shop admin trying to reject order from different shop")
+                    return Response({
+                        'error': 'You can only reject orders from your own shop'
+                    }, status=status.HTTP_403_FORBIDDEN)
 
             if order.status in ['expired', 'completed']:
                 # No-op: already finalized; return current state for idempotency
@@ -2341,9 +2363,41 @@ class OrderViewSet(viewsets.ModelViewSet):
             )
             for o in overdue:
                 try:
-                    o.status = 'expired'
-                    o.save(update_fields=['status', 'updated_at'])
-                except Exception:
+                    with transaction.atomic():
+                        o.status = 'expired'
+                        o.save(update_fields=['status', 'updated_at'])
+                        
+                        # If order was paid, refund to wallet
+                        if o.is_paid:
+                            user = o.user
+                            user.balance += o.total_price
+                            user.save()
+                            
+                            # Log refund transaction
+                            Transaction.objects.create(
+                                user=user,
+                                shop=o.shop,
+                                order=o,
+                                amount=o.total_price,
+                                type='credit',
+                                status='success',
+                                payment_method='balance',
+                                description=f'Order {o.order_id} expired, amount returned to wallet.'
+                            )
+                            
+                            # Send WebSocket update for wallet balance change
+                            try:
+                                from api.tasks import send_wallet_update
+                                send_wallet_update(
+                                    user_id=str(user.id),
+                                    balance=float(user.balance),
+                                    change=float(o.total_price),
+                                    transaction_type='expiry_refund'
+                                )
+                            except Exception:
+                                pass
+                except Exception as e:
+                    print(f"[ERROR] Failed to expire order {o.order_id}: {str(e)}")
                     pass
 
             orders = Order.objects.filter(shop=shop_id)
