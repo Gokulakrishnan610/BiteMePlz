@@ -21,7 +21,7 @@ const LoginPage: React.FC = () => {
   const getExpectedRole = () => {
     if (location.pathname.startsWith('/kisok-ac-back-office/login')) return 'admin';
     if (location.pathname.startsWith('/kisok-sp-back-office/login')) return 'shopAdmin';
-    return 'student';
+    return 'customer'; // Both student and staff use this login
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,11 +40,23 @@ const LoginPage: React.FC = () => {
       // Enforce role restriction based on path
       const expectedRole = getExpectedRole();
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      if (!user.role || user.role !== expectedRole) {
-        setLoading(false);
-        toast.error('You are not authorized to login here.');
-        return;
+      
+      // For customer login (student/staff), allow both roles
+      if (expectedRole === 'customer') {
+        if (user.role !== 'student' && user.role !== 'staff') {
+          setLoading(false);
+          toast.error('You are not authorized to login here.');
+          return;
+        }
+      } else {
+        // For admin/shopAdmin, enforce exact role match
+        if (!user.role || user.role !== expectedRole) {
+          setLoading(false);
+          toast.error('You are not authorized to login here.');
+          return;
+        }
       }
+      
       setShowPostLoginAnimation(true);
     } catch (err: any) {
       const message = err?.message || 'Invalid email or password';
@@ -184,7 +196,7 @@ const LoginPage: React.FC = () => {
               >
                 Forgot your password?
               </Link>
-              {getExpectedRole() === 'student' && (
+              {getExpectedRole() === 'customer' && (
                 <div className="border-t border-gray-200 pt-4">
                   <p className="text-gray-600">
                     Don't have an account?{' '}
