@@ -553,43 +553,43 @@ const TransactionsPage: React.FC = () => {
         </nav>
       </div>
 
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                  <div className="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-           <div className="p-4 lg:p-6 flex items-center">
-             <Receipt size={32} className="lg:size-36 mr-4" />
+           <div className="p-4 flex items-center">
+             <Receipt size={40} className="mr-3 flex-shrink-0" />
              <div>
-               <p className="text-sm lg:text-base font-semibold">Total</p>
-               <p className="text-2xl lg:text-3xl font-bold">{stats.totalTransactions}</p>
+               <p className="text-sm font-semibold">Total</p>
+               <p className="text-2xl font-bold">{stats.totalTransactions}</p>
              </div>
            </div>
          </div>
 
          <div className="card bg-gradient-to-br from-green-500 to-green-600 text-white">
-           <div className="p-4 lg:p-6 flex items-center">
-             <DollarSign size={32} className="lg:size-36 mr-4" />
+           <div className="p-4 flex items-center">
+             <DollarSign size={40} className="mr-3 flex-shrink-0" />
              <div>
-               <p className="text-sm lg:text-base font-semibold">Amount</p>
-               <p className="text-2xl lg:text-3xl font-bold">₹{stats.totalAmount.toFixed(0)}</p>
+               <p className="text-sm font-semibold">Amount</p>
+               <p className="text-2xl font-bold">₹{stats.totalAmount.toFixed(0)}</p>
              </div>
            </div>
          </div>
 
          <div className="card bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">
-           <div className="p-4 lg:p-6 flex items-center">
-             <TrendingUp size={32} className="lg:size-36 mr-4" />
+           <div className="p-4 flex items-center">
+             <TrendingUp size={40} className="mr-3 flex-shrink-0" />
              <div>
-               <p className="text-sm lg:text-base font-semibold">Success</p>
-               <p className="text-2xl lg:text-3xl font-bold">{stats.successfulTransactions}</p>
+               <p className="text-sm font-semibold">Success</p>
+               <p className="text-2xl font-bold">{stats.successfulTransactions}</p>
              </div>
            </div>
          </div>
 
          <div className="card bg-gradient-to-br from-red-500 to-red-600 text-white">
-           <div className="p-4 lg:p-6 flex items-center">
-             <TrendingDown size={32} className="lg:size-36 mr-4" />
+           <div className="p-4 flex items-center">
+             <TrendingDown size={40} className="mr-3 flex-shrink-0" />
              <div>
-               <p className="text-sm lg:text-base font-semibold">Failed</p>
-               <p className="text-2xl lg:text-3xl font-bold">{stats.failedTransactions}</p>
+               <p className="text-sm font-semibold">Failed</p>
+               <p className="text-2xl font-bold">{stats.failedTransactions}</p>
              </div>
            </div>
          </div>

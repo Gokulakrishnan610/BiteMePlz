@@ -22,6 +22,14 @@ const ProductsPage: React.FC = () => {
   // Determine the effective shop ID
   const effectiveShopId = user?.role === "admin" && selectedShop ? selectedShop.id : user?.shop
 
+  // Safe date formatter
+  const formatDate = (dateString: string | undefined | null): string => {
+    if (!dateString) return "N/A"
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return "N/A"
+    return date.toLocaleDateString()
+  }
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -231,7 +239,7 @@ const ProductsPage: React.FC = () => {
                       {product.is_available ? "Available" : "Unavailable"}
                     </span>
                   </td>
-                  <td className="py-4 px-4 text-gray-600">{new Date(product.createdAt).toLocaleDateString()}</td>
+                  <td className="py-4 px-4 text-gray-600">{formatDate(product.createdAt)}</td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-2">
                       <button
@@ -289,26 +297,24 @@ const ProductsPage: React.FC = () => {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-4">
-                  <div>
-                    <span className="text-gray-500">Stock: </span>
-                    <span
-                      className={`font-medium ${
-                        product.stock_mode === "live_stock"
-                          ? "text-[var(--primary)]"
-                          : product.stock === 0
-                            ? "text-[var(--error)]"
-                            : "text-[var(--success)]"
-                      }`}
-                    >
-                      {product.stock_mode === "live_stock" ? "Livestock" : product.stock}
-                    </span>
-                  </div>
-                  <div className="hidden sm:block">
-                    <span className="text-gray-500">Created: </span>
-                    <span className="text-gray-700">{new Date(product.createdAt).toLocaleDateString()}</span>
-                  </div>
+              <div className="flex items-center justify-between text-sm flex-wrap gap-2">
+                <div>
+                  <span className="text-gray-500">Stock: </span>
+                  <span
+                    className={`font-medium ${
+                      product.stock_mode === "live_stock"
+                        ? "text-[var(--primary)]"
+                        : product.stock === 0
+                          ? "text-[var(--error)]"
+                          : "text-[var(--success)]"
+                    }`}
+                  >
+                    {product.stock_mode === "live_stock" ? "Livestock" : product.stock}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Date Created: </span>
+                  <span className="text-gray-700">{formatDate(product.createdAt)}</span>
                 </div>
               </div>
 
