@@ -190,8 +190,21 @@ class ShopAdmin(admin.ModelAdmin):
     list_filter = ('is_active', 'is_open', 'created_at')
     search_fields = ('name', 'location', 'shop_admin__name', 'shop_admin__email')
     ordering = ('-created_at',)
-    
     actions = ['change_shop_admin_password', 'view_password_reset_info']
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        if 'disabled_categories' in form.base_fields:
+            form.base_fields['disabled_categories'].required = False
+            form.base_fields['disabled_categories'].initial = '[]'
+            form.base_fields['disabled_categories'].help_text = 'JSON list of disabled categories. Leave empty or enter []'
+        return form
+
+    def save_model(self, request, obj, form, change):
+        # Ensure disabled_categories is always a list, never None
+        if not obj.disabled_categories:
+            obj.disabled_categories = []
+        super().save_model(request, obj, form, change)
     
     def shop_admin_email(self, obj):
         """Display shop admin email for easy reference"""
