@@ -944,9 +944,7 @@ const ShopPage: React.FC = () => {
                               <img
                                 src={
                                   product.image
-                                    ? product.image.startsWith("http")
-                                      ? product.image
-                                      : getMediaUrl(product.image)
+                                    ? getMediaUrl(product.image)
                                     : "/placeholder.svg"
                                 }
                                 alt={product.name}

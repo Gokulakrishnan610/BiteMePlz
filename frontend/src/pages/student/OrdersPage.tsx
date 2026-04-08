@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import api from "../../api"
 import { Package, AlertCircle, Trash2, ArrowLeft, Clock, CheckCircle, XCircle } from "lucide-react"
+import { getMediaUrl } from "../../lib/utils"
 // import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
 import { Badge } from "../../components/ui/badge"
@@ -388,7 +389,7 @@ const OrdersPage: React.FC = () => {
                       <div key={index} className="flex items-center p-3 bg-gray-50 rounded-lg">
                         <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
                           <img
-                            src={item.image || "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"}
+                            src={item.image ? getMediaUrl(item.image) : "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"}
                             alt={item.name}
                             className="w-full h-full object-cover"
                           />

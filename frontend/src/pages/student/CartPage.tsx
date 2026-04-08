@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
+import { getMediaUrl } from "../../lib/utils"
 import {
   Trash2,
   ShoppingBag,
@@ -497,7 +498,7 @@ const CartPage: React.FC = () => {
                           <div className="flex items-center flex-1 min-w-0">
                             <div className="relative flex-shrink-0">
                               <img
-                                src={item.image || "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"}
+                                src={item.image ? getMediaUrl(item.image) : "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg"}
                                 alt={item.name}
                                 className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border border-gray-200"
                                 onError={(e) => {

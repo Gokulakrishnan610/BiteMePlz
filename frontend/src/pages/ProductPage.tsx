@@ -190,9 +190,7 @@ const ProductPage: React.FC = () => {
                 <img
                   src={
                     product.image
-                      ? product.image.startsWith("http")
-                        ? product.image
-                        : getMediaUrl(product.image)
+                      ? getMediaUrl(product.image)
                       : "https://images.pexels.com/photos/1667088/pexels-photo-1667088.jpeg"
                   }
                   alt={product.name}

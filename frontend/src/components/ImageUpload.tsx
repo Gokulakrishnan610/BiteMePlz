@@ -111,9 +111,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       const formData = new FormData();
       formData.append('image', file);
       const { data } = await api.post('/api/upload/single/', formData, { timeout: 30000 });
-      const imageUrl = getMediaUrl(data.filePath);
-      setPreview(imageUrl);
-      onImageUpload(imageUrl);
+      // Backend returns full URL (blob storage) or relative path (local) — getMediaUrl handles both
+      const uploadedUrl = data.filePath;
+      setPreview(uploadedUrl);
+      onImageUpload(uploadedUrl);
       toast.success('Image uploaded successfully! 🎉', {
         style: { background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#166534' },
       });
@@ -216,13 +217,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       {preview ? (
         <div className="relative group">
           <div className="relative overflow-hidden rounded-xl border-2 border-gray-200 shadow-lg">
-            <img src={
-              preview
-                ? preview.startsWith('http')
-                  ? preview
-                  : getMediaUrl(preview)
-                : ""
-            } alt="Preview" className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105" />
+            <img src={getMediaUrl(preview)} alt="Preview" className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105" />
             <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300" />
           </div>
 
