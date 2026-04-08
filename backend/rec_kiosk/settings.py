@@ -105,14 +105,18 @@ except Exception as channels_error:
     print(f"DEBUG: Channels not available: {channels_error}")
     WSGI_APPLICATION = 'rec_kiosk.wsgi.application'
 
-# Database: Use DATABASE_URL if set (Render), otherwise SQLite
+# Database: Use DATABASE_URL if set, otherwise SQLite
 import os
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    DATABASES = {'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        }
     }
-}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
