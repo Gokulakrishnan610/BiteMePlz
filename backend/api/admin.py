@@ -13,6 +13,19 @@ from django.urls import reverse
 from django.utils.crypto import get_random_string
 
 
+def _build_password_change_entries(recent_password_changes):
+    if not recent_password_changes:
+        return '<p>No recent password changes found.</p>'
+    return ''.join(
+        '<div class="log-entry">'
+        '<strong>Date:</strong> ' + log.created_at.strftime('%Y-%m-%d %H:%M:%S') + '<br>'
+        '<strong>Changed By:</strong> ' + (log.performed_by.email if log.performed_by else 'Unknown') + '<br>'
+        '<strong>Details:</strong> ' + str(log.details.get('admin_user', 'N/A')) +
+        '</div>'
+        for log in recent_password_changes
+    )
+
+
 class CustomUserAdmin(UserAdmin):
     list_display = ('name', 'email', 'role', 'get_identifier', 'is_verified', 'otp_status', 'get_year_dept', 'balance', 'created_at')
     list_filter = ('role', 'is_verified', 'created_at', 'year', 'department')
@@ -97,7 +110,13 @@ class CustomUserAdmin(UserAdmin):
             self.message_user(request, f"❌ Failed to send {fail_count} email(s)", messages.ERROR)
     
     send_test_email.short_description = "📧 Send test OTP email to selected users"
-    
+
+    @staticmethod
+    def _password_changes_html(user, recent_password_changes):
+        if not (user.role == 'shopAdmin' and user.shop):
+            return ''
+        return '<h2>Recent Password Changes</h2>' + _build_password_change_entries(recent_password_changes)
+
     def view_password_reset_info(self, request, queryset):
         """View password reset information for selected users"""
         if len(queryset) != 1:
@@ -153,16 +172,7 @@ class CustomUserAdmin(UserAdmin):
                 <strong>Reset Token:</strong> {'Active' if has_reset_token else 'None'}
             </div>
             
-            {f'''
-            <h2>Recent Password Changes</h2>
-            {''.join([f'''
-            <div class="log-entry">
-                <strong>Date:</strong> {log.created_at.strftime('%Y-%m-%d %H:%M:%S')}<br>
-                <strong>Changed By:</strong> {log.performed_by.email if log.performed_by else 'Unknown'}<br>
-                <strong>Details:</strong> {log.details.get('admin_user', 'N/A')}
-            </div>
-            ''' for log in recent_password_changes]) if recent_password_changes else '<p>No recent password changes found.</p>'}
-            ''' if user.role == 'shopAdmin' and user.shop else ''}
+            {self._password_changes_html(user, recent_password_changes)}
             
             <h2>Actions</h2>
             <a href="{reverse('admin:api_user_change', args=[user.id])}" class="button">Back to User</a>
@@ -417,13 +427,7 @@ class ShopAdmin(admin.ModelAdmin):
                 </div>
                 
                 <h2>Recent Password Changes</h2>
-                {''.join([f'''
-                <div class="log-entry">
-                    <strong>Date:</strong> {log.created_at.strftime('%Y-%m-%d %H:%M:%S')}<br>
-                    <strong>Changed By:</strong> {log.performed_by.email if log.performed_by else 'Unknown'}<br>
-                    <strong>Details:</strong> {log.details.get('admin_user', 'N/A')}
-                </div>
-                ''' for log in recent_password_changes]) if recent_password_changes else '<p>No recent password changes found.</p>'}
+                {_build_password_change_entries(recent_password_changes)}
                 
                 <h2>Actions</h2>
                 <a href="{reverse('admin:api_shop_change', args=[object_id])}" class="button">Back to Shop</a>
