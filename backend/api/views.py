@@ -117,12 +117,18 @@ class FileUploadViewSet(viewsets.ViewSet):
         try:
             # Generate unique filename
             filename = f"{uuid.uuid4().hex}_{file.name}"
-            
-            # Save file
+
+            # Save file via default_storage (local or Azure Blob)
             file_path = default_storage.save(f'uploads/{filename}', file)
-            
+
+            # Build the public URL
+            if hasattr(default_storage, 'url'):
+                file_url = default_storage.url(file_path)
+            else:
+                file_url = f'/media/{file_path}'
+
             return Response({
-                'filePath': f'/media/{file_path}',
+                'filePath': file_url,
                 'filename': filename
             }, status=status.HTTP_201_CREATED)
         except Exception as e:

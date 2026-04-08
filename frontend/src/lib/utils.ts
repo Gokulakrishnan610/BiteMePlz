@@ -1,24 +1,26 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
-export const MEDIA_BASE_URL = import.meta.env.PROD 
-  ? (import.meta.env.VITE_API_BASE_URL || 'https://rec-kiosk-api-31875.azurewebsites.net') 
+// In production, media may be served from Azure Blob Storage (full URL returned by backend)
+// or from the API server itself. Always prefer full URLs returned by the backend.
+export const MEDIA_BASE_URL = import.meta.env.PROD
+  ? (import.meta.env.VITE_API_BASE_URL || 'https://rec-kiosk-api-31875.azurewebsites.net')
   : "";
 
 export function getMediaUrl(path: string): string {
   if (!path) return "";
-  
-  // If it's already a full URL, return as is
+
+  // Already a full URL (blob storage, external CDN, or http image URL) — use as-is
   if (path.startsWith('http')) {
     return path;
   }
-  
-  // In development, use relative path (will be handled by Vite proxy)
+
+  // Development: relative path handled by Vite proxy
   if (!import.meta.env.PROD) {
     return path.startsWith('/') ? path : `/${path}`;
   }
-  
-  // In production, prepend the media base URL
+
+  // Production fallback: prepend API base URL (local media serving)
   return MEDIA_BASE_URL + (path.startsWith('/') ? path : `/${path}`);
 }
 
