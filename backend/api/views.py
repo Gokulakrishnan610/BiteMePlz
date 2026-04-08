@@ -41,57 +41,44 @@ from django.conf import settings
 import os
 
 def serve_media_file(request, path):
-    """Custom view to serve media files in production"""
+    """Redirect to Azure Blob Storage if configured, otherwise serve locally."""
+    if settings.AZURE_STORAGE_CONNECTION_STRING:
+        from django.http import HttpResponseRedirect
+        blob_url = f"{settings.MEDIA_URL}{path}"
+        return HttpResponseRedirect(blob_url)
+
     file_path = os.path.join(settings.MEDIA_ROOT, path)
-    
-    # Handle directory requests (show directory listing)
+
     if os.path.exists(file_path) and os.path.isdir(file_path):
         try:
             files = []
             for item in os.listdir(file_path):
                 item_path = os.path.join(file_path, item)
                 if os.path.isfile(item_path):
-                    # Clean up path to avoid double slashes
                     clean_path = path.rstrip('/') if path else ''
                     files.append({
                         'name': item,
                         'size': os.path.getsize(item_path),
                         'url': f'/media/{clean_path}/{item}' if clean_path else f'/media/{item}'
                     })
-            
-            # Return JSON response for directory listing
-            return JsonResponse({
-                'type': 'directory',
-                'path': path,
-                'files': files
-            })
+            return JsonResponse({'type': 'directory', 'path': path, 'files': files})
         except Exception as e:
             raise Http404(f"Error reading directory: {e}")
-    
-    # Handle file requests
+
     elif os.path.exists(file_path) and os.path.isfile(file_path):
-        # Get file extension for content type
         ext = os.path.splitext(file_path)[1].lower()
         content_types = {
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.png': 'image/png',
-            '.gif': 'image/gif',
-            '.webp': 'image/webp',
-            '.pdf': 'application/pdf',
-            '.txt': 'text/plain',
+            '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+            '.gif': 'image/gif', '.webp': 'image/webp',
+            '.pdf': 'application/pdf', '.txt': 'text/plain',
         }
-        
         content_type = content_types.get(ext, 'application/octet-stream')
-        
         try:
-            # Open file without context manager to keep it open for FileResponse
             file_handle = open(file_path, 'rb')
             response = FileResponse(file_handle, content_type=content_type)
-            response['Cache-Control'] = 'public, max-age=31536000'  # Cache for 1 year
+            response['Cache-Control'] = 'public, max-age=31536000'
             return response
         except Exception as e:
-            # Close file handle if there was an error
             if 'file_handle' in locals():
                 file_handle.close()
             raise Http404(f"Error reading file: {e}")

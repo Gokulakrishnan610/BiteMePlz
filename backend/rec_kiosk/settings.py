@@ -154,14 +154,22 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Create media directories if they don't exist
-if not DEBUG:  # Only create directories in production
-    os.makedirs(os.path.join(MEDIA_ROOT, 'uploads'), exist_ok=True)
-    os.makedirs(os.path.join(MEDIA_ROOT, 'shops'), exist_ok=True)
-    os.makedirs(os.path.join(MEDIA_ROOT, 'products'), exist_ok=True)
+# Azure Blob Storage for media files
+AZURE_STORAGE_CONNECTION_STRING = os.environ.get('AZURE_STORAGE_CONNECTION_STRING', '')
+AZURE_STORAGE_CONTAINER = os.environ.get('AZURE_STORAGE_CONTAINER', 'media')
 
-# Note: We use custom view for media serving in production, not whitenoise
-# whitenoise is only for static files
+if AZURE_STORAGE_CONNECTION_STRING:
+    DEFAULT_FILE_STORAGE = 'storages.backends.azure_storage.AzureStorage'
+    AZURE_CONNECTION_STRING = AZURE_STORAGE_CONNECTION_STRING
+    AZURE_CONTAINER = AZURE_STORAGE_CONTAINER
+    AZURE_OVERWRITE_FILES = False
+    MEDIA_URL = f'https://{os.environ.get("AZURE_STORAGE_ACCOUNT_NAME", "")}.blob.core.windows.net/{AZURE_STORAGE_CONTAINER}/'
+else:
+    # Local/fallback: create media directories
+    if not DEBUG:
+        os.makedirs(os.path.join(MEDIA_ROOT, 'uploads'), exist_ok=True)
+        os.makedirs(os.path.join(MEDIA_ROOT, 'shops'), exist_ok=True)
+        os.makedirs(os.path.join(MEDIA_ROOT, 'products'), exist_ok=True)
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'api.User'
