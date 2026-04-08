@@ -1,31 +1,24 @@
 #!/bin/bash
 set -e
 
-# Parse connection details from DATABASE_URL if set
-# Format: postgresql://user:password@host:port/dbname
-if [ -n "$DATABASE_URL" ]; then
-    # Strip scheme
-    _url="${DATABASE_URL#postgresql://}"
-    _url="${_url#postgres://}"
-    # Extract host:port/dbname part (after @)
-    _hostpart="${_url##*@}"
-    DB_HOST="${_hostpart%%:*}"
-    DB_HOST="${DB_HOST%%/*}"
-    _portdbname="${_hostpart#*:}"
-    DB_PORT="${_portdbname%%/*}"
-    # If no port found, default to 5432
-    if [ "$DB_PORT" = "$_hostpart" ]; then
-        DB_PORT=5432
-    fi
-    # Extract user (before : or @)
-    _userpass="${_url%%@*}"
-    DB_USER="${_userpass%%:*}"
-    # Decode %40 -> @ in username
-    DB_USER=$(echo "$DB_USER" | sed 's/%40/@/g')
+# Use individual DB vars (preferred) or fall back to parsing DATABASE_URL
+if [ -n "$DB_HOST" ]; then
+    DB_PORT="${DB_PORT:-5432}"
+    DB_USER="${DB_USER:-postgres}"
 else
-    DB_HOST=${DATABASE_HOST:-""}
-    DB_PORT=${DATABASE_PORT:-5432}
-    DB_USER=${DATABASE_USER:-postgres}
+    # Parse from DATABASE_URL if set
+    if [ -n "$DATABASE_URL" ]; then
+        _url="${DATABASE_URL#postgresql://}"
+        _url="${_url#postgres://}"
+        _hostpart="${_url##*@}"
+        DB_HOST="${_hostpart%%:*}"
+        DB_HOST="${DB_HOST%%/*}"
+        _portdbname="${_hostpart#*:}"
+        DB_PORT="${_portdbname%%/*}"
+        [ "$DB_PORT" = "$_hostpart" ] && DB_PORT=5432
+        _userpass="${_url%%@*}"
+        DB_USER=$(echo "${_userpass%%:*}" | sed 's/%40/@/g')
+    fi
 fi
 
 echo "Waiting for database at ${DB_HOST}:${DB_PORT}..."
@@ -40,18 +33,14 @@ else
     echo "Database is ready!"
 fi
 
-# Run migrations
 echo "Running migrations..."
 python manage.py migrate --noinput
 
-# Setup superuser
 echo "Setting up superuser..."
 python manage.py setup_superuser
 
-# Collect static files
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
 
-# Start the application
 echo "Starting application..."
 exec "$@"
