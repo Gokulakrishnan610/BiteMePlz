@@ -1,1 +1,0 @@
-web: daphne rec_kiosk.asgi:application --bind 0.0.0.0 --port $PORT
