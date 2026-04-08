@@ -94,7 +94,7 @@ const ShopPage: React.FC = () => {
       const wsProto = loc.protocol === 'https:' ? 'wss' : 'ws'
       // Connect to backend WebSocket server with shop_id parameter
       const wsUrl = import.meta.env.PROD 
-        ? `wss://rec-kiosk.onrender.com/ws/stock/?shop_id=${id}`
+        ? `wss://${new URL(import.meta.env.VITE_API_BASE_URL || 'https://rec-kiosk-api-31875.azurewebsites.net').host}/ws/stock/?shop_id=${id}`
         : `${wsProto}://${loc.hostname}:8000/ws/stock/?shop_id=${id}`
       
       ws = new WebSocket(wsUrl)

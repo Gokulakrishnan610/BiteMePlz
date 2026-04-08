@@ -2,7 +2,7 @@ import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
 export const MEDIA_BASE_URL = import.meta.env.PROD 
-  ? "https://rec-kiosk.onrender.com" 
+  ? (import.meta.env.VITE_API_BASE_URL || 'https://rec-kiosk-api-31875.azurewebsites.net') 
   : "";
 
 export function getMediaUrl(path: string): string {

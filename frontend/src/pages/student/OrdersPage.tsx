@@ -88,7 +88,7 @@ const OrdersPage: React.FC = () => {
     uniqueShopIds.forEach((shopId) => {
       if (wsMapRef.current.has(shopId)) return
       const wsUrl = import.meta.env.PROD
-        ? `wss://rec-kiosk.onrender.com/ws/orders/?shop_id=${shopId}`
+        ? `wss://${new URL(import.meta.env.VITE_API_BASE_URL || 'https://rec-kiosk-api-31875.azurewebsites.net').host}/ws/orders/?shop_id=${shopId}`
         : `${wsProto}://${loc.hostname}:8000/ws/orders/?shop_id=${shopId}`
       try {
         const ws = new WebSocket(wsUrl)

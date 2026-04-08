@@ -34,6 +34,9 @@ jobs:
           context: ./frontend
           push: true
           tags: ${{ secrets.REGISTRY_LOGIN_SERVER }}/rec-kiosk-frontend:latest
+          build-args: |
+            VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}
+            VITE_RAZORPAY_KEY_ID=${{ secrets.VITE_RAZORPAY_KEY_ID }}
 
   deploy:
     name: Deploy to Azure Web Apps
