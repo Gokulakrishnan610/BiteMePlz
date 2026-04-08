@@ -373,7 +373,7 @@ class UserViewSet(viewsets.ModelViewSet):
             'password': password,
             'confirm_password': password,
             'role': 'shopAdmin',
-            'roll_no': f'SUB_ADMIN_{email.split('@')[0]}_{int(time.time())}'
+            'roll_no': f'SUB_ADMIN_{email.split("@")[0]}_{int(time.time())}'
         }
 
         user_serializer = UserRegistrationSerializer(data=user_data)
