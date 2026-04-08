@@ -1,0 +1,20 @@
+{% extends "admin/index.html" %}
+{% load i18n %}
+
+{% block content %}
+<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:16px 20px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:gap">
+  <div>
+    <strong>🚀 Demo Data</strong> &mdash; Seed a demo shop <em>(REC Canteen)</em>, shop admin account, and 42 products with images.
+    <br>
+    <small style="color:#555">
+      Admin email: <code>shopAdmin@gmail.com</code> &nbsp;|&nbsp; Password: <code>shopAdmin@123</code>
+    </small>
+  </div>
+  <a href="/admin/seed-demo-data/"
+     style="background:#007bff;color:#fff;padding:8px 18px;border-radius:4px;text-decoration:none;font-weight:bold;white-space:nowrap;margin-left:16px"
+     onclick="return confirm('This will create the demo shop, admin user, and products. Continue?')">
+    ▶ Seed Demo Data
+  </a>
+</div>
+{{ block.super }}
+{% endblock %}

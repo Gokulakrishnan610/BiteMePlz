@@ -2,9 +2,11 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib import messages
 from api.views import serve_media_file
 
 @csrf_exempt
@@ -18,7 +20,23 @@ def cors_preflight(request):
     response["Access-Control-Max-Age"] = "86400"
     return response
 
+
+@staff_member_required
+def seed_demo_data_view(request):
+    """Admin action view to seed demo shop, admin, and products."""
+    from django.core.management import call_command
+    from io import StringIO
+    out = StringIO()
+    try:
+        call_command('seed_demo_data', stdout=out)
+        messages.success(request, f'Demo data seeded successfully. {out.getvalue()}')
+    except Exception as e:
+        messages.error(request, f'Seed failed: {e}')
+    return HttpResponseRedirect('/admin/')
+
+
 urlpatterns = [
+    path('admin/seed-demo-data/', seed_demo_data_view, name='seed_demo_data'),
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
     path('api/startup/', include('startup.urls')),
