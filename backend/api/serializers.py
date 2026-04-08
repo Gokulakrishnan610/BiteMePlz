@@ -92,7 +92,10 @@ class UserLoginSerializer(serializers.Serializer):
         password = attrs.get('password')
 
         if email and password:
-            user = authenticate(username=email, password=password)
+            user = authenticate(username=email.lower(), password=password)
+            if not user:
+                # Try with original case as fallback
+                user = authenticate(username=email, password=password)
             if not user:
                 raise serializers.ValidationError('Invalid credentials')
             attrs['user'] = user

@@ -13,7 +13,7 @@ import os
 import datetime
 
 
-DEMO_ADMIN_EMAIL = 'shopAdmin@gmail.com'
+DEMO_ADMIN_EMAIL = 'shopadmin@gmail.com'
 DEMO_ADMIN_PASSWORD = 'shopAdmin@123'
 DEMO_ADMIN_NAME = 'Demo Shop Admin'
 
