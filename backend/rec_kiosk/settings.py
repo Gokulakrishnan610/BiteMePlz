@@ -10,7 +10,13 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here'
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 # Render dynamically assigns host
-ALLOWED_HOSTS = ["kisokrec.onrender.com", "kioskrec.onrender.com", "kisok-e3w0.onrender.com", "localhost", "127.0.0.1","rec-kiosk-1.onrender.com","rec-kiosk.onrender.com"]
+ALLOWED_HOSTS = [
+    "kisokrec.onrender.com", "kioskrec.onrender.com", "kisok-e3w0.onrender.com",
+    "rec-kiosk-1.onrender.com", "rec-kiosk.onrender.com",
+    "rec-kiosk-api-31875.azurewebsites.net",
+    "rec-kiosk-web-15852.azurewebsites.net",
+    "localhost", "127.0.0.1",
+]
 
 
 # Apps
@@ -152,6 +158,8 @@ CSRF_TRUSTED_ORIGINS = [
     "https://kisokrec.onrender.com",
     "https://kioskrec25.netlify.app",
     "https://kisok.ghasa.xyz",
+    "https://rec-kiosk-web-15852.azurewebsites.net",
+    "https://rec-kiosk-api-31875.azurewebsites.net",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:8000",
@@ -191,6 +199,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://kioskrec25.netlify.app",
     "https://super-conkies-906020.netlify.app",
     "https://kisok.ghasa.xyz",
+    "https://rec-kiosk-web-15852.azurewebsites.net",
     "http://localhost:5173",
     "http://localhost:3000",
     "http://127.0.0.1:5173",
