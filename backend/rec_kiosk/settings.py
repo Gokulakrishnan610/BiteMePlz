@@ -105,11 +105,23 @@ except Exception as channels_error:
     print(f"DEBUG: Channels not available: {channels_error}")
     WSGI_APPLICATION = 'rec_kiosk.wsgi.application'
 
-# Database: Use DATABASE_URL if set, otherwise SQLite
+# Database: Use DATABASE_URL if set, otherwise individual DB_* vars, otherwise SQLite
 import os
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
     DATABASES = {'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=True)}
+elif os.environ.get('DB_HOST'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DB_NAME', 'reckioskdb'),
+            'USER': os.environ.get('DB_USER', 'pgadmin@reckioskdb4464'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'HOST': os.environ.get('DB_HOST', ''),
+            'PORT': os.environ.get('DB_PORT', '5432'),
+            'OPTIONS': {'sslmode': 'require'},
+        }
+    }
 else:
     DATABASES = {
         'default': {
