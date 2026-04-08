@@ -85,7 +85,7 @@ class Shop(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     location = models.CharField(max_length=255)
-    image = models.ImageField(upload_to='shops/', blank=True, null=True)
+    image = models.CharField(max_length=500, blank=True, null=True)  # stores URL or path
     shop_admin = models.ForeignKey(User, on_delete=models.CASCADE, related_name='administered_shops')
     is_active = models.BooleanField(default=True)
     is_open = models.BooleanField(default=True)
