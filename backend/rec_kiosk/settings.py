@@ -115,7 +115,7 @@ elif os.environ.get('DB_HOST'):
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.environ.get('DB_NAME', 'reckioskdb'),
-            'USER': os.environ.get('DB_USER', 'pgadmin@reckioskdb4464'),
+            'USER': os.environ.get('DB_USER', 'pgadmin'),
             'PASSWORD': os.environ.get('DB_PASSWORD', ''),
             'HOST': os.environ.get('DB_HOST', ''),
             'PORT': os.environ.get('DB_PORT', '5432'),
