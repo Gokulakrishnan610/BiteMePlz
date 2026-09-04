@@ -15,6 +15,8 @@ ALLOWED_HOSTS = [
     "rec-kiosk-1.onrender.com", "rec-kiosk.onrender.com",
     "rec-kiosk-api-31875.azurewebsites.net",
     "rec-kiosk-web-15852.azurewebsites.net",
+    "foodapp.gokulakrishnank.in",
+    "foodappbackend.gokulakrishnank.in",
     "localhost", "127.0.0.1",
 ]
 
@@ -109,7 +111,8 @@ except Exception as channels_error:
 import os
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
-    DATABASES = {'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=True)}
+    ssl_require = os.environ.get('DB_SSL', 'true').lower() in ('1', 'true', 'yes')
+    DATABASES = {'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=ssl_require)}
 elif os.environ.get('DB_HOST'):
     DATABASES = {
         'default': {
@@ -119,7 +122,7 @@ elif os.environ.get('DB_HOST'):
             'PASSWORD': os.environ.get('DB_PASSWORD', ''),
             'HOST': os.environ.get('DB_HOST', ''),
             'PORT': os.environ.get('DB_PORT', '5432'),
-            'OPTIONS': {'sslmode': 'require'},
+            'OPTIONS': {'sslmode': os.environ.get('DB_SSLMODE', 'require')},
         }
     }
 else:
@@ -184,6 +187,8 @@ CSRF_TRUSTED_ORIGINS = [
     "https://kisok.ghasa.xyz",
     "https://rec-kiosk-web-15852.azurewebsites.net",
     "https://rec-kiosk-api-31875.azurewebsites.net",
+    "https://foodapp.gokulakrishnank.in",
+    "https://foodappbackend.gokulakrishnank.in",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:8000",
