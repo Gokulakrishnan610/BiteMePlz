@@ -1,13 +1,16 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
+import { useEventStream } from './EventStreamContext';
 import api from '../api';
+import type { WalletUpdateEvent } from '../lib/realtime';
 
 interface WalletContextType {
   balance: number;
   loading: boolean;
   error: string | null;
   refreshBalance: () => Promise<void>;
-  // isWebSocketConnected: boolean; // removed
+  isLiveConnected: boolean;
+  connectionMode: 'sse' | 'polling' | 'disconnected';
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -26,14 +29,12 @@ interface WalletProviderProps {
 
 export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const { user, token } = useAuth();
+  const { register, isLiveConnected, connectionMode } = useEventStream();
   const [balance, setBalance] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // const [lastError, setLastError] = useState<string | null>(null);
-  // const [isWebSocketConnected, setIsWebSocketConnected] = useState(false);
-  // const wsRef = useRef<WebSocket | null>(null);
 
-  const fetchBalance = async () => {
+  const fetchBalance = useCallback(async () => {
     if (!user || !token) {
       setBalance(0);
       return;
@@ -54,11 +55,10 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, token]);
 
   useEffect(() => {
     fetchBalance();
-    // Auto-refresh on tab focus/visibility change to keep balance fresh across pages
     const onFocus = () => { fetchBalance().catch(() => {}); };
     const onVisibility = () => { if (document.visibilityState === 'visible') fetchBalance().catch(() => {}); };
     window.addEventListener('focus', onFocus);
@@ -67,22 +67,43 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-    // only refetch on auth changes; avoid loops on lastError
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, token]);
+  }, [fetchBalance]);
+
+  useEffect(() => {
+    if (!user || !token) return;
+
+    return register({
+      shopIds: [],
+      events: {
+        wallet_update: (payload) => {
+          const data = payload as WalletUpdateEvent;
+          if (String(data.user_id) === String(user._id || (user as any).id)) {
+            const numeric = typeof data.balance === 'number' ? data.balance : Number(data.balance);
+            if (Number.isFinite(numeric)) {
+              setBalance(numeric);
+            }
+          }
+        },
+      },
+      polling: {
+        enabled: true,
+        intervalMs: 15000,
+        fetcher: fetchBalance,
+      },
+    });
+  }, [register, user, token, fetchBalance]);
 
   const refreshBalance = async () => {
     await fetchBalance();
   };
-
-  // Remove all WebSocket logic
 
   const value = {
     balance,
     loading,
     error,
     refreshBalance,
-    // isWebSocketConnected, // removed
+    isLiveConnected,
+    connectionMode,
   };
 
   return (

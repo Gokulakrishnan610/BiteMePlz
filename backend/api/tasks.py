@@ -246,23 +246,10 @@ def expire_orders_and_handle_refund():
 
 
 def send_wallet_update(user_id: str, balance: float, change: float = 0, transaction_type: str = 'update'):
-    """Send wallet update via WebSocket to connected clients"""
-    if not _channels_available:
-        return
-    
+    """Send wallet update via SSE event bus."""
     try:
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            'wallet_updates',
-            {
-                'type': 'wallet_update',
-                'user_id': user_id,
-                'balance': balance,
-                'change': change,
-                'transaction_type': transaction_type,
-                'timestamp': timezone.now().isoformat()
-            }
-        )
+        from .websocket_utils import broadcast_wallet_update
+        broadcast_wallet_update(user_id, balance, change, transaction_type)
     except Exception as e:
         print(f"Error sending wallet update: {e}")
 

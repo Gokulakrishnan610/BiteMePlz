@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { WalletProvider } from './context/WalletContext';
+import { EventStreamProvider } from './context/EventStreamContext';
 import { AdminShopProvider } from './context/AdminShopContext';
 
 // Layouts
@@ -79,8 +80,9 @@ function App() {
   }
 
   return (
-    <WalletProvider>
-      <AdminShopProvider>
+    <EventStreamProvider>
+      <WalletProvider>
+        <AdminShopProvider>
         <LocalhostNotification />
         <PWAInstallPrompt />
         
@@ -199,8 +201,9 @@ function App() {
           {/* 404 Page - Must be last */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
-      </AdminShopProvider>
-    </WalletProvider>
+        </AdminShopProvider>
+      </WalletProvider>
+    </EventStreamProvider>
   );
 }
 

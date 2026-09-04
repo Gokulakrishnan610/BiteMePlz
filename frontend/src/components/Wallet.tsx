@@ -3,7 +3,7 @@ import { Wallet as WalletIcon, Wifi, WifiOff } from 'lucide-react';
 import { useWallet } from '../context/WalletContext';
 
 const Wallet: React.FC = () => {
-  const { balance, loading, isWebSocketConnected } = useWallet();
+  const { balance, loading, isLiveConnected, connectionMode } = useWallet();
 
   if (loading) {
     return (
@@ -18,11 +18,11 @@ const Wallet: React.FC = () => {
     <div className="flex items-center space-x-2 bg-[var(--card-bg)] px-4 py-2 rounded-lg border border-[var(--border-color)] hover:border-[var(--accent-purple)] transition-colors duration-200">
       <WalletIcon size={20} className="text-[var(--accent-purple)]" />
       <span className="font-medium text-[var(--primary-text)]">₹{Number(balance || 0).toFixed(2)}</span>
-      <div className="flex items-center ml-1">
-        {isWebSocketConnected ? (
-          <Wifi size={12} className="text-green-500" title="Real-time updates connected" />
+      <div className="flex items-center ml-1" title={isLiveConnected ? (connectionMode === 'sse' ? 'Live SSE updates' : 'Polling fallback active') : 'Live updates disconnected'}>
+        {isLiveConnected ? (
+          <Wifi size={12} className="text-green-500" />
         ) : (
-          <WifiOff size={12} className="text-gray-400" title="Real-time updates disconnected" />
+          <WifiOff size={12} className="text-gray-400" />
         )}
       </div>
     </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState, useCallback, useMemo } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import api from "../../api"
 import { Package, AlertCircle, Trash2, ArrowLeft, Clock, CheckCircle, XCircle } from "lucide-react"
@@ -11,6 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Badge } from "../../components/ui/badge"
 import { Button } from "../../components/ui/button"
 import Navbar from "../../components/Navbar"
+import { useEventStream } from "../../context/EventStreamContext"
+import { useEventStreamSubscription } from "../../hooks/useEventStreamSubscription"
+import type { OrderVerificationEvent } from "../../lib/realtime"
 
 interface Order {
   _id: string
@@ -42,116 +45,67 @@ const OrdersPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [billHtml, setBillHtml] = useState<string | null>(null)
   const [billOpen, setBillOpen] = useState<boolean>(false)
-  // cleaned up unused processing/payment states
+  const { register } = useEventStream()
+
+  const fetchOrders = useCallback(async () => {
+    try {
+      setLoading(true)
+      const { data } = await api.get("/api/orders/myorders")
+      setOrders(data.results || data)
+      setError(null)
+    } catch (err) {
+      setError("Failed to load orders")
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     fetchOrders()
-  }, [])
+  }, [fetchOrders])
 
-  const fetchOrders = async () => {
-    try {
-      const { data } = await api.get("/api/orders/myorders")
-      // Handle paginated response
-      setOrders(data.results || data)
-      setLoading(false)
-    } catch (err) {
-      setError("Failed to load orders")
-      setLoading(false)
-    }
-  }
-
-  // removed old Razorpay continue-payment/cancel handlers (handled during checkout)
-
-  // Real-time: Subscribe to WebSocket order updates for all shops in the user's orders
-  const wsMapRef = useRef<Map<string, WebSocket>>(new Map())
-
-  useEffect(() => {
-    if (!orders || orders.length === 0) {
-      // Cleanup any existing sockets if no orders
-      wsMapRef.current.forEach((ws) => {
-        try { ws.close() } catch {}
-      })
-      wsMapRef.current.clear()
-      return
-    }
-
-    // Collect unique shop ids from orders
+  const orderShopIds = useMemo(() => {
     const uniqueShopIds = new Set<string>()
-    orders.forEach((o) => {
-      const shopId = typeof o.shop === 'string' ? o.shop : (o.shop?.id || (o.shop as any)?._id)
+    orders.forEach((order) => {
+      const shopId = typeof order.shop === "string" ? order.shop : (order.shop?.id || (order.shop as any)?._id)
       if (shopId) uniqueShopIds.add(String(shopId))
     })
-
-    const loc = window.location
-    const wsProto = loc.protocol === 'https:' ? 'wss' : 'ws'
-
-    // Open sockets for any new shop ids
-    uniqueShopIds.forEach((shopId) => {
-      if (wsMapRef.current.has(shopId)) return
-      const wsUrl = import.meta.env.PROD
-        ? `wss://${new URL(import.meta.env.VITE_API_BASE_URL || 'https://rec-kiosk-api-31875.azurewebsites.net').host}/ws/orders/?shop_id=${shopId}`
-        : `${wsProto}://${loc.hostname}:8000/ws/orders/?shop_id=${shopId}`
-      try {
-        const ws = new WebSocket(wsUrl)
-        wsMapRef.current.set(shopId, ws)
-
-        ws.onopen = () => {
-        }
-
-        ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data)
-            if (data?.type === 'order_verification' && String(data.shop_id) === String(shopId)) {
-              const incomingDbId: string | undefined = (data.order_data?.id || data.order_data?._id || data.order_id)?.toString?.()
-              const incomingCode: string | undefined = (data.order_data?.order_id || data.order_code || data.order_id)?.toString?.()
-              // Update any matching order in list
-              setOrders((prev) => prev.map((ord) => {
-                const ordDbId = (ord.id || ord._id || '').toString()
-                const ordCode = (ord.order_id || '').toString()
-                const dbIdMatch = incomingDbId && ordDbId && String(ordDbId) === String(incomingDbId)
-                const codeMatch = incomingCode && ordCode && String(ordCode) === String(incomingCode)
-                if (dbIdMatch || codeMatch) {
-                  const next = {
-                    ...ord,
-                    // Prefer fields from payload to ensure status reflects verification immediately
-                    is_verified: Boolean(data.order_data?.is_verified ?? true),
-                    status: data.order_data?.status || 'completed',
-                  }
-                  return next as Order
-                }
-                return ord
-              }))
-            }
-          } catch {}
-        }
-
-        ws.onerror = () => {
-        }
-
-        ws.onclose = () => {
-          // Remove on close; will be re-added if orders effect runs again
-          wsMapRef.current.delete(shopId)
-        }
-      } catch {}
-    })
-
-    // Close sockets for shops no longer present
-    Array.from(wsMapRef.current.keys()).forEach((existingShopId) => {
-      if (!uniqueShopIds.has(existingShopId)) {
-        const ws = wsMapRef.current.get(existingShopId)
-        try { ws?.close() } catch {}
-        wsMapRef.current.delete(existingShopId)
-      }
-    })
-
-    // Cleanup on unmount
-    return () => {
-      wsMapRef.current.forEach((ws) => {
-        try { ws.close() } catch {}
-      })
-      wsMapRef.current.clear()
-    }
+    return Array.from(uniqueShopIds)
   }, [orders])
+
+  useEventStreamSubscription(register, {
+    shopIds: orderShopIds,
+    events: {
+      order_verification: (payload) => {
+        const data = payload as OrderVerificationEvent
+        const incomingDbId = (data.order_data?.id || data.order_data?._id || data.order_id)?.toString?.()
+        const incomingCode = (data.order_data?.order_id || data.order_id)?.toString?.()
+
+        setOrders((prev) =>
+          prev.map((order) => {
+            const ordDbId = (order.id || order._id || "").toString()
+            const ordCode = (order.order_id || "").toString()
+            const dbIdMatch = incomingDbId && ordDbId && String(ordDbId) === String(incomingDbId)
+            const codeMatch = incomingCode && ordCode && String(ordCode) === String(incomingCode)
+
+            if (dbIdMatch || codeMatch) {
+              return {
+                ...order,
+                is_verified: Boolean(data.order_data?.is_verified ?? true),
+                status: (data.order_data?.status || "completed") as Order["status"],
+              }
+            }
+            return order
+          }),
+        )
+      },
+    },
+    polling: {
+      enabled: true,
+      intervalMs: 12000,
+      fetcher: fetchOrders,
+    },
+  })
 
   const handleDelete = async (order_id: string) => {
     if (!window.confirm("Are you sure you want to delete this order?")) {

@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../api';
 import { ArrowLeft, AlertCircle, Trash2, Wallet } from 'lucide-react';
@@ -10,6 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import Navbar from '../../components/Navbar';
+import { useEventStream } from '../../context/EventStreamContext';
+import { useEventStreamSubscription } from '../../hooks/useEventStreamSubscription';
+import type { OrderVerificationEvent } from '../../lib/realtime';
 
 interface OrderItem {
   name: string;
@@ -56,116 +59,78 @@ const OrderDetailsPage: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [billHtml, setBillHtml] = useState<string | null>(null);
   const [billOpen, setBillOpen] = useState<boolean>(false);
+  const { register } = useEventStream();
 
-  // Realtime: connect to the order's shop group and update when verified
-  const wsRef = useRef<WebSocket | null>(null)
-
-  useEffect(() => {
-    // Require order to be loaded to know shopId; connect when order fetched
-    const shopId = (order?.shop as any)?.id || (order?.shop as any)?._id
-    const currentOrderId = (order?._id || (order as any)?.id)?.toString?.()
-    if (!shopId || !currentOrderId) {
-      // Cleanup if previously open
-      if (wsRef.current) {
-        try { wsRef.current.close() } catch {}
-        wsRef.current = null
-      }
-      return
-    }
-
-    // Build URL
-    const loc = window.location
-    const wsProto = loc.protocol === 'https:' ? 'wss' : 'ws'
-    const wsUrl = import.meta.env.PROD
-      ? `wss://${new URL(import.meta.env.VITE_API_BASE_URL || 'https://rec-kiosk-api-31875.azurewebsites.net').host}/ws/orders/?shop_id=${shopId}`
-      : `${wsProto}://${loc.hostname}:8000/ws/orders/?shop_id=${shopId}`
-
+  const fetchOrder = useCallback(async () => {
+    if (!id) return;
     try {
-      const ws = new WebSocket(wsUrl)
-      wsRef.current = ws
+      const { data } = await api.get(`/api/orders/${id}/`);
+      const normalized: Order = {
+        ...data,
+        _id: (data._id || data.id)?.toString?.() || '',
+        createdAt: data.createdAt || data.created_at || data.created_at?.toString?.() || '',
+      };
+      setOrder(normalized);
+      setError(null);
 
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
-          if (data?.type === 'order_verification' && String(data.shop_id) === String(shopId)) {
-            const incomingDbId: string | undefined = (data.order_data?.id || data.order_data?._id || data.order_id)?.toString?.()
-            const incomingCode: string | undefined = (data.order_data?.order_id || data.order_code || data.order_id)?.toString?.()
-            const currentCode: string | undefined = (order?.order_id || (order as any)?.order_id)?.toString?.()
-            const dbIdMatch = incomingDbId && currentOrderId && String(incomingDbId) === String(currentOrderId)
-            const codeMatch = incomingCode && currentCode && String(incomingCode) === String(currentCode)
-            if (dbIdMatch || codeMatch) {
-              setOrder((prev) => {
-                if (!prev) return prev
-                return {
-                  ...prev,
-                  is_verified: Boolean(data.order_data?.is_verified ?? true),
-                  status: data.order_data?.status || 'completed',
-                }
-              })
-            }
-          }
-        } catch {}
+      try {
+        await api.get(`/api/orders/${id}/group_details/`);
+      } catch {
+        // Group details are optional
       }
 
-      ws.onclose = () => {
-        wsRef.current = null
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (['student', 'staff'].includes(user.role) && normalized.order_id) {
+          import('../../utils/studentLogger').then(({ logViewOrder }) => {
+            logViewOrder(normalized._id, normalized.order_id!, normalized.shop?.name);
+          });
+        }
       }
-    } catch {}
-
-    return () => {
-      if (wsRef.current) {
-        try { wsRef.current.close() } catch {}
-        wsRef.current = null
-      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to fetch order details');
+    } finally {
+      setLoading(false);
     }
-  }, [order?.shop, order?._id])
+  }, [id]);
 
-  // Removed periodic expiry check in this view to reduce warnings and background load
+  const shopId = (order?.shop as any)?.id || (order?.shop as any)?._id;
+
+  useEventStreamSubscription(register, {
+    shopIds: shopId ? [String(shopId)] : [],
+    events: {
+      order_verification: (payload) => {
+        const data = payload as OrderVerificationEvent;
+        const currentOrderId = (order?._id || (order as any)?.id)?.toString?.();
+        const incomingDbId = (data.order_data?.id || data.order_data?._id || data.order_id)?.toString?.();
+        const incomingCode = (data.order_data?.order_id || data.order_id)?.toString?.();
+        const currentCode = (order?.order_id || '')?.toString?.();
+        const dbIdMatch = incomingDbId && currentOrderId && String(incomingDbId) === String(currentOrderId);
+        const codeMatch = incomingCode && currentCode && String(incomingCode) === String(currentCode);
+
+        if (dbIdMatch || codeMatch) {
+          setOrder((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              is_verified: Boolean(data.order_data?.is_verified ?? true),
+              status: (data.order_data?.status || 'completed') as Order['status'],
+            };
+          });
+        }
+      },
+    },
+    polling: {
+      enabled: true,
+      intervalMs: 10000,
+      fetcher: fetchOrder,
+    },
+  });
 
   useEffect(() => {
-    const fetchOrder = async () => {
-      try {
-        const { data } = await api.get(`/api/orders/${id}/`);
-        // Normalize fields to satisfy UI expectations
-        const normalized: Order = {
-          ...data,
-          _id: (data._id || data.id)?.toString?.() || '',
-          createdAt: data.createdAt || data.created_at || data.created_at?.toString?.() || '',
-        };
-        setOrder(normalized);
-        // QR removed: do not parse qr_code
-        // setQrMeta(null);
-        // If multi-order, fetch grouped details to render all shops on this page
-        try {
-          const { data: gd } = await api.get(`/api/orders/${id}/group_details/`);
-          if (gd && gd.shops) {
-            // setGroupDetails(gd);
-          } else {
-            // setGroupDetails(null);
-          }
-        } catch {
-          // setGroupDetails(null);
-        }
-        setLoading(false);
-        
-        // Log view order for students/staff
-        const userStr = localStorage.getItem('user')
-        if (userStr) {
-          const user = JSON.parse(userStr)
-          if (['student', 'staff'].includes(user.role) && normalized.order_id) {
-            import('../../utils/studentLogger').then(({ logViewOrder }) => {
-              logViewOrder(normalized._id, normalized.order_id!, normalized.shop?.name)
-            })
-          }
-        }
-      } catch (err) {
-        setError('Failed to load order details');
-        setLoading(false);
-      }
-    };
-
     fetchOrder();
-  }, [id]);
+  }, [fetchOrder]);
 
   useEffect(() => {
     // QR removed: no expiry tracking

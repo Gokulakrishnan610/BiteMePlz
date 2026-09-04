@@ -15,6 +15,7 @@ from .views import (
     TransactionViewSet, ShopLogViewSet, StudentAnalyticsViewSet, StudentLogViewSet, FileUploadViewSet,
     test_websocket, test_wallet_update
 )
+from .sse_views import EventStreamView
 
 router = DefaultRouter()
 router.register(r'users', UserViewSet)
@@ -618,9 +619,10 @@ urlpatterns = [
     path('orders/shop/', OrderViewSet.as_view({'get': 'shop'}), name='order-shop'),
     # Manual registration for shop transactions action
     path('transactions/shop/', TransactionViewSet.as_view({'get': 'shop'}), name='transaction-shop'),
-    # WebSocket test endpoint
+    # Real-time SSE stream (replaces WebSocket for client push)
+    path('events/stream/', EventStreamView.as_view(), name='event-stream'),
+    # Legacy WebSocket test endpoints
     path('test-websocket/', test_websocket, name='test-websocket'),
-    # Wallet WebSocket test endpoint
     path('test-wallet-update/', test_wallet_update, name='test-wallet-update'),
 ]
 

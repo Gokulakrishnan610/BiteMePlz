@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useMemo, useState, useDeferredValue, useRef } from "react"
+import { useEffect, useMemo, useState, useDeferredValue, useCallback, useRef } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { Link } from "react-router-dom"
 import {
@@ -31,7 +31,9 @@ import { useCart } from "../context/CartContext"
 import { useAuth } from "../context/AuthContext"
 // import { toast } from 'sonner'
 import { getMediaUrl } from "../lib/utils";
-// no-op alias imports removed
+import { useEventStream } from "../context/EventStreamContext"
+import { useEventStreamSubscription } from "../hooks/useEventStreamSubscription"
+import type { StockUpdateEvent } from "../lib/realtime"
 
 interface Product {
   id: string
@@ -85,88 +87,59 @@ const ShopPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<"relevance" | "price" | "stock">("relevance")
   const mobileSearchRef = useRef<HTMLInputElement>(null)
   const [favoriteProductIds, setFavoriteProductIds] = useState<Set<string>>(new Set())
-  // Live stock updates via WebSocket
-  useEffect(() => {
+  const { register } = useEventStream()
+
+  const reloadProducts = useCallback(async () => {
     if (!id) return
-    let ws: WebSocket | null = null
     try {
-      const loc = window.location
-      const wsProto = loc.protocol === 'https:' ? 'wss' : 'ws'
-      // Connect to backend WebSocket server with shop_id parameter
-      const wsUrl = import.meta.env.PROD 
-        ? `wss://${new URL(import.meta.env.VITE_API_BASE_URL || 'https://rec-kiosk-api-31875.azurewebsites.net').host}/ws/stock/?shop_id=${id}`
-        : `${wsProto}://${loc.hostname}:8000/ws/stock/?shop_id=${id}`
-      
-      ws = new WebSocket(wsUrl)
-      
-      ws.onopen = () => {
-      }
-      
-      ws.onmessage = (ev) => {
-        try {
-          const data = JSON.parse(ev.data)
-          
-          switch (data.type) {
-            case 'connection_established':
-              break
-              
-            case 'stock_update':
-              if (data.shop_id === id && data.product_id) {
-                setProducts((prev) => prev.map((p) => 
-                  p.id === data.product_id ? { ...p, stock: Number(data.stock) } : p
-                ))
-              }
-              break
-              
-            case 'order_update':
-              if (data.shop_id === id) {
-                // You can add order status updates here if needed
-              }
-              break
-              
-            case 'product_update':
-              if (data.shop_id === id && data.product_id) {
-                // Refresh products or update specific product
-                // You can implement specific product updates here
-              }
-              break
-              
-            case 'notification':
-              if (data.shop_id === id) {
-                // You can show notifications to users here
-              }
-              break
-              
-            default:
-              break
-          }
-        } catch (error) {
-          console.error('Failed to parse WebSocket message:', error)
+      let allProducts: Product[] = []
+      let nextUrl: string | null = `/api/products/?shop_id=${id}`
+
+      while (nextUrl) {
+        const productsResponse: any = await api.get(nextUrl)
+        const pageProducts = productsResponse.data.results || []
+        allProducts = [...allProducts, ...pageProducts]
+
+        if (productsResponse.data.next) {
+          const nextUrlObj: URL = new URL(productsResponse.data.next)
+          nextUrl = nextUrlObj.pathname + nextUrlObj.search
+        } else {
+          nextUrl = null
         }
       }
-      
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error)
-      }
-      
-      ws.onclose = (event) => {
-        console.log('WebSocket connection closed:', event.code, event.reason)
-      }
-      
+
+      const availableProducts = allProducts.filter((product: Product) => product.is_available)
+      setProducts(
+        availableProducts.map((product: Product) => ({
+          ...product,
+          stock_mode: product.stock_mode || 'stock',
+        })),
+      )
     } catch (error) {
-      console.error('Failed to establish WebSocket connection:', error)
-    }
-    
-    return () => {
-      try { 
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.close()
-        }
-      } catch (error) {
-        console.error('Error closing WebSocket:', error)
-      }
+      console.error('Failed to refresh products:', error)
     }
   }, [id])
+
+  useEventStreamSubscription(register, {
+    shopIds: id ? [id] : [],
+    events: {
+      stock_update: (payload) => {
+        const data = payload as StockUpdateEvent
+        if (data.shop_id === id && data.product_id) {
+          setProducts((prev) =>
+            prev.map((product) =>
+              product.id === data.product_id ? { ...product, stock: Number(data.stock) } : product,
+            ),
+          )
+        }
+      },
+    },
+    polling: {
+      enabled: true,
+      intervalMs: 15000,
+      fetcher: reloadProducts,
+    },
+  })
   const favoritesStorageKey = useMemo(() => (user ? `favorites_${user._id}` : 'favorites_guest'), [user])
   useEffect(() => {
     try {
